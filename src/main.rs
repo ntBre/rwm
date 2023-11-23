@@ -3,13 +3,15 @@
 use std::ffi::c_int;
 use std::mem::MaybeUninit;
 
+use drw::Drw;
 use libc::{
     sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART,
     SIGCHLD, SIG_IGN, WNOHANG,
 };
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, Display as XDisplay, False,
-    SubstructureRedirectMask, XDefaultRootWindow, XSelectInput, XSync,
+    SubstructureRedirectMask, XDefaultRootWindow, XDefaultScreen,
+    XDisplayHeight, XDisplayWidth, XRootWindow, XSelectInput, XSync,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -73,7 +75,7 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut XDisplay, *mut XErrorEvent) -> i32,
 > = None;
 
-fn checkotherwm(dpy: Display) {
+fn checkotherwm(dpy: &Display) {
     unsafe {
         XERRORXLIB = XSetErrorHandler(Some(xerrorstart));
         XSelectInput(
@@ -86,7 +88,7 @@ fn checkotherwm(dpy: Display) {
     }
 }
 
-fn setup() {
+fn setup(dpy: &Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
 
     unsafe {
@@ -102,11 +104,22 @@ fn setup() {
         while waitpid(-1, std::ptr::null::<c_int>() as *mut _, WNOHANG) > 0 {}
 
         // init screen
+        let screen = XDefaultScreen(dpy.inner);
+        let sw = XDisplayWidth(dpy.inner, screen);
+        let sh = XDisplayHeight(dpy.inner, screen);
+        let root = XRootWindow(dpy.inner, screen);
+        let mut drw = Drw::new(dpy, screen, root, sw as usize, sh as usize);
+
+        // TODO read from config
+        let fonts = ["monospace:size=10"];
+        drw.fontset_create(fonts).expect("no fonts could be loaded");
     }
 }
 
+mod drw;
+
 fn main() {
     let dpy = Display::open();
-    checkotherwm(dpy);
-    setup();
+    checkotherwm(&dpy);
+    setup(&dpy);
 }
