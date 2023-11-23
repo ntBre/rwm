@@ -1,7 +1,12 @@
 //! tiling window manager based on dwm
 
 use std::ffi::c_int;
+use std::mem::MaybeUninit;
 
+use libc::{
+    sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART,
+    SIGCHLD, SIG_IGN, WNOHANG,
+};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, Display as XDisplay, False,
     SubstructureRedirectMask, XDefaultRootWindow, XSelectInput, XSync,
@@ -81,7 +86,27 @@ fn checkotherwm(dpy: Display) {
     }
 }
 
+fn setup() {
+    let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
+
+    unsafe {
+        // do not transform children into zombies when they terminate
+        sigemptyset(&mut (*(sa.as_mut_ptr())).sa_mask as *mut _);
+        (*(sa.as_mut_ptr())).sa_flags =
+            SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
+        (*(sa.as_mut_ptr())).sa_sigaction = SIG_IGN;
+        let sa = sa.assume_init();
+        sigaction(SIGCHLD, &sa, std::ptr::null::<sigaction>() as *mut _);
+
+        // clean up any zombies (inherited from .xinitrc etc) immediately
+        while waitpid(-1, std::ptr::null::<c_int>() as *mut _, WNOHANG) > 0 {}
+
+        // init screen
+    }
+}
+
 fn main() {
     let dpy = Display::open();
     checkotherwm(dpy);
+    setup();
 }
