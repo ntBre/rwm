@@ -11,9 +11,9 @@ use x11::{
 
 use crate::Display;
 
-struct Fnt<'a> {
+pub struct Fnt<'a> {
     dpy: &'a Display,
-    h: usize,
+    pub h: usize,
     xfont: *mut XftFont,
     pattern: *mut FcPattern,
 }
@@ -31,7 +31,7 @@ pub struct Drw<'a> {
     scheme: Option<XftColor>,
 
     /// using a vec instead of a linked list
-    fonts: Vec<Fnt<'a>>,
+    pub fonts: Vec<Fnt<'a>>,
 }
 
 impl<'a> Drw<'a> {
