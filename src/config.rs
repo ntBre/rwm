@@ -12,7 +12,7 @@ pub const LAYOUTS: [Layout; 3] = [
     // tile
     Layout {
         symbol: "[]=",
-        arrange: |mon| todo!(),
+        arrange: |_mon| todo!(),
     },
     // floating
     Layout {
@@ -22,6 +22,6 @@ pub const LAYOUTS: [Layout; 3] = [
     // monocle
     Layout {
         symbol: "[M]",
-        arrange: |mon| todo!(),
+        arrange: |_mon| todo!(),
     },
 ];

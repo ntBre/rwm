@@ -1,5 +1,7 @@
 //! tiling window manager based on dwm
 
+#![allow(unused)]
+
 use std::ffi::c_int;
 use std::mem::MaybeUninit;
 
@@ -15,7 +17,8 @@ use x11::xinerama::{
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, Display as XDisplay, False,
     SubstructureRedirectMask, XDefaultRootWindow, XDefaultScreen,
-    XDisplayHeight, XDisplayWidth, XFree, XRootWindow, XSelectInput, XSync,
+    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XQueryPointer,
+    XRootWindow, XSelectInput, XSync, XUnmapWindow,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -79,10 +82,17 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut XDisplay, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut SELMON: *const Monitor = std::ptr::null();
+static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
 /// again using a vec instead of a linked list
-static mut MONS: Vec<Monitor> = Vec::new();
+static mut MONS: *mut Monitor = std::ptr::null_mut();
+
+/// bar height
+static mut BH: i16 = 0;
+static mut SW: i16 = 0;
+static mut SH: i16 = 0;
+
+static mut ROOT: Window = 0;
 
 struct Client {
     name: String,
@@ -114,13 +124,13 @@ struct Client {
     neverfocus: bool,
     oldstate: bool,
     isfullscreen: bool,
-    next: *const Client,
-    snext: *const Client,
-    mon: *const Monitor,
+    next: *mut Client,
+    snext: *mut Client,
+    mon: *mut Monitor,
     win: Window,
 }
 
-struct Window {}
+type Window = u64;
 
 struct Layout {
     symbol: &'static str,
@@ -133,7 +143,7 @@ struct Monitor {
     nmaster: i32,
     num: i32,
     /// bar geometry
-    by: i32,
+    by: i16,
     /// screen size
     mx: i16,
     my: i16,
@@ -149,11 +159,11 @@ struct Monitor {
     tagset: [usize; 2],
     showbar: bool,
     topbar: bool,
-    clients: Vec<Client>,
+    clients: *mut Client,
     /// index into clients vec, pointer in C
-    sel: usize,
-    /// this is probably part of a linked list in C, so maybe a vec of indices?
-    stack: Vec<usize>,
+    sel: *mut Client,
+    stack: *mut Client,
+    next: *mut Monitor,
     barwin: Window,
     lt: [*const Layout; 2],
 }
@@ -179,13 +189,19 @@ impl Monitor {
             tagset: [1, 1],
             showbar: SHOWBAR,
             topbar: TOPBAR,
-            clients: Vec::new(),
-            sel: 0,
-            stack: Vec::new(),
-            barwin: Window {},
+            clients: std::ptr::null_mut(),
+            sel: std::ptr::null_mut(),
+            stack: std::ptr::null_mut(),
+            next: std::ptr::null_mut(),
+            barwin: 0,
             lt: [&LAYOUTS[0], &LAYOUTS[1 % LAYOUTS.len()]],
         }
     }
+}
+
+fn createmon() -> *mut Monitor {
+    let mon = Monitor::new();
+    Box::into_raw(Box::new(mon))
 }
 
 fn checkotherwm(dpy: &Display) {
@@ -220,17 +236,17 @@ fn setup(dpy: &Display) {
         let screen = XDefaultScreen(dpy.inner);
         let sw = XDisplayWidth(dpy.inner, screen);
         let sh = XDisplayHeight(dpy.inner, screen);
-        let root = XRootWindow(dpy.inner, screen);
-        let mut drw = Drw::new(dpy, screen, root, sw as usize, sh as usize);
+        ROOT = XRootWindow(dpy.inner, screen);
+        let mut drw = Drw::new(dpy, screen, ROOT, sw as usize, sh as usize);
 
         drw.fontset_create(FONTS).expect("no fonts could be loaded");
         let lrpa = drw.fonts[0].h;
-        let bh = drw.fonts[0].h + 2;
-        update_geom(dpy);
+        BH = (drw.fonts[0].h + 2) as i16;
+        updategeom(dpy);
     }
 }
 
-fn update_geom(dpy: &Display) -> i32 {
+fn updategeom(dpy: &Display) -> i32 {
     let mut dirty = 0;
     unsafe {
         if XineramaIsActive(dpy.inner) != 0 {
@@ -238,7 +254,14 @@ fn update_geom(dpy: &Display) -> i32 {
             let mut nn: i32 = 0;
             let info = XineramaQueryScreens(dpy.inner, &mut nn as *mut _);
             let mut unique = vec![MaybeUninit::uninit(); nn as usize];
-            let n = MONS.len();
+
+            let mut n = 0;
+            let mut m = MONS;
+            while !m.is_null() {
+                m = (*m).next;
+                n += 1;
+            }
+
             let mut j = 0;
             for i in 0..nn {
                 if isuniquegeom(&unique, j, info.offset(i as isize)) {
@@ -256,59 +279,249 @@ fn update_geom(dpy: &Display) -> i32 {
 
             // new monitors if nn > n
             for _ in n..nn as usize {
-                // this is the C code:
-                // for (m = mons; m && m->next; m = m->next);
-                //
-                // so I think it's walking the linked list of monitors, leaving
-                // m as the last monitor. then it checks if (m) and sets m->next
-                // to createmon if m else mons = createmon, which I guess
-                // translates to always MONITORS.push(createmon()) in my case
-                MONS.push(Monitor::new());
+                let mut m = MONS;
+                while !m.is_null() && !(*m).next.is_null() {
+                    m = (*m).next;
+                }
+
+                if !m.is_null() {
+                    (*m).next = createmon();
+                } else {
+                    m = createmon();
+                }
             }
 
-            for (i, m) in MONS.iter_mut().enumerate() {
+            let mut i: usize = 0;
+            let mut m = MONS;
+            while i < nn as usize && !m.is_null() {
                 if i >= n
-                    || unique[i].x_org != m.mx
-                    || unique[i].y_org != m.my
-                    || unique[i].width != m.mw
-                    || unique[i].height != m.mh
+                    || unique[i].x_org != (*m).mx
+                    || unique[i].y_org != (*m).my
+                    || unique[i].width != (*m).mw
+                    || unique[i].height != (*m).mh
                 {
                     dirty = 1;
-                    m.num = i as i32;
-                    m.mx = unique[i].x_org;
-                    m.wx = unique[i].x_org;
-                    m.my = unique[i].y_org;
-                    m.wy = unique[i].y_org;
-                    m.mw = unique[i].width;
-                    m.ww = unique[i].width;
-                    m.mh = unique[i].height;
-                    m.wh = unique[i].height;
-                    m.update_bar_pos();
+                    (*m).num = i as i32;
+                    (*m).mx = unique[i].x_org;
+                    (*m).wx = unique[i].x_org;
+                    (*m).my = unique[i].y_org;
+                    (*m).wy = unique[i].y_org;
+                    (*m).mw = unique[i].width;
+                    (*m).ww = unique[i].width;
+                    (*m).mh = unique[i].height;
+                    (*m).wh = unique[i].height;
+                    update_bar_pos(m);
                 }
+
+                m = (*m).next;
+                i += 1;
             }
 
             // removed monitors if n > nn
-            for i in nn..n {
-                let m = MONS.last().unwrap();
-                for c in m.clients {
+            for i in nn..n as i32 {
+                let mut m = MONS;
+                while !m.is_null() && !(*m).next.is_null() {
+                    m = (*m).next;
+                }
+
+                let mut c = (*m).clients;
+                while !c.is_null() {
                     dirty = 1;
-                    c.detach_stack();
-                    c.mon = &MONS[0] as *const _;
-                    c.attach();
-                    c.attach_stack();
+                    (*m).clients = (*c).next;
+                    detach_stack(c);
+                    (*c).mon = MONS;
+                    attach(c);
+                    attach_stack(c);
                 }
                 if m == SELMON {
-                    SELMON = &MONS[0] as *const _;
+                    SELMON = MONS;
                 }
-                m.cleanup();
+                cleanupmon(m, dpy);
+            }
+        } else {
+            // default monitor setup
+            if MONS.is_null() {
+                MONS = createmon();
+            }
+
+            if (*MONS).mw != SW || (*MONS).mh != SH {
+                dirty = 1;
+                (*MONS).mw = SW;
+                (*MONS).ww = SW;
+                (*MONS).mh = SH;
+                (*MONS).wh = SH;
+                update_bar_pos(MONS);
             }
         }
+        if dirty != 0 {
+            SELMON = MONS;
+            SELMON = wintomon(dpy, ROOT);
+        }
     }
-    todo!()
+    dirty
+}
+
+fn wintomon(dpy: &Display, w: Window) -> *mut Monitor {
+    unsafe {
+        let mut x = 0;
+        let mut y = 0;
+        if w == ROOT && getrootptr(dpy, &mut x, &mut y) {
+            return recttomon(x, y, 1, 1);
+        }
+        let mut m = MONS;
+        while !m.is_null() {
+            if w == (*m).barwin {
+                return m;
+            }
+            m = (*m).next;
+        }
+
+        let c = wintoclient(w);
+        if !c.is_null() {
+            return (*c).mon;
+        }
+        SELMON
+    }
+}
+
+fn wintoclient(w: u64) -> *mut Client {
+    unsafe {
+        let mut m = MONS;
+        while !m.is_null() {
+            let mut c = (*m).clients;
+            while !c.is_null() {
+                if (*c).win == w {
+                    return c;
+                }
+                c = (*c).next;
+            }
+            m = (*m).next;
+        }
+    }
+    std::ptr::null_mut()
+}
+
+fn recttomon(x: i32, y: i32, w: i32, h: i32) -> *mut Monitor {
+    unsafe {
+        let mut r = SELMON;
+        let mut area = 0;
+
+        let mut m = MONS;
+        while !m.is_null() {
+            let a = intersect(x, y, w, h, m);
+            if a > area {
+                area = a;
+                r = m;
+            }
+            m = (*m).next;
+        }
+        r
+    }
+}
+
+#[inline]
+fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
+    unsafe {
+        i32::max(
+            0,
+            i32::min((x) + (w), (*m).wx as i32 + (*m).ww as i32)
+                - i32::max((x), (*m).wx as i32),
+        ) * i32::max(
+            0,
+            i32::min((y) + (h), (*m).wy as i32 + (*m).wh as i32)
+                - i32::max((y), (*m).wy as i32),
+        )
+    }
+}
+
+fn getrootptr(dpy: &Display, x: &mut i32, y: &mut i32) -> bool {
+    let mut di = 0;
+    let mut dui = 0;
+    let mut dummy = 0;
+    unsafe {
+        let ret = XQueryPointer(
+            dpy.inner, ROOT, &mut dummy, &mut dummy, x, y, &mut di, &mut di,
+            &mut dui,
+        );
+        ret != 0
+    }
+}
+
+fn cleanupmon(mon: *mut Monitor, dpy: &Display) {
+    unsafe {
+        if mon == MONS {
+            MONS = (*MONS).next;
+        } else {
+            let mut m = MONS;
+            while !m.is_null() && (*m).next != mon {
+                m = (*m).next;
+            }
+        }
+        XUnmapWindow(dpy.inner, (*mon).barwin);
+        XDestroyWindow(dpy.inner, (*mon).barwin);
+        Box::from_raw(mon); // free mon
+    }
+}
+
+fn attach_stack(c: *mut Client) {
+    unsafe {
+        (*c).snext = (*(*c).mon).stack;
+        (*(*c).mon).stack = c;
+    }
+}
+
+fn attach(c: *mut Client) {
+    unsafe {
+        (*c).next = (*(*c).mon).clients;
+        (*(*c).mon).clients = c;
+    }
+}
+
+fn detach_stack(c: *mut Client) {
+    unsafe {
+        let mut tc = (*(*c).mon).stack;
+        while !tc.is_null() && tc != c {
+            tc = (*tc).snext;
+        }
+        tc = (*c).snext;
+
+        if c == (*(*c).mon).sel {
+            let mut t = (*(*c).mon).stack;
+            while !t.is_null() && !is_visible(t) {
+                t = (*t).snext;
+            }
+            (*(*c).mon).sel = t;
+        }
+    }
+}
+
+/// this is actually a macro in the C code, but an inline function is probably
+/// as close as I can get
+#[inline]
+fn is_visible(c: *const Client) -> bool {
+    unsafe { ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags]) != 0 }
+}
+
+fn update_bar_pos(m: *mut Monitor) {
+    unsafe {
+        (*m).wy = (*m).my;
+        (*m).wh = (*m).mh;
+        if (*m).showbar {
+            (*m).wh -= BH;
+            (*m).by = if (*m).topbar {
+                (*m).wy
+            } else {
+                (*m).wy + (*m).wh
+            };
+            (*m).wy = if (*m).topbar { (*m).wy + BH } else { (*m).wy };
+        } else {
+            (*m).by = -BH;
+        }
+    }
 }
 
 fn isuniquegeom(
-    unique: &Vec<MaybeUninit<XineramaScreenInfo>>,
+    unique: &[MaybeUninit<XineramaScreenInfo>],
     n: isize,
     info: *const XineramaScreenInfo,
 ) -> bool {
