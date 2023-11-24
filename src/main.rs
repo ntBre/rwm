@@ -18,12 +18,13 @@ use x11::xinerama::{
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
     CWEventMask, CWOverrideRedirect, CopyFromParent, Display as XDisplay,
-    ExposureMask, False, ParentRelative, SubstructureRedirectMask, True,
-    XClassHint, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    ExposureMask, False, ParentRelative, SubstructureRedirectMask, Success,
+    True, XClassHint, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
     XDefaultScreen, XDefaultVisual, XDefineCursor, XDestroyWindow,
-    XDisplayHeight, XDisplayWidth, XFree, XInternAtom, XMapRaised,
-    XQueryPointer, XRootWindow, XSelectInput, XSetClassHint,
-    XSetWindowAttributes, XSync, XUnmapWindow,
+    XDisplayHeight, XDisplayWidth, XFree, XFreeStringList, XGetTextProperty,
+    XInternAtom, XMapRaised, XQueryPointer, XRootWindow, XSelectInput,
+    XSetClassHint, XSetWindowAttributes, XSync, XUnmapWindow,
+    XmbTextPropertyToTextList, XA_STRING, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -97,6 +98,8 @@ static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = std::ptr::null_mut();
 
 static mut SCREEN: i32 = 0;
+
+static mut STEXT: String = String::new();
 
 /// bar height
 static mut BH: i16 = 0;
@@ -339,10 +342,61 @@ fn setup(dpy: &Display) {
 
         // init bars
         updatebars(dpy);
-        // updatestatus();
+        updatestatus(dpy);
 
         // supporting window for NetWMCheck
     }
+}
+
+fn updatestatus(dpy: &Display) {
+    unsafe {
+        let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
+        if !c {
+            STEXT = "rwm-0.0.1".to_owned();
+        }
+        drawbar(SELMON);
+    }
+}
+
+fn gettextprop(
+    dpy: &Display,
+    w: Window,
+    atom: Atom,
+    text: &mut String,
+) -> bool {
+    let size = text.len();
+    if text.is_empty() {
+        return false;
+    }
+    unsafe {
+        let mut name = MaybeUninit::uninit();
+        let c = XGetTextProperty(dpy.inner, w, name.as_mut_ptr(), atom);
+        let name = name.assume_init();
+        if c != 0 || name.nitems == 0 {
+            return false;
+        }
+
+        let mut n = 0;
+        let mut list = std::ptr::null_mut();
+        if name.encoding == XA_STRING {
+            let t = CString::from_raw(name.value as *mut _);
+            *text = t.to_str().unwrap().to_owned();
+        } else if XmbTextPropertyToTextList(
+            dpy.inner,
+            &name,
+            list,
+            &mut n as *mut _,
+        ) >= Success as i32
+            && n > 0
+            && !list.is_null()
+        {
+            let t = CString::from_raw(list as *mut _);
+            *text = t.to_str().unwrap().to_owned();
+            XFreeStringList(*list);
+        }
+        XFree(name.value as *mut _);
+    }
+    true
 }
 
 fn updatebars(dpy: &Display) {
