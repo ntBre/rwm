@@ -25,3 +25,14 @@ pub const LAYOUTS: [Layout; 3] = [
         arrange: |_mon| todo!(),
     },
 ];
+
+const COL_GRAY1: &str = "#222222";
+const COL_GRAY2: &str = "#444444";
+const COL_GRAY3: &str = "#bbbbbb";
+const COL_GRAY4: &str = "#eeeeee";
+const COL_CYAN: &str = "#005577";
+
+pub const COLORS: [[&str; 3]; 2] = [
+    [COL_GRAY3, COL_GRAY1, COL_GRAY2], // SchemeNorm
+    [COL_GRAY4, COL_CYAN, COL_CYAN],   // SchemeSel
+];

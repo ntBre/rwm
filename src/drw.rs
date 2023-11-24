@@ -1,15 +1,19 @@
-use std::ffi::CString;
+use std::{ffi::CString, mem::MaybeUninit};
 
 use fontconfig_sys::{FcChar8, FcNameParse};
 use x11::{
-    xft::{FcPattern, XftColor, XftFont, XftFontClose, XftFontOpenName},
+    xft::{
+        FcPattern, XftColor, XftColorAllocName, XftFont, XftFontClose,
+        XftFontOpenName,
+    },
     xlib::{
         CapButt, Drawable, JoinMiter, LineSolid, XCreateFontCursor, XCreateGC,
-        XCreatePixmap, XDefaultDepth, XGCValues, XSetLineAttributes, GC,
+        XCreatePixmap, XDefaultColormap, XDefaultDepth, XDefaultVisual,
+        XGCValues, XSetLineAttributes, GC,
     },
 };
 
-use crate::{Cursor, Display};
+use crate::{Clr, Cursor, Display};
 
 pub struct Fnt<'a> {
     dpy: &'a Display,
@@ -109,5 +113,36 @@ impl<'a> Drw<'a> {
 
     pub(crate) fn cur_create(&self, shape: u8) -> Cursor {
         unsafe { XCreateFontCursor(self.dpy.inner, shape as u32) }
+    }
+
+    // TODO clrcount is the length of clrnames
+    pub(crate) fn scm_create(
+        &self,
+        clrnames: [&str; 3],
+        clrcount: i32,
+    ) -> Vec<Clr> {
+        let mut ret = Vec::new();
+        for i in 0..clrcount {
+            ret.push(self.clr_create(clrnames[i as usize]));
+        }
+        ret
+    }
+
+    fn clr_create(&self, clrname: &str) -> Clr {
+        unsafe {
+            let name = CString::new(clrname).unwrap();
+            let mut dest = MaybeUninit::uninit();
+            let ret = XftColorAllocName(
+                self.dpy.inner,
+                XDefaultVisual(self.dpy.inner, self.screen),
+                XDefaultColormap(self.dpy.inner, self.screen),
+                name.as_ptr(),
+                dest.as_mut_ptr(),
+            );
+            if ret != 0 {
+                panic!("cannot allocate color {clrname}");
+            }
+            dest.assume_init()
+        }
     }
 }

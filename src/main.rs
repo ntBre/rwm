@@ -5,20 +5,25 @@
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
 
-use config::{FONTS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
+use config::{COLORS, FONTS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
 use drw::Drw;
 use libc::{
-    sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART,
-    SIGCHLD, SIG_IGN, WNOHANG,
+    c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT,
+    SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
+use x11::xft::XftColor;
 use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
 use x11::xlib::{
-    BadAccess, BadDrawable, BadMatch, BadWindow, Display as XDisplay, False,
-    SubstructureRedirectMask, XDefaultRootWindow, XDefaultScreen,
-    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XInternAtom,
-    XQueryPointer, XRootWindow, XSelectInput, XSync, XUnmapWindow,
+    BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
+    CWEventMask, CWOverrideRedirect, CopyFromParent, Display as XDisplay,
+    ExposureMask, False, ParentRelative, SubstructureRedirectMask, True,
+    XClassHint, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDestroyWindow,
+    XDisplayHeight, XDisplayWidth, XFree, XInternAtom, XMapRaised,
+    XQueryPointer, XRootWindow, XSelectInput, XSetClassHint,
+    XSetWindowAttributes, XSync, XUnmapWindow,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -89,8 +94,9 @@ static mut XERRORXLIB: Option<
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
-/// again using a vec instead of a linked list
 static mut MONS: *mut Monitor = std::ptr::null_mut();
+
+static mut SCREEN: i32 = 0;
 
 /// bar height
 static mut BH: i16 = 0;
@@ -103,6 +109,9 @@ static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
 static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
 
 static mut CURSOR: [Cursor; Cur::Last as usize] = [0; Cur::Last as usize];
+
+/// color scheme
+static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
 
 struct Client {
     name: String,
@@ -143,6 +152,7 @@ struct Client {
 type Window = u64;
 type Atom = u64;
 type Cursor = u64;
+type Clr = XftColor;
 
 struct Layout {
     symbol: &'static str,
@@ -276,11 +286,11 @@ fn setup(dpy: &Display) {
         while waitpid(-1, std::ptr::null::<c_int>() as *mut _, WNOHANG) > 0 {}
 
         // init screen
-        let screen = XDefaultScreen(dpy.inner);
-        let sw = XDisplayWidth(dpy.inner, screen);
-        let sh = XDisplayHeight(dpy.inner, screen);
-        ROOT = XRootWindow(dpy.inner, screen);
-        let mut drw = Drw::new(dpy, screen, ROOT, sw as usize, sh as usize);
+        SCREEN = XDefaultScreen(dpy.inner);
+        let sw = XDisplayWidth(dpy.inner, SCREEN);
+        let sh = XDisplayHeight(dpy.inner, SCREEN);
+        ROOT = XRootWindow(dpy.inner, SCREEN);
+        let mut drw = Drw::new(dpy, SCREEN, ROOT, sw as usize, sh as usize);
 
         drw.fontset_create(FONTS).expect("no fonts could be loaded");
         let lrpa = drw.fonts[0].h;
@@ -320,6 +330,73 @@ fn setup(dpy: &Display) {
         CURSOR[Cur::Normal as usize] = drw.cur_create(XC_LEFT_PTR);
         CURSOR[Cur::Resize as usize] = drw.cur_create(XC_SIZING);
         CURSOR[Cur::Move as usize] = drw.cur_create(XC_FLEUR);
+
+        // init appearance
+        SCHEME = Vec::with_capacity(COLORS.len());
+        for i in 0..COLORS.len() {
+            SCHEME.push(drw.scm_create(COLORS[i], 3));
+        }
+
+        // init bars
+        updatebars(dpy);
+        // updatestatus();
+
+        // supporting window for NetWMCheck
+    }
+}
+
+fn updatebars(dpy: &Display) {
+    let mut wa = XSetWindowAttributes {
+        background_pixmap: ParentRelative as u64,
+        event_mask: ButtonPressMask | ExposureMask,
+        override_redirect: True,
+        // everything else should be uninit I guess
+        background_pixel: 0,
+        border_pixmap: 0,
+        border_pixel: 0,
+        bit_gravity: 0,
+        win_gravity: 0,
+        backing_store: 0,
+        backing_planes: 0,
+        backing_pixel: 0,
+        save_under: 0,
+        do_not_propagate_mask: 0,
+        colormap: 0,
+        cursor: 0,
+    };
+    let s = CString::new("rwm").unwrap();
+    // I think this is technically a memory leak, but who cares about "leaking"
+    // two 3 character strings
+    let mut ch = XClassHint {
+        res_name: s.clone().into_raw(),
+        res_class: s.into_raw(),
+    };
+
+    unsafe {
+        let mut m = MONS;
+        while !m.is_null() {
+            if (*m).barwin != 0 {
+                continue;
+            }
+            (*m).barwin = XCreateWindow(
+                dpy.inner,
+                ROOT,
+                (*m).wx as c_int,
+                (*m).by as c_int,
+                (*m).ww as c_uint,
+                BH as c_uint,
+                0,
+                XDefaultDepth(dpy.inner, SCREEN),
+                CopyFromParent as c_uint,
+                XDefaultVisual(dpy.inner, SCREEN),
+                CWOverrideRedirect | CWBackPixmap | CWEventMask,
+                &mut wa as *mut _,
+            );
+            XDefineCursor(dpy.inner, (*m).barwin, CURSOR[Cur::Normal as usize]);
+            XMapRaised(dpy.inner, (*m).barwin);
+            XSetClassHint(dpy.inner, (*m).barwin, &mut ch as *mut _);
+            m = (*m).next;
+        }
     }
 }
 
