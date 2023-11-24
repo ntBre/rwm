@@ -2,7 +2,7 @@
 
 #![allow(unused)]
 
-use std::ffi::c_int;
+use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
 
 use config::{FONTS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
@@ -17,8 +17,8 @@ use x11::xinerama::{
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, Display as XDisplay, False,
     SubstructureRedirectMask, XDefaultRootWindow, XDefaultScreen,
-    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XQueryPointer,
-    XRootWindow, XSelectInput, XSync, XUnmapWindow,
+    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XInternAtom,
+    XQueryPointer, XRootWindow, XSelectInput, XSync, XUnmapWindow,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -243,6 +243,10 @@ fn setup(dpy: &Display) {
         let lrpa = drw.fonts[0].h;
         BH = (drw.fonts[0].h + 2) as i16;
         updategeom(dpy);
+
+        // init atoms
+        let s = CString::new("UTF8_STRING").unwrap();
+        let utf8string = XInternAtom(dpy.inner, s.as_ptr(), False);
     }
 }
 
