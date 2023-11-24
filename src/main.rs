@@ -51,6 +51,11 @@ const X_GRAB_BUTTON: u8 = 28;
 const X_GRAB_KEY: u8 = 33;
 const X_COPY_AREA: u8 = 62;
 
+// from cursorfont.h
+const XC_LEFT_PTR: u8 = 68;
+const XC_SIZING: u8 = 120;
+const XC_FLEUR: u8 = 52;
+
 extern "C" fn xerror(dpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
     unsafe {
         let e = *ee;
@@ -94,6 +99,11 @@ static mut SH: i16 = 0;
 
 static mut ROOT: Window = 0;
 
+static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
+static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
+
+static mut CURSOR: [Cursor; Cur::Last as usize] = [0; Cur::Last as usize];
+
 struct Client {
     name: String,
     mina: f64,
@@ -131,6 +141,8 @@ struct Client {
 }
 
 type Window = u64;
+type Atom = u64;
+type Cursor = u64;
 
 struct Layout {
     symbol: &'static str,
@@ -217,6 +229,37 @@ fn checkotherwm(dpy: &Display) {
     }
 }
 
+#[repr(C)]
+enum WM {
+    Protocols,
+    Delete,
+    State,
+    TakeFocus,
+    Last,
+}
+
+#[repr(C)]
+enum Net {
+    Supported,
+    WMName,
+    WMState,
+    WMCheck,
+    WMFullscreen,
+    ActiveWindow,
+    WMWindowType,
+    WMWindowTypeDialog,
+    ClientList,
+    Last,
+}
+
+#[repr(C)]
+enum Cur {
+    Normal,
+    Resize,
+    Move,
+    Last,
+}
+
 fn setup(dpy: &Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
 
@@ -244,9 +287,39 @@ fn setup(dpy: &Display) {
         BH = (drw.fonts[0].h + 2) as i16;
         updategeom(dpy);
 
-        // init atoms
+        // init atoms - I really hope these CStrings live long enough.
         let s = CString::new("UTF8_STRING").unwrap();
         let utf8string = XInternAtom(dpy.inner, s.as_ptr(), False);
+
+        for (k, s) in [
+            (WM::Protocols, "WM_PROTOCOLS"),
+            (WM::Delete, "WM_DELETE_WINDOW"),
+            (WM::State, "WM_STATE"),
+            (WM::TakeFocus, "WM_TAKE_FOCUS"),
+        ] {
+            let s = CString::new(s).unwrap();
+            WMATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
+        }
+
+        for (k, s) in [
+            (Net::ActiveWindow, "_NET_ACTIVE_WINDOW"),
+            (Net::Supported, "_NET_SUPPORTED"),
+            (Net::WMName, "_NET_WM_NAME"),
+            (Net::WMState, "_NET_WM_STATE"),
+            (Net::WMCheck, "_NET_SUPPORTING_WM_CHECK"),
+            (Net::WMFullscreen, "_NET_WM_STATE_FULLSCREEN"),
+            (Net::WMWindowType, "_NET_WM_WINDOW_TYPE"),
+            (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG"),
+            (Net::ClientList, "_NET_CLIENT_LIST"),
+        ] {
+            let s = CString::new(s).unwrap();
+            NETATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
+        }
+
+        // init cursors
+        CURSOR[Cur::Normal as usize] = drw.cur_create(XC_LEFT_PTR);
+        CURSOR[Cur::Resize as usize] = drw.cur_create(XC_SIZING);
+        CURSOR[Cur::Move as usize] = drw.cur_create(XC_FLEUR);
     }
 }
 

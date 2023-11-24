@@ -4,12 +4,12 @@ use fontconfig_sys::{FcChar8, FcNameParse};
 use x11::{
     xft::{FcPattern, XftColor, XftFont, XftFontClose, XftFontOpenName},
     xlib::{
-        CapButt, Drawable, JoinMiter, LineSolid, XCreateGC, XCreatePixmap,
-        XDefaultDepth, XGCValues, XSetLineAttributes, GC,
+        CapButt, Drawable, JoinMiter, LineSolid, XCreateFontCursor, XCreateGC,
+        XCreatePixmap, XDefaultDepth, XGCValues, XSetLineAttributes, GC,
     },
 };
 
-use crate::Display;
+use crate::{Cursor, Display};
 
 pub struct Fnt<'a> {
     dpy: &'a Display,
@@ -105,5 +105,9 @@ impl<'a> Drw<'a> {
             xfont,
             pattern: pattern as *mut FcPattern,
         })
+    }
+
+    pub(crate) fn cur_create(&self, shape: u8) -> Cursor {
+        unsafe { XCreateFontCursor(self.dpy.inner, shape as u32) }
     }
 }
