@@ -643,6 +643,9 @@ pub fn setlayout(arg: Arg) {
                 (*SELMON).sellt ^= 1;
             }
             (*SELMON).lt[(*SELMON).sellt] = lt;
+        } else {
+            // same as inner if above but not sure how to chain them otherwise
+            (*SELMON).sellt ^= 1;
         }
         (*SELMON).ltsymbol = (*(*SELMON).lt[(*SELMON).sellt]).symbol.to_owned();
         if !(*SELMON).sel.is_null() {
