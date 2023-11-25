@@ -9,11 +9,12 @@ use x11::{
     xlib::{
         CapButt, Drawable, JoinMiter, LineSolid, XCreateFontCursor, XCreateGC,
         XCreatePixmap, XDefaultColormap, XDefaultDepth, XDefaultVisual,
-        XGCValues, XSetLineAttributes, GC,
+        XDrawRectangle, XFillRectangle, XGCValues, XSetForeground,
+        XSetLineAttributes, GC,
     },
 };
 
-use crate::{Clr, Cursor, Display};
+use crate::{Clr, Col, Cursor, Display};
 
 pub struct Fnt {
     dpy: *mut Display,
@@ -181,14 +182,49 @@ impl Drw {
 
     pub(crate) fn rect(
         &self,
-        i32: i32,
-        boxs: usize,
-        boxw_1: usize,
-        boxw_2: usize,
-        i_1: bool,
-        i_2: bool,
+        x: i32,
+        y: usize,
+        w: usize,
+        h: usize,
+        filled: bool,
+        invert: bool,
     ) {
-        todo!()
+        if self.scheme.is_null() {
+            return;
+        }
+        unsafe {
+            XSetForeground(
+                (*self.dpy).inner,
+                self.gc,
+                (*if invert {
+                    self.scheme.offset(Col::Bg as isize)
+                } else {
+                    self.scheme.offset(Col::Fg as isize)
+                })
+                .pixel,
+            );
+            if filled {
+                XFillRectangle(
+                    (*self.dpy).inner,
+                    self.drawable,
+                    self.gc,
+                    x,
+                    y as i32,
+                    w as u32,
+                    h as u32,
+                );
+            } else {
+                XDrawRectangle(
+                    (*self.dpy).inner,
+                    self.drawable,
+                    self.gc,
+                    x,
+                    y as i32,
+                    w as u32 - 1,
+                    h as u32 - 1,
+                );
+            }
+        }
     }
 
     pub(crate) fn map(

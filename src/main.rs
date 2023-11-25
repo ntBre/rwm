@@ -284,6 +284,14 @@ enum Scheme {
     Sel,
 }
 
+/// Color scheme index
+#[repr(C)]
+enum Col {
+    Fg,
+    Bg,
+    Border,
+}
+
 fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
 
