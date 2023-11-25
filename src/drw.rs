@@ -153,4 +153,52 @@ impl Drw {
             dest.assume_init()
         }
     }
+
+    pub(crate) fn setscheme(&mut self, scm: &mut [XftColor]) {
+        self.scheme = scm.as_mut_ptr();
+    }
+
+    pub(crate) fn textw(&self, stext: &str, lrpad: usize) -> usize {
+        self.fontset_getwidth(stext) + lrpad
+    }
+
+    fn fontset_getwidth(&self, stext: &str) -> usize {
+        self.text(0, 0, 0, 0, 0, stext, false)
+    }
+
+    pub(crate) fn text(
+        &self,
+        x: i32,
+        y: i32,
+        w: usize,
+        h: usize,
+        lpad: usize,
+        text: &str,
+        invert: bool,
+    ) -> usize {
+        todo!()
+    }
+
+    pub(crate) fn rect(
+        &self,
+        i32: i32,
+        boxs: usize,
+        boxw_1: usize,
+        boxw_2: usize,
+        i_1: bool,
+        i_2: bool,
+    ) {
+        todo!()
+    }
+
+    pub(crate) fn map(
+        &self,
+        barwin: u64,
+        arg_1: i32,
+        arg_2: i32,
+        ww: i16,
+        bh: i16,
+    ) {
+        todo!()
+    }
 }

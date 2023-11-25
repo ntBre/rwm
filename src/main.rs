@@ -28,6 +28,8 @@ use x11::xlib::{
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
+use crate::config::TAGS;
+
 struct Display {
     inner: *mut XDisplay,
 }
@@ -115,6 +117,9 @@ static mut CURSOR: [Cursor; Cur::Last as usize] = [0; Cur::Last as usize];
 
 /// color scheme
 static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
+
+/// sum of left and right padding for text
+static mut LRPAD: usize = 0;
 
 struct Client {
     name: String,
@@ -273,6 +278,12 @@ enum Cur {
     Last,
 }
 
+#[repr(C)]
+enum Scheme {
+    Norm,
+    Sel,
+}
+
 fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
 
@@ -342,13 +353,13 @@ fn setup(dpy: &mut Display) {
 
         // init bars
         updatebars(dpy);
-        updatestatus(dpy, &drw);
+        updatestatus(dpy, &mut drw);
 
         // supporting window for NetWMCheck
     }
 }
 
-fn updatestatus(dpy: &Display, drw: &Drw) {
+fn updatestatus(dpy: &Display, drw: &mut Drw) {
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
         if !c {
@@ -358,11 +369,117 @@ fn updatestatus(dpy: &Display, drw: &Drw) {
     }
 }
 
-fn drawbar(selmon: *mut Monitor, drw: &Drw) {
+fn drawbar(m: *mut Monitor, drw: &mut Drw) {
     unsafe {
-        let boxs = (*drw.fonts).h;
+        let boxs = (*drw.fonts).h / 9;
+        let boxw = (*drw.fonts).h / 6 + 2;
+        let mut occ = 0;
+        let mut urg = 0;
+        let mut tw = 0;
+
+        if !(*m).showbar {
+            return;
+        }
+
+        // draw status first so it can be overdrawn by tags later
+        if m == SELMON {
+            // status is only drawn on selected monitor
+            drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+            tw = drw.textw(&STEXT, LRPAD) - LRPAD + 2; // 2px right padding
+            drw.text(
+                ((*m).ww - tw as i16) as i32,
+                0,
+                tw,
+                BH as usize,
+                0,
+                &STEXT,
+                false,
+            );
+        }
+
+        let mut c = (*m).clients;
+        while !c.is_null() {
+            occ |= (*c).tags;
+            if (*c).isurgent {
+                urg |= (*c).tags;
+            }
+        }
+
+        let mut x = 0;
+        for i in 0..TAGS.len() {
+            let w = drw.textw(&TAGS[i], LRPAD);
+            drw.setscheme(
+                &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
+                    Scheme::Sel as usize
+                } else {
+                    Scheme::Norm as usize
+                }],
+            );
+            drw.text(
+                x,
+                0,
+                w,
+                BH as usize,
+                LRPAD / 2,
+                &TAGS[i],
+                (urg & 1 << i) != 0,
+            );
+
+            if (occ & 1 << i) != 0 {
+                drw.rect(
+                    x + boxs as i32,
+                    boxs,
+                    boxw,
+                    boxw,
+                    m == SELMON
+                        && !(*SELMON).sel.is_null()
+                        && ((*(*SELMON).sel).tags & 1 << i) != 0,
+                    (urg & 1 << i) != 0,
+                );
+            }
+            x += w as i32;
+        }
+        let w = drw.textw(&(*m).ltsymbol, LRPAD);
+        drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+        let x =
+            drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, false);
+
+        let w = (*m).ww - tw as i16 - x as i16;
+        if w > BH {
+            if !(*m).sel.is_null() {
+                drw.setscheme(
+                    &mut SCHEME[if m == SELMON {
+                        Scheme::Sel
+                    } else {
+                        Scheme::Norm
+                    } as usize],
+                );
+                drw.text(
+                    x as i32,
+                    0,
+                    w as usize,
+                    BH as usize,
+                    LRPAD / 2,
+                    &(*(*m).sel).name,
+                    false,
+                );
+                if (*(*m).sel).isfloating {
+                    drw.rect(
+                        (x + boxs) as i32,
+                        boxs,
+                        boxw,
+                        boxw,
+                        (*(*m).sel).isfixed,
+                        false,
+                    );
+                }
+            } else {
+                drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+                drw.rect(x as i32, 0, w as usize, BH as usize, true, true);
+            }
+        }
+        drw.map((*m).barwin, 0, 0, (*m).ww, BH);
     }
-    todo!()
 }
 
 fn gettextprop(

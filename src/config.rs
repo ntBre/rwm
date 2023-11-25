@@ -36,3 +36,5 @@ pub const COLORS: [[&str; 3]; 2] = [
     [COL_GRAY3, COL_GRAY1, COL_GRAY2], // SchemeNorm
     [COL_GRAY4, COL_CYAN, COL_CYAN],   // SchemeSel
 ];
+
+pub const TAGS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
