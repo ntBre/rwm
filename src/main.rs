@@ -25,11 +25,11 @@ use x11::xlib::{
     XChangeWindowAttributes, XClassHint, XCreateSimpleWindow, XCreateWindow,
     XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
     XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayWidth, XFree, XFreeStringList, XGetTextProperty, XInternAtom,
-    XMapRaised, XQueryPointer, XRootWindow, XSelectInput, XSetClassHint,
-    XSetInputFocus, XSetWindowAttributes, XSetWindowBorder, XSync,
-    XUnmapWindow, XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW,
-    XA_WM_NAME,
+    XDisplayWidth, XFree, XFreeStringList, XGetTextProperty, XGetWMHints,
+    XInternAtom, XMapRaised, XQueryPointer, XRootWindow, XSelectInput,
+    XSetClassHint, XSetInputFocus, XSetWMHints, XSetWindowAttributes,
+    XSetWindowBorder, XSync, XUnmapWindow, XUrgencyHint,
+    XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -457,7 +457,7 @@ fn focus(dpy: &Display, c: *mut Client, drw: &mut Drw) {
                 SELMON = (*c).mon;
             }
             if (*c).isurgent {
-                seturgent(c, false);
+                seturgent(dpy, c, false);
             }
             detach_stack(c);
             attach_stack(c);
@@ -523,8 +523,21 @@ fn grabbuttons(c: *mut Client, arg: i32) {
     todo!()
 }
 
-fn seturgent(c: *mut Client, arg: bool) {
-    todo!()
+fn seturgent(dpy: &Display, c: *mut Client, urg: bool) {
+    unsafe {
+        (*c).isurgent = urg;
+        let wmh = XGetWMHints(dpy.inner, (*c).win);
+        if wmh.is_null() {
+            return;
+        }
+        (*wmh).flags = if urg {
+            (*wmh).flags | XUrgencyHint
+        } else {
+            (*wmh).flags & !XUrgencyHint
+        };
+        XSetWMHints(dpy.inner, (*c).win, wmh);
+        XFree(wmh.cast());
+    }
 }
 
 fn unfocus(sel: *mut Client, arg: i32) {
