@@ -17,26 +17,28 @@ use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
 use x11::xlib::{
-    BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
-    CWCursor, CWEventMask, CWOverrideRedirect, ClientMessage, CopyFromParent,
-    CurrentTime, Display as XDisplay, EnterWindowMask, ExposureMask, False,
-    LeaveWindowMask, NoEventMask, ParentRelative, PointerMotionMask,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XChangeProperty, XChangeWindowAttributes, XClassHint,
-    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
-    XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetModifierMapping, XGetTextProperty,
-    XGetWMHints, XGetWMProtocols, XInternAtom, XKeysymToKeycode, XMapRaised,
-    XQueryPointer, XRootWindow, XSelectInput, XSendEvent, XSetClassHint,
-    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync,
+    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow,
+    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWCursor, CWEventMask,
+    CWOverrideRedirect, ClientMessage, CopyFromParent, CurrentTime,
+    Display as XDisplay, EnterWindowMask, ExposureMask, False, GrabModeAsync,
+    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, ParentRelative,
+    PointerMotionMask, PropModeReplace, PropertyChangeMask,
+    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, XChangeProperty,
+    XChangeWindowAttributes, XClassHint, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
+    XGetModifierMapping, XGetTextProperty, XGetWMHints, XGetWMProtocols,
+    XGrabButton, XInternAtom, XKeysymToKeycode, XMapRaised, XQueryPointer,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
+    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton,
     XUnmapWindow, XUrgencyHint, XmbTextPropertyToTextList, XA_ATOM, XA_STRING,
     XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
-use crate::config::TAGS;
+use crate::config::{BUTTONS, TAGS};
 
 struct Display {
     inner: *mut XDisplay,
@@ -130,6 +132,23 @@ static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
 /// sum of left and right padding for text
 static mut LRPAD: usize = 0;
 
+const NUMLOCKMASK: u32 = 0;
+const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
+
+pub enum Arg {
+    Uint(usize),
+    Str(&'static str),
+    Layout(&'static Layout),
+}
+
+pub struct Button {
+    pub click: Clk,
+    pub mask: u32,
+    pub button: u32,
+    pub func: fn(arg: Arg),
+    pub arg: Arg,
+}
+
 struct Client {
     name: String,
     mina: f64,
@@ -171,7 +190,7 @@ type Atom = u64;
 type Cursor = u64;
 type Clr = XftColor;
 
-struct Layout {
+pub struct Layout {
     symbol: &'static str,
     arrange: fn(mon: &Monitor),
 }
@@ -299,6 +318,18 @@ enum Col {
     Fg,
     Bg,
     Border,
+}
+
+#[derive(PartialEq)]
+#[repr(C)]
+pub enum Clk {
+    TagBar,
+    LtSymbol,
+    StatusText,
+    WinTitle,
+    ClientWin,
+    RootWin,
+    Last,
 }
 
 fn setup(dpy: &mut Display) {
@@ -464,7 +495,7 @@ fn focus(dpy: &Display, c: *mut Client, drw: &mut Drw) {
             }
             detach_stack(c);
             attach_stack(c);
-            grabbuttons(dpy, c, 1);
+            grabbuttons(dpy, c, true);
             XSetWindowBorder(
                 dpy.inner,
                 (*c).win,
@@ -551,10 +582,56 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
     }
 }
 
-fn grabbuttons(dpy: &Display, c: *mut Client, arg: i32) {
+fn grabbuttons(dpy: &Display, c: *mut Client, focused: bool) {
     updatenumlockmask(dpy);
-    todo!()
+    let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+    unsafe {
+        XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
+        if !focused {
+            XGrabButton(
+                dpy.inner,
+                AnyButton as u32,
+                AnyModifier,
+                (*c).win,
+                False,
+                BUTTONMASK as u32,
+                GrabModeSync,
+                GrabModeSync,
+                0,
+                0,
+            );
+        }
+        for i in 0..BUTTONS.len() {
+            if BUTTONS[i].click == Clk::ClientWin {
+                for j in 0..modifiers.len() {
+                    XGrabButton(
+                        dpy.inner,
+                        BUTTONS[i].button as u32,
+                        (BUTTONS[i].mask | modifiers[j]) as u32,
+                        (*c).win,
+                        False,
+                        BUTTONMASK as u32,
+                        GrabModeAsync,
+                        GrabModeSync,
+                        0,
+                        0,
+                    );
+                }
+            }
+        }
+    }
 }
+
+pub fn setlayout(arg: Arg) {}
+pub fn zoom(arg: Arg) {}
+pub fn spawn(arg: Arg) {}
+pub fn movemouse(arg: Arg) {}
+pub fn togglefloating(arg: Arg) {}
+pub fn resizemouse(arg: Arg) {}
+pub fn view(arg: Arg) {}
+pub fn toggleview(arg: Arg) {}
+pub fn tag(arg: Arg) {}
+pub fn toggletag(arg: Arg) {}
 
 fn grabkeys() {
     todo!()
@@ -600,7 +677,7 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
     if c.is_null() {
         return;
     }
-    grabbuttons(dpy, c, 0);
+    grabbuttons(dpy, c, false);
     unsafe {
         XSetWindowBorder(
             dpy.inner,
