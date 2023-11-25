@@ -17,30 +17,31 @@ use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
 use x11::xlib::{
-    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow,
+    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow, Below,
     ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWCursor, CWEventMask,
-    CWOverrideRedirect, ClientMessage, CopyFromParent, CurrentTime,
-    Display as XDisplay, EnterWindowMask, ExposureMask, False, GrabModeAsync,
-    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, ParentRelative,
-    PointerMotionMask, PropModeReplace, PropertyChangeMask,
+    CWOverrideRedirect, CWSibling, CWStackMode, ClientMessage, CopyFromParent,
+    CurrentTime, Display as XDisplay, EnterWindowMask, ExposureMask, False,
+    GrabModeAsync, GrabModeSync, LeaveWindowMask, LockMask, NoEventMask,
+    ParentRelative, PointerMotionMask, PropModeReplace, PropertyChangeMask,
     RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
     SubstructureRedirectMask, Success, True, XChangeProperty,
-    XChangeWindowAttributes, XClassHint, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
-    XGetModifierMapping, XGetTextProperty, XGetWMHints, XGetWMProtocols,
-    XGrabButton, XInternAtom, XKeysymToKeycode, XMapRaised, XQueryPointer,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
-    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton,
-    XUnmapWindow, XUrgencyHint, XmbTextPropertyToTextList, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XConfigureWindow,
+    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
+    XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent, XFree,
+    XFreeModifiermap, XFreeStringList, XGetModifierMapping, XGetTextProperty,
+    XGetWMHints, XGetWMProtocols, XGrabButton, XInternAtom, XKeysymToKeycode,
+    XMapRaised, XQueryPointer, XRaiseWindow, XRootWindow, XSelectInput,
+    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton, XUnmapWindow,
+    XUrgencyHint, XWindowChanges, XmbTextPropertyToTextList, XA_ATOM,
+    XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
 use crate::config::{BUTTONS, TAGS};
 
-struct Display {
+pub struct Display {
     inner: *mut XDisplay,
 }
 
@@ -147,7 +148,7 @@ pub struct Button {
     pub click: Clk,
     pub mask: u32,
     pub button: u32,
-    pub func: fn(arg: Arg),
+    pub func: fn(dpy: &Display, arg: Arg),
     pub arg: Arg,
 }
 
@@ -636,7 +637,7 @@ fn grabbuttons(dpy: &Display, c: *mut Client, focused: bool) {
     }
 }
 
-pub fn setlayout(arg: Arg) {
+pub fn setlayout(dpy: &Display, arg: Arg) {
     unsafe {
         if let Arg::Layout(lt) = arg {
             if lt as *const _ != (*SELMON).lt[(*SELMON).sellt] {
@@ -649,14 +650,14 @@ pub fn setlayout(arg: Arg) {
         }
         (*SELMON).ltsymbol = (*(*SELMON).lt[(*SELMON).sellt]).symbol.to_owned();
         if !(*SELMON).sel.is_null() {
-            arrange(SELMON);
+            arrange(dpy, SELMON);
         } else {
             drawbar(SELMON);
         }
     }
 }
 
-fn arrange(mut m: *mut Monitor) {
+fn arrange(dpy: &Display, mut m: *mut Monitor) {
     unsafe {
         if !m.is_null() {
             showhide((*m).stack);
@@ -670,7 +671,7 @@ fn arrange(mut m: *mut Monitor) {
 
         if !m.is_null() {
             arrangemon(m);
-            restack(m);
+            restack(dpy, m);
         } else {
             m = MONS;
             while !m.is_null() {
@@ -687,23 +688,55 @@ fn arrangemon(m: *mut Monitor) {
     }
 }
 
-fn restack(m: *mut Monitor) {
-    todo!()
+fn restack(dpy: &Display, m: *mut Monitor) {
+    drawbar(m);
+    unsafe {
+        if (*m).sel.is_null() {
+            return;
+        }
+        if (*(*m).sel).isfloating {
+            // supposed to be or arrange is null, but we only have empty arrange
+            // instead
+            XRaiseWindow(dpy.inner, (*(*m).sel).win);
+        }
+        let mut wc = MaybeUninit::uninit();
+        let mut wc: XWindowChanges = wc.assume_init();
+        wc.stack_mode = Below;
+        wc.sibling = (*m).barwin;
+        let mut c = (*m).stack;
+        while !c.is_null() {
+            if !(*c).isfloating && is_visible(c) {
+                XConfigureWindow(
+                    dpy.inner,
+                    (*c).win,
+                    (CWSibling | CWStackMode) as u32,
+                    &mut wc as *mut _,
+                );
+                wc.sibling = (*c).win;
+            }
+            c = (*c).snext;
+        }
+        XSync(dpy.inner, False);
+        let mut ev: XEvent = MaybeUninit::uninit().assume_init();
+        while XCheckMaskEvent(dpy.inner, EnterWindowMask, &mut ev as *mut _)
+            != 0
+        {}
+    }
 }
 
 fn showhide(stack: *mut Client) {
     todo!()
 }
 
-pub fn zoom(arg: Arg) {}
-pub fn spawn(arg: Arg) {}
-pub fn movemouse(arg: Arg) {}
-pub fn togglefloating(arg: Arg) {}
-pub fn resizemouse(arg: Arg) {}
-pub fn view(arg: Arg) {}
-pub fn toggleview(arg: Arg) {}
-pub fn tag(arg: Arg) {}
-pub fn toggletag(arg: Arg) {}
+pub fn zoom(dpy: &Display, arg: Arg) {}
+pub fn spawn(dpy: &Display, arg: Arg) {}
+pub fn movemouse(dpy: &Display, arg: Arg) {}
+pub fn togglefloating(dpy: &Display, arg: Arg) {}
+pub fn resizemouse(dpy: &Display, arg: Arg) {}
+pub fn view(dpy: &Display, arg: Arg) {}
+pub fn toggleview(dpy: &Display, arg: Arg) {}
+pub fn tag(dpy: &Display, arg: Arg) {}
+pub fn toggletag(dpy: &Display, arg: Arg) {}
 
 fn grabkeys() {
     todo!()
