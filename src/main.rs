@@ -11,6 +11,7 @@ use libc::{
     c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT,
     SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
+use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
@@ -26,11 +27,12 @@ use x11::xlib::{
     XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
     XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
     XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent, XFree,
-    XFreeStringList, XGetTextProperty, XGetWMHints, XGetWMProtocols,
-    XInternAtom, XMapRaised, XQueryPointer, XRootWindow, XSelectInput,
-    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSync, XUnmapWindow, XUrgencyHint,
-    XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    XFreeModifiermap, XFreeStringList, XGetModifierMapping, XGetTextProperty,
+    XGetWMHints, XGetWMProtocols, XInternAtom, XKeysymToKeycode, XMapRaised,
+    XQueryPointer, XRootWindow, XSelectInput, XSendEvent, XSetClassHint,
+    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync,
+    XUnmapWindow, XUrgencyHint, XmbTextPropertyToTextList, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -462,7 +464,7 @@ fn focus(dpy: &Display, c: *mut Client, drw: &mut Drw) {
             }
             detach_stack(c);
             attach_stack(c);
-            grabbuttons(c, 1);
+            grabbuttons(dpy, c, 1);
             XSetWindowBorder(
                 dpy.inner,
                 (*c).win,
@@ -549,12 +551,32 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
     }
 }
 
-fn grabbuttons(c: *mut Client, arg: i32) {
+fn grabbuttons(dpy: &Display, c: *mut Client, arg: i32) {
+    updatenumlockmask(dpy);
     todo!()
 }
 
 fn grabkeys() {
     todo!()
+}
+
+fn updatenumlockmask(dpy: &Display) {
+    let mut numlockmask = 0;
+    unsafe {
+        let modmap = XGetModifierMapping(dpy.inner);
+        for i in 0..8 {
+            for j in 0..(*modmap).max_keypermod {
+                if *(*modmap)
+                    .modifiermap
+                    .offset((i * (*modmap).max_keypermod + j) as isize)
+                    == XKeysymToKeycode(dpy.inner, XK_Num_Lock as u64)
+                {
+                    numlockmask = (1 << i);
+                }
+            }
+        }
+        XFreeModifiermap(modmap);
+    }
 }
 
 fn seturgent(dpy: &Display, c: *mut Client, urg: bool) {
@@ -578,7 +600,7 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
     if c.is_null() {
         return;
     }
-    grabbuttons(c, 0);
+    grabbuttons(dpy, c, 0);
     unsafe {
         XSetWindowBorder(
             dpy.inner,
