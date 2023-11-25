@@ -7,10 +7,10 @@ use x11::{
         XftFontOpenName,
     },
     xlib::{
-        CapButt, Drawable, JoinMiter, LineSolid, XCreateFontCursor, XCreateGC,
-        XCreatePixmap, XDefaultColormap, XDefaultDepth, XDefaultVisual,
-        XDrawRectangle, XFillRectangle, XGCValues, XSetForeground,
-        XSetLineAttributes, GC,
+        CapButt, Drawable, False, JoinMiter, LineSolid, XCopyArea,
+        XCreateFontCursor, XCreateGC, XCreatePixmap, XDefaultColormap,
+        XDefaultDepth, XDefaultVisual, XDrawRectangle, XFillRectangle,
+        XGCValues, XSetForeground, XSetLineAttributes, XSync, GC,
     },
 };
 
@@ -227,14 +227,21 @@ impl Drw {
         }
     }
 
-    pub(crate) fn map(
-        &self,
-        barwin: u64,
-        arg_1: i32,
-        arg_2: i32,
-        ww: i16,
-        bh: i16,
-    ) {
-        todo!()
+    pub(crate) fn map(&self, win: u64, x: i32, y: i32, w: i16, h: i16) {
+        unsafe {
+            XCopyArea(
+                (*self.dpy).inner,
+                self.drawable,
+                win,
+                self.gc,
+                x,
+                y,
+                w as u32,
+                h as u32,
+                x,
+                y,
+            );
+            XSync((*self.dpy).inner, False);
+        }
     }
 }
