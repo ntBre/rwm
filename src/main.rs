@@ -273,7 +273,7 @@ enum Cur {
     Last,
 }
 
-fn setup(dpy: &Display) {
+fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
 
     unsafe {
@@ -296,8 +296,8 @@ fn setup(dpy: &Display) {
         let mut drw = Drw::new(dpy, SCREEN, ROOT, sw as usize, sh as usize);
 
         drw.fontset_create(FONTS).expect("no fonts could be loaded");
-        let lrpa = drw.fonts[0].h;
-        BH = (drw.fonts[0].h + 2) as i16;
+        let lrpa = (*drw.fonts).h;
+        BH = ((*drw.fonts).h + 2) as i16;
         updategeom(dpy);
 
         // init atoms - I really hope these CStrings live long enough.
@@ -342,20 +342,27 @@ fn setup(dpy: &Display) {
 
         // init bars
         updatebars(dpy);
-        updatestatus(dpy);
+        updatestatus(dpy, &drw);
 
         // supporting window for NetWMCheck
     }
 }
 
-fn updatestatus(dpy: &Display) {
+fn updatestatus(dpy: &Display, drw: &Drw) {
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
         if !c {
             STEXT = "rwm-0.0.1".to_owned();
         }
-        drawbar(SELMON);
+        drawbar(SELMON, drw);
     }
+}
+
+fn drawbar(selmon: *mut Monitor, drw: &Drw) {
+    unsafe {
+        let boxs = (*drw.fonts).h;
+    }
+    todo!()
 }
 
 fn gettextprop(
@@ -752,7 +759,7 @@ mod config;
 mod drw;
 
 fn main() {
-    let dpy = Display::open();
+    let mut dpy = Display::open();
     checkotherwm(&dpy);
-    setup(&dpy);
+    setup(&mut dpy);
 }

@@ -15,32 +15,29 @@ use x11::{
 
 use crate::{Clr, Cursor, Display};
 
-pub struct Fnt<'a> {
-    dpy: &'a Display,
+pub struct Fnt {
+    dpy: *mut Display,
     pub h: usize,
     xfont: *mut XftFont,
     pattern: *mut FcPattern,
+    next: *mut Fnt,
 }
 
-pub struct Drw<'a> {
+pub struct Drw {
     w: usize,
     h: usize,
-    dpy: &'a Display,
+    dpy: *mut Display,
     screen: i32,
     root: u64,
     drawable: Drawable,
     gc: GC,
-
-    /// initially unset, set later I guess
-    scheme: Option<XftColor>,
-
-    /// using a vec instead of a linked list
-    pub fonts: Vec<Fnt<'a>>,
+    scheme: *mut Clr,
+    pub fonts: *mut Fnt,
 }
 
-impl<'a> Drw<'a> {
+impl Drw {
     pub fn new(
-        dpy: &'a Display,
+        dpy: &mut Display,
         screen: i32,
         root: u64,
         w: usize,
@@ -77,8 +74,8 @@ impl<'a> Drw<'a> {
             root,
             drawable,
             gc,
-            scheme: None,
-            fonts: Vec::new(),
+            scheme: std::ptr::null_mut(),
+            fonts: std::ptr::null_mut(),
         }
     }
 
@@ -86,33 +83,44 @@ impl<'a> Drw<'a> {
         &mut self,
         fonts: [&str; 1],
     ) -> Result<(), ()> {
-        for font in fonts {
-            self.xfont_create(font);
+        unsafe {
+            let mut ret = std::ptr::null_mut();
+            for font in fonts {
+                let cur = self.xfont_create(font);
+                if !cur.is_null() {
+                    (*cur).next = ret;
+                    ret = cur;
+                }
+            }
+            self.fonts = ret;
         }
         Ok(())
     }
 
-    fn xfont_create(&mut self, font: &str) {
+    fn xfont_create(&mut self, font: &str) -> *mut Fnt {
         let s = CString::new(font).unwrap();
-        let xfont =
-            unsafe { XftFontOpenName(self.dpy.inner, self.screen, s.as_ptr()) };
+        let xfont = unsafe {
+            XftFontOpenName((*self.dpy).inner, self.screen, s.as_ptr())
+        };
 
         let pattern = unsafe { FcNameParse(s.as_ptr() as *const FcChar8) };
 
         unsafe {
-            XftFontClose(self.dpy.inner, xfont);
+            XftFontClose((*self.dpy).inner, xfont);
         }
 
-        self.fonts.push(Fnt {
+        let font = Fnt {
             dpy: self.dpy,
             h: unsafe { (*xfont).ascent + (*xfont).descent } as usize,
             xfont,
             pattern: pattern as *mut FcPattern,
-        })
+            next: std::ptr::null_mut(),
+        };
+        Box::into_raw(Box::new(font))
     }
 
     pub(crate) fn cur_create(&self, shape: u8) -> Cursor {
-        unsafe { XCreateFontCursor(self.dpy.inner, shape as u32) }
+        unsafe { XCreateFontCursor((*self.dpy).inner, shape as u32) }
     }
 
     // TODO clrcount is the length of clrnames
@@ -133,9 +141,9 @@ impl<'a> Drw<'a> {
             let name = CString::new(clrname).unwrap();
             let mut dest = MaybeUninit::uninit();
             let ret = XftColorAllocName(
-                self.dpy.inner,
-                XDefaultVisual(self.dpy.inner, self.screen),
-                XDefaultColormap(self.dpy.inner, self.screen),
+                (*self.dpy).inner,
+                XDefaultVisual((*self.dpy).inner, self.screen),
+                XDefaultColormap((*self.dpy).inner, self.screen),
                 name.as_ptr(),
                 dest.as_mut_ptr(),
             );
