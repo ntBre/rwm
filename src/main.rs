@@ -450,7 +450,7 @@ fn focus(dpy: &Display, c: *mut Client, drw: &mut Drw) {
             }
         }
         if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-            unfocus((*SELMON).sel, 0);
+            unfocus(dpy, (*SELMON).sel, false);
         }
         if !c.is_null() {
             if (*c).mon != SELMON {
@@ -540,8 +540,26 @@ fn seturgent(dpy: &Display, c: *mut Client, urg: bool) {
     }
 }
 
-fn unfocus(sel: *mut Client, arg: i32) {
-    todo!()
+fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
+    if c.is_null() {
+        return;
+    }
+    grabbuttons(c, 0);
+    unsafe {
+        XSetWindowBorder(
+            dpy.inner,
+            (*c).win,
+            SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
+        );
+        if setfocus {
+            XSetInputFocus(dpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+            XDeleteProperty(
+                dpy.inner,
+                ROOT,
+                NETATOM[Net::ActiveWindow as usize],
+            );
+        }
+    }
 }
 
 fn grabkeys() {
