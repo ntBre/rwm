@@ -18,24 +18,25 @@ use x11::xinerama::{
 };
 use x11::xlib::{
     AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow, Below,
-    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWCursor, CWEventMask,
-    CWOverrideRedirect, CWSibling, CWStackMode, ClientMessage, CopyFromParent,
-    CurrentTime, Display as XDisplay, EnterWindowMask, ExposureMask, False,
-    GrabModeAsync, GrabModeSync, LeaveWindowMask, LockMask, NoEventMask,
-    ParentRelative, PointerMotionMask, PropModeReplace, PropertyChangeMask,
+    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor,
+    CWEventMask, CWHeight, CWOverrideRedirect, CWSibling, CWStackMode, CWWidth,
+    ClientMessage, ConfigureNotify, CopyFromParent, CurrentTime,
+    Display as XDisplay, EnterWindowMask, ExposureMask, False, GrabModeAsync,
+    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, ParentRelative,
+    PointerMotionMask, PropModeReplace, PropertyChangeMask,
     RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
     SubstructureRedirectMask, Success, True, XChangeProperty,
-    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XConfigureWindow,
-    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
-    XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetModifierMapping, XGetTextProperty,
-    XGetWMHints, XGetWMProtocols, XGrabButton, XInternAtom, XKeysymToKeycode,
-    XMapRaised, XQueryPointer, XRaiseWindow, XRootWindow, XSelectInput,
-    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton, XUnmapWindow,
-    XUrgencyHint, XWindowChanges, XmbTextPropertyToTextList, XA_ATOM,
-    XA_STRING, XA_WINDOW, XA_WM_NAME,
+    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XConfigureEvent,
+    XConfigureWindow, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
+    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
+    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent,
+    XFree, XFreeModifiermap, XFreeStringList, XGetModifierMapping,
+    XGetTextProperty, XGetWMHints, XGetWMProtocols, XGrabButton, XInternAtom,
+    XKeysymToKeycode, XMapRaised, XMoveWindow, XQueryPointer, XRaiseWindow,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
+    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton,
+    XUnmapWindow, XUrgencyHint, XWindowChanges, XmbTextPropertyToTextList, CWX,
+    CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -341,8 +342,6 @@ fn setup(dpy: &mut Display) {
     let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
 
     unsafe {
-        // Safety: None except that dwm does it
-        let mut wa = wa.assume_init();
         // do not transform children into zombies when they terminate
         sigemptyset(&mut (*(sa.as_mut_ptr())).sa_mask as *mut _);
         (*(sa.as_mut_ptr())).sa_flags =
@@ -469,15 +468,19 @@ fn setup(dpy: &mut Display) {
         XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
 
         // select events
-        wa.cursor = CURSOR[Cur::Normal as usize];
-        wa.event_mask = SubstructureRedirectMask
-            | SubstructureNotifyMask
-            | ButtonPressMask
-            | PointerMotionMask
-            | EnterWindowMask
-            | LeaveWindowMask
-            | StructureNotifyMask
-            | PropertyChangeMask;
+        {
+            let wa = wa.as_mut_ptr();
+            (*wa).cursor = CURSOR[Cur::Normal as usize];
+            (*wa).event_mask = SubstructureRedirectMask
+                | SubstructureNotifyMask
+                | ButtonPressMask
+                | PointerMotionMask
+                | EnterWindowMask
+                | LeaveWindowMask
+                | StructureNotifyMask
+                | PropertyChangeMask;
+        }
+        let mut wa = wa.assume_init();
         XChangeWindowAttributes(
             dpy.inner,
             ROOT,
@@ -568,9 +571,8 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
     let mut n = 0;
     let mut protocols = std::ptr::null_mut();
     let mut exists = false;
-    let mut ev = MaybeUninit::uninit();
+    let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
     unsafe {
-        let mut ev: XEvent = ev.assume_init();
         if XGetWMProtocols(dpy.inner, (*c).win, &mut protocols, &mut n) != 0 {
             while !exists && n > 0 {
                 exists = *protocols.offset(n as isize) == proto;
@@ -579,12 +581,17 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
             XFree(protocols.cast());
         }
         if exists {
-            ev.type_ = ClientMessage;
-            ev.client_message.window = (*c).win;
-            ev.client_message.message_type = WMATOM[WM::Protocols as usize];
-            ev.client_message.format = 32;
-            ev.client_message.data.set_long(0, proto as i64);
-            ev.client_message.data.set_long(1, CurrentTime as i64);
+            {
+                let ev = ev.as_mut_ptr();
+                (*ev).type_ = ClientMessage;
+                (*ev).client_message.window = (*c).win;
+                (*ev).client_message.message_type =
+                    WMATOM[WM::Protocols as usize];
+                (*ev).client_message.format = 32;
+                (*ev).client_message.data.set_long(0, proto as i64);
+                (*ev).client_message.data.set_long(1, CurrentTime as i64);
+            }
+            let mut ev: XEvent = ev.assume_init();
             XSendEvent(
                 dpy.inner,
                 (*c).win,
@@ -660,11 +667,11 @@ pub fn setlayout(dpy: &Display, arg: Arg) {
 fn arrange(dpy: &Display, mut m: *mut Monitor) {
     unsafe {
         if !m.is_null() {
-            showhide((*m).stack);
+            showhide(dpy, (*m).stack);
         } else {
             m = MONS;
             while !m.is_null() {
-                showhide((*m).stack);
+                showhide(dpy, (*m).stack);
                 m = (*m).next;
             }
         }
@@ -699,10 +706,13 @@ fn restack(dpy: &Display, m: *mut Monitor) {
             // instead
             XRaiseWindow(dpy.inner, (*(*m).sel).win);
         }
-        let mut wc = MaybeUninit::uninit();
-        let mut wc: XWindowChanges = wc.assume_init();
-        wc.stack_mode = Below;
-        wc.sibling = (*m).barwin;
+        let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+        {
+            let wc = wc.as_mut_ptr();
+            (*wc).stack_mode = Below;
+            (*wc).sibling = (*m).barwin;
+        }
+        let mut wc = wc.assume_init();
         let mut c = (*m).stack;
         while !c.is_null() {
             if !(*c).isfloating && is_visible(c) {
@@ -724,7 +734,144 @@ fn restack(dpy: &Display, m: *mut Monitor) {
     }
 }
 
-fn showhide(stack: *mut Client) {
+fn showhide(dpy: &Display, c: *mut Client) {
+    if c.is_null() {
+        return;
+    }
+    if is_visible(c) {
+        // show clients top down
+        unsafe {
+            XMoveWindow(dpy.inner, (*c).win, (*c).x, (*c).y);
+            if (*c).isfloating && !(*c).isfullscreen {
+                resize(dpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
+            }
+            showhide(dpy, (*c).snext);
+        }
+    } else {
+        // hide clients bottom up
+        unsafe {
+            showhide(dpy, (*c).snext);
+            XMoveWindow(dpy.inner, (*c).win, width(c) * -2, (*c).y);
+        }
+    }
+}
+
+fn resize(
+    dpy: &Display,
+    c: *mut Client,
+    mut x: i32,
+    mut y: i32,
+    mut w: i32,
+    mut h: i32,
+    interact: bool,
+) {
+    if applysizehints(c, &mut x, &mut y, &mut w, &mut h, interact) {
+        resizeclient(dpy, c, x, y, w, h);
+    }
+}
+
+fn resizeclient(dpy: &Display, c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
+    unsafe {
+        let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+        (*c).oldx = (*c).x;
+        (*c).oldy = (*c).y;
+        (*c).oldw = (*c).w;
+        (*c).oldh = (*c).h;
+        (*c).x = x;
+        (*c).y = y;
+        (*c).w = w;
+        (*c).h = h;
+        {
+            let wc = wc.as_mut_ptr();
+            (*wc).x = x;
+            (*wc).y = y;
+            (*wc).width = w;
+            (*wc).height = h;
+            (*wc).border_width = (*c).bw;
+        }
+        let mut wc = wc.assume_init();
+        XConfigureWindow(
+            dpy.inner,
+            (*c).win,
+            (CWX | CWY | CWWidth | CWHeight | CWBorderWidth) as u32,
+            &mut wc,
+        );
+        configure(dpy, c);
+        XSync(dpy.inner, False);
+    }
+}
+
+fn configure(dpy: &Display, c: *mut Client) {
+    // TODO this looks like a nice Into impl
+    unsafe {
+        let mut ce: MaybeUninit<XConfigureEvent> = MaybeUninit::uninit();
+        {
+            let ce = ce.as_mut_ptr();
+            (*ce).type_ = ConfigureNotify;
+            (*ce).display = dpy.inner;
+            (*ce).event = (*c).win;
+            (*ce).window = (*c).win;
+            (*ce).x = (*c).x;
+            (*ce).y = (*c).y;
+            (*ce).width = (*c).w;
+            (*ce).height = (*c).h;
+            (*ce).border_width = (*c).bw;
+            (*ce).above = 0;
+            (*ce).override_redirect = False;
+        }
+        let mut ce = ce.assume_init();
+        XSendEvent(
+            dpy.inner,
+            (*c).win,
+            False,
+            StructureNotifyMask,
+            &mut ce as *mut _ as *mut _,
+        );
+    }
+}
+
+fn applysizehints(
+    c: *mut Client,
+    x: &mut i32,
+    y: &mut i32,
+    w: &mut i32,
+    h: &mut i32,
+    interact: bool,
+) -> bool {
+    let baseismin = 0;
+    unsafe {
+        let m = (*c).mon;
+        // set minimum possible
+        *w = 1.max(*w);
+        *h = 1.max(*h);
+        if interact {
+            if *x > SW as i32 {
+                *x = SW as i32 - width(c);
+            }
+            if *y > SH as i32 {
+                *y = SH as i32 - height(c);
+            }
+            if (*x + *w + 2 * (*c).bw < 0) {
+                *x = 0;
+            }
+            if (*y + *h + 2 * (*c).bw < 0) {
+                *y = 0;
+            }
+        } else {
+            if *x >= ((*m).wx + (*m).ww) as i32 {
+                *x = ((*m).wx + (*m).ww - width(c) as i16) as i32;
+            }
+            if *y >= ((*m).wy + (*m).wh) as i32 {
+                *y = ((*m).wy + (*m).wh - height(c) as i16) as i32;
+            }
+            if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
+                *x = (*m).wx as i32;
+            }
+            if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
+                *y = (*m).wy as i32;
+            }
+        }
+    }
     todo!()
 }
 
@@ -1212,6 +1359,8 @@ fn recttomon(x: i32, y: i32, w: i32, h: i32) -> *mut Monitor {
     }
 }
 
+// "macros"
+
 #[inline]
 fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
     unsafe {
@@ -1225,6 +1374,16 @@ fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
                 - i32::max((y), (*m).wy as i32),
         )
     }
+}
+
+#[inline]
+fn width(x: *mut Client) -> i32 {
+    unsafe { (*x).w + 2 * (*x).bw }
+}
+
+#[inline]
+fn height(x: *mut Client) -> i32 {
+    unsafe { (*x).h + 2 * (*x).bw }
 }
 
 fn getrootptr(dpy: &Display, x: &mut i32, y: &mut i32) -> bool {
