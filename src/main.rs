@@ -17,14 +17,17 @@ use x11::xinerama::{
 };
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
-    CWEventMask, CWOverrideRedirect, CopyFromParent, Display as XDisplay,
-    ExposureMask, False, ParentRelative, SubstructureRedirectMask, Success,
-    True, XClassHint, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDestroyWindow,
-    XDisplayHeight, XDisplayWidth, XFree, XFreeStringList, XGetTextProperty,
-    XInternAtom, XMapRaised, XQueryPointer, XRootWindow, XSelectInput,
-    XSetClassHint, XSetWindowAttributes, XSync, XUnmapWindow,
-    XmbTextPropertyToTextList, XA_STRING, XA_WM_NAME,
+    CWCursor, CWEventMask, CWOverrideRedirect, CopyFromParent,
+    Display as XDisplay, EnterWindowMask, ExposureMask, False, LeaveWindowMask,
+    ParentRelative, PointerMotionMask, PropModeReplace, PropertyChangeMask,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, XChangeProperty, XChangeWindowAttributes, XClassHint,
+    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
+    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XFreeStringList,
+    XGetTextProperty, XInternAtom, XMapRaised, XQueryPointer, XRootWindow,
+    XSelectInput, XSetClassHint, XSetWindowAttributes, XSync, XUnmapWindow,
+    XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -109,6 +112,7 @@ static mut SW: i16 = 0;
 static mut SH: i16 = 0;
 
 static mut ROOT: Window = 0;
+static mut WMCHECKWIN: Window = 0;
 
 static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
 static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
@@ -294,8 +298,11 @@ enum Col {
 
 fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
+    let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
 
     unsafe {
+        // Safety: None except that dwm does it
+        let mut wa = wa.assume_init();
         // do not transform children into zombies when they terminate
         sigemptyset(&mut (*(sa.as_mut_ptr())).sa_mask as *mut _);
         (*(sa.as_mut_ptr())).sa_flags =
@@ -364,6 +371,71 @@ fn setup(dpy: &mut Display) {
         updatestatus(dpy, &mut drw);
 
         // supporting window for NetWMCheck
+        WMCHECKWIN = XCreateSimpleWindow(dpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
+        XChangeProperty(
+            dpy.inner,
+            WMCHECKWIN,
+            NETATOM[Net::WMCheck as usize],
+            XA_WINDOW,
+            32,
+            PropModeReplace,
+            &mut (WMCHECKWIN as u8) as *mut _,
+            1,
+        );
+        let rwm = CString::new("rwm").unwrap();
+        XChangeProperty(
+            dpy.inner,
+            WMCHECKWIN,
+            NETATOM[Net::WMName as usize],
+            utf8string,
+            8,
+            PropModeReplace,
+            rwm.as_ptr().cast(),
+            3,
+        );
+        XChangeProperty(
+            dpy.inner,
+            ROOT,
+            NETATOM[Net::WMCheck as usize],
+            XA_WINDOW,
+            32,
+            PropModeReplace,
+            &mut (WMCHECKWIN as u8) as *mut _,
+            1,
+        );
+
+        // EWMH support per view
+        XChangeProperty(
+            dpy.inner,
+            ROOT,
+            NETATOM[Net::Supported as usize],
+            XA_ATOM,
+            32,
+            PropModeReplace,
+            NETATOM.as_ptr().cast(),
+            Net::Last as i32,
+        );
+        XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
+
+        // select events
+        wa.cursor = CURSOR[Cur::Normal as usize];
+        wa.event_mask = SubstructureRedirectMask
+            | SubstructureNotifyMask
+            | ButtonPressMask
+            | PointerMotionMask
+            | EnterWindowMask
+            | LeaveWindowMask
+            | StructureNotifyMask
+            | PropertyChangeMask;
+        XChangeWindowAttributes(
+            dpy.inner,
+            ROOT,
+            CWEventMask | CWCursor,
+            &mut wa as *mut _,
+        );
+        XSelectInput(dpy.inner, ROOT, wa.event_mask);
+        grabkeys();
+        focus(std::ptr::null());
     }
 }
 
