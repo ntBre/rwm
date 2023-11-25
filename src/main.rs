@@ -195,7 +195,7 @@ type Clr = XftColor;
 #[derive(PartialEq)]
 pub struct Layout {
     symbol: &'static str,
-    arrange: fn(mon: &Monitor),
+    arrange: fn(mon: *mut Monitor),
 }
 
 struct Monitor {
@@ -656,7 +656,42 @@ pub fn setlayout(arg: Arg) {
     }
 }
 
-fn arrange(m: *mut Monitor) {
+fn arrange(mut m: *mut Monitor) {
+    unsafe {
+        if !m.is_null() {
+            showhide((*m).stack);
+        } else {
+            m = MONS;
+            while !m.is_null() {
+                showhide((*m).stack);
+                m = (*m).next;
+            }
+        }
+
+        if !m.is_null() {
+            arrangemon(m);
+            restack(m);
+        } else {
+            m = MONS;
+            while !m.is_null() {
+                arrangemon(m);
+            }
+        }
+    }
+}
+
+fn arrangemon(m: *mut Monitor) {
+    unsafe {
+        (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
+        ((*(*m).lt[(*m).sellt]).arrange)(m)
+    }
+}
+
+fn restack(m: *mut Monitor) {
+    todo!()
+}
+
+fn showhide(stack: *mut Client) {
     todo!()
 }
 
