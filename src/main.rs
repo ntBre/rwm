@@ -17,18 +17,19 @@ use x11::xinerama::{
 };
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
-    CWCursor, CWEventMask, CWOverrideRedirect, CopyFromParent, CurrentTime,
-    Display as XDisplay, EnterWindowMask, ExposureMask, False, LeaveWindowMask,
-    ParentRelative, PointerMotionMask, PropModeReplace, PropertyChangeMask,
-    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, XChangeProperty,
-    XChangeWindowAttributes, XClassHint, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayWidth, XFree, XFreeStringList, XGetTextProperty, XGetWMHints,
+    CWCursor, CWEventMask, CWOverrideRedirect, ClientMessage, CopyFromParent,
+    CurrentTime, Display as XDisplay, EnterWindowMask, ExposureMask, False,
+    LeaveWindowMask, NoEventMask, ParentRelative, PointerMotionMask,
+    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, XChangeProperty, XChangeWindowAttributes, XClassHint,
+    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
+    XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent, XFree,
+    XFreeStringList, XGetTextProperty, XGetWMHints, XGetWMProtocols,
     XInternAtom, XMapRaised, XQueryPointer, XRootWindow, XSelectInput,
-    XSetClassHint, XSetInputFocus, XSetWMHints, XSetWindowAttributes,
-    XSetWindowBorder, XSync, XUnmapWindow, XUrgencyHint,
+    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSync, XUnmapWindow, XUrgencyHint,
     XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
@@ -511,15 +512,48 @@ fn setfocus(dpy: &Display, c: *mut Client) {
                 1,
             );
         }
-        sendevent(c, WMATOM[WM::TakeFocus as usize]);
+        sendevent(dpy, c, WMATOM[WM::TakeFocus as usize]);
     }
 }
 
-fn sendevent(c: *mut Client, usize: u64) {
-    todo!()
+fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
+    let mut n = 0;
+    let mut protocols = std::ptr::null_mut();
+    let mut exists = false;
+    let mut ev = MaybeUninit::uninit();
+    unsafe {
+        let mut ev: XEvent = ev.assume_init();
+        if XGetWMProtocols(dpy.inner, (*c).win, &mut protocols, &mut n) != 0 {
+            while !exists && n > 0 {
+                exists = *protocols.offset(n as isize) == proto;
+                n -= 1;
+            }
+            XFree(protocols.cast());
+        }
+        if exists {
+            ev.type_ = ClientMessage;
+            ev.client_message.window = (*c).win;
+            ev.client_message.message_type = WMATOM[WM::Protocols as usize];
+            ev.client_message.format = 32;
+            ev.client_message.data.set_long(0, proto as i64);
+            ev.client_message.data.set_long(1, CurrentTime as i64);
+            XSendEvent(
+                dpy.inner,
+                (*c).win,
+                False,
+                NoEventMask,
+                &mut ev as *mut _,
+            );
+        }
+        exists
+    }
 }
 
 fn grabbuttons(c: *mut Client, arg: i32) {
+    todo!()
+}
+
+fn grabkeys() {
     todo!()
 }
 
@@ -560,10 +594,6 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
             );
         }
     }
-}
-
-fn grabkeys() {
-    todo!()
 }
 
 fn updatestatus(dpy: &Display, drw: &mut Drw) {
