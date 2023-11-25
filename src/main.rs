@@ -17,17 +17,19 @@ use x11::xinerama::{
 };
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask, CWBackPixmap,
-    CWCursor, CWEventMask, CWOverrideRedirect, CopyFromParent,
+    CWCursor, CWEventMask, CWOverrideRedirect, CopyFromParent, CurrentTime,
     Display as XDisplay, EnterWindowMask, ExposureMask, False, LeaveWindowMask,
     ParentRelative, PointerMotionMask, PropModeReplace, PropertyChangeMask,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XChangeProperty, XChangeWindowAttributes, XClassHint,
-    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
-    XDestroyWindow, XDisplayHeight, XDisplayWidth, XFree, XFreeStringList,
-    XGetTextProperty, XInternAtom, XMapRaised, XQueryPointer, XRootWindow,
-    XSelectInput, XSetClassHint, XSetWindowAttributes, XSync, XUnmapWindow,
-    XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, XChangeProperty,
+    XChangeWindowAttributes, XClassHint, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayWidth, XFree, XFreeStringList, XGetTextProperty, XInternAtom,
+    XMapRaised, XQueryPointer, XRootWindow, XSelectInput, XSetClassHint,
+    XSetInputFocus, XSetWindowAttributes, XSetWindowBorder, XSync,
+    XUnmapWindow, XmbTextPropertyToTextList, XA_ATOM, XA_STRING, XA_WINDOW,
+    XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -435,8 +437,102 @@ fn setup(dpy: &mut Display) {
         );
         XSelectInput(dpy.inner, ROOT, wa.event_mask);
         grabkeys();
-        focus(std::ptr::null());
+        focus(dpy, std::ptr::null_mut(), &mut drw);
     }
+}
+
+fn focus(dpy: &Display, c: *mut Client, drw: &mut Drw) {
+    unsafe {
+        if c.is_null() || !is_visible(c) {
+            let mut c = (*SELMON).stack;
+            while !c.is_null() && !is_visible(c) {
+                c = (*c).snext;
+            }
+        }
+        if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
+            unfocus((*SELMON).sel, 0);
+        }
+        if !c.is_null() {
+            if (*c).mon != SELMON {
+                SELMON = (*c).mon;
+            }
+            if (*c).isurgent {
+                seturgent(c, false);
+            }
+            detach_stack(c);
+            attach_stack(c);
+            grabbuttons(c, 1);
+            XSetWindowBorder(
+                dpy.inner,
+                (*c).win,
+                SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
+            );
+            setfocus(dpy, c);
+        } else {
+            XSetInputFocus(dpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+            XDeleteProperty(
+                dpy.inner,
+                ROOT,
+                NETATOM[Net::ActiveWindow as usize],
+            );
+        }
+        (*SELMON).sel = c;
+        drawbars(drw);
+    }
+}
+
+fn drawbars(drw: &mut Drw) {
+    unsafe {
+        let mut m = MONS;
+        while !m.is_null() {
+            drawbar(m, drw);
+            m = (*m).next;
+        }
+    }
+}
+
+fn setfocus(dpy: &Display, c: *mut Client) {
+    unsafe {
+        if !(*c).neverfocus {
+            XSetInputFocus(
+                dpy.inner,
+                (*c).win,
+                RevertToPointerRoot,
+                CurrentTime,
+            );
+            XChangeProperty(
+                dpy.inner,
+                ROOT,
+                NETATOM[Net::ActiveWindow as usize],
+                XA_WINDOW,
+                32,
+                PropModeReplace,
+                &mut ((*c).win as u8) as *mut _,
+                1,
+            );
+        }
+        sendevent(c, WMATOM[WM::TakeFocus as usize]);
+    }
+}
+
+fn sendevent(c: *mut Client, usize: u64) {
+    todo!()
+}
+
+fn grabbuttons(c: *mut Client, arg: i32) {
+    todo!()
+}
+
+fn seturgent(c: *mut Client, arg: bool) {
+    todo!()
+}
+
+fn unfocus(sel: *mut Client, arg: i32) {
+    todo!()
+}
+
+fn grabkeys() {
+    todo!()
 }
 
 fn updatestatus(dpy: &Display, drw: &mut Drw) {
