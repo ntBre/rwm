@@ -609,6 +609,10 @@ impl Drw {
             }
         }
     }
+
+    pub(crate) fn cur_free(&self, i: u64) {
+        todo!()
+    }
 }
 
 fn xfont_free(font: *mut Fnt) {

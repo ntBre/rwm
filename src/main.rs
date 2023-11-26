@@ -1,11 +1,12 @@
 //! tiling window manager based on dwm
 
 #![allow(unused)]
-#![feature(vec_into_raw_parts)]
+#![feature(vec_into_raw_parts, lazy_cell)]
 
 use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
+use std::sync::LazyLock;
 
 use config::{
     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
@@ -22,24 +23,27 @@ use x11::xinerama::{
 };
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
-    BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
-    CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
-    CWSibling, CWStackMode, CWWidth, ClientMessage, ConfigureNotify,
-    CopyFromParent, CurrentTime, Display as XDisplay, EnterWindowMask,
-    ExposureMask, False, GrabModeAsync, GrabModeSync, KeySym, LeaveWindowMask,
-    LockMask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc,
-    PSize, ParentRelative, PointerMotionMask, PropModeReplace,
-    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
-    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
-    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
-    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
-    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetKeyboardMapping,
-    XGetModifierMapping, XGetTextProperty, XGetWMHints, XGetWMNormalHints,
-    XGetWMProtocols, XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode,
-    XMapRaised, XMoveWindow, XQueryPointer, XRaiseWindow, XRootWindow,
+    BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
+    CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
+    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
+    ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime,
+    DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
+    ExposureMask, False, FocusIn, GrabModeAsync, GrabModeSync, KeyPress,
+    KeySym, LeaveWindowMask, LockMask, MapRequest, MappingNotify, MotionNotify,
+    NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
+    ParentRelative, PointerMotionMask, PointerRoot, PropModeReplace,
+    PropertyChangeMask, PropertyNotify, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
+    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
+    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
+    XFreeStringList, XGetKeyboardMapping, XGetModifierMapping,
+    XGetTextProperty, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode, XMapRaised,
+    XMoveWindow, XNextEvent, XQueryPointer, XRaiseWindow, XRootWindow,
     XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
     XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
     XUngrabKey, XUnmapWindow, XUrgencyHint, XWindowChanges,
@@ -135,6 +139,8 @@ static mut WMCHECKWIN: Window = 0;
 
 static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
 static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
+
+static mut RUNNING: bool = true;
 
 static mut CURSOR: [Cursor; Cur::Last as usize] = [0; Cur::Last as usize];
 
@@ -1827,6 +1833,83 @@ fn isuniquegeom(
     true
 }
 
+fn cleanup(dpy: &Display) {
+    let a = Arg::Uint(!0);
+    let foo = Box::new(Layout {
+        symbol: "",
+        arrange: |_| {},
+    });
+    let mut m: *mut Monitor = std::ptr::null_mut();
+    let mut i = 0;
+
+    view(dpy, a);
+    unsafe {
+        (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(foo);
+        m = MONS;
+        while !m.is_null() {
+            while !(*m).stack.is_null() {
+                unmanage((*m).stack, false);
+            }
+            m = (*m).next;
+        }
+        XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
+        while !MONS.is_null() {
+            cleanupmon(MONS, dpy);
+        }
+        for i in 0..Cur::Last as usize {
+            DRW.as_ref().unwrap().cur_free(CURSOR[i]);
+        }
+        // shouldn't have to free SCHEME because it's actually a vec
+        XDestroyWindow(dpy.inner, WMCHECKWIN);
+        Box::from_raw(DRW);
+        XSync(dpy.inner, False);
+        XSetInputFocus(
+            dpy.inner,
+            PointerRoot as u64,
+            RevertToPointerRoot,
+            CurrentTime,
+        );
+        XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ActiveWindow as usize]);
+    }
+}
+
+fn unmanage(stack: *mut Client, destroyed: bool) {
+    todo!()
+}
+
+// not sure how this is my problem...
+#[allow(non_upper_case_globals, non_snake_case)]
+fn run(dpy: &Display) {
+    // main event loop
+    let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
+    unsafe {
+        XSync(dpy.inner, False);
+        while RUNNING && XNextEvent(dpy.inner, ev.as_mut_ptr()) == 0 {
+            match (*ev.as_mut_ptr()).type_ {
+                ButtonPress => todo!(),
+                ClientMessage => todo!(),
+                ConfigureRequest => todo!(),
+                ConfigureNotify => todo!(),
+                DestroyNotify => todo!(),
+                EnterNotify => todo!(),
+                Expose => todo!(),
+                FocusIn => todo!(),
+                KeyPress => todo!(),
+                MappingNotify => todo!(),
+                MapRequest => todo!(),
+                MotionNotify => todo!(),
+                PropertyNotify => todo!(),
+                UnmapNotify => todo!(),
+                _ => (),
+            }
+        }
+    }
+}
+
+fn scan() {
+    todo!()
+}
+
 mod config;
 mod drw;
 
@@ -1834,4 +1917,10 @@ fn main() {
     let mut dpy = Display::open();
     checkotherwm(&dpy);
     setup(&mut dpy);
+    scan();
+    run(&dpy);
+    cleanup(&dpy);
+    unsafe {
+        XCloseDisplay(dpy.inner);
+    }
 }
