@@ -1043,51 +1043,67 @@ fn updatesizehints(dpy: &Display, c: *mut Client) {
 pub fn zoom(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn spawn(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn movemouse(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn togglefloating(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn resizemouse(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn view(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn toggleview(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn tag(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn toggletag(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn togglebar(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn focusstack(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn incnmaster(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn setmfact(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn killclient(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn focusmon(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn tagmon(dpy: &Display, arg: Arg) {
     todo!()
 }
+
 pub fn quit(dpy: &Display, arg: Arg) {
     todo!()
 }
