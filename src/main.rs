@@ -685,8 +685,8 @@ fn grabbuttons(dpy: &Display, c: *mut Client, focused: bool) {
                 for j in 0..modifiers.len() {
                     XGrabButton(
                         dpy.inner,
-                        BUTTONS[i].button as u32,
-                        (BUTTONS[i].mask | modifiers[j]) as u32,
+                        BUTTONS[i].button,
+                        BUTTONS[i].mask | modifiers[j],
                         (*c).win,
                         False,
                         BUTTONMASK as u32,
@@ -976,7 +976,7 @@ fn applysizehints(
                 *h = min(*h, (*c).maxh);
             }
         }
-        return *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h;
+        *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
     }
 }
 
@@ -1200,7 +1200,7 @@ fn grabkeys(dpy: &Display) {
         syms = XGetKeyboardMapping(
             dpy.inner,
             start as u8,
-            (end - start + 1) as i32,
+            end - start + 1,
             &mut skip as *mut _,
         );
         if syms.is_null() {
@@ -1338,7 +1338,7 @@ fn drawbar(m: *mut Monitor) {
 
         let mut x = 0;
         for i in 0..TAGS.len() {
-            let w = DRW.as_ref().unwrap().textw(&TAGS[i], LRPAD);
+            let w = DRW.as_ref().unwrap().textw(TAGS[i], LRPAD);
             DRW.as_mut().unwrap().setscheme(
                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
                     Scheme::Sel as usize
@@ -1352,7 +1352,7 @@ fn drawbar(m: *mut Monitor) {
                 w,
                 BH as usize,
                 LRPAD / 2,
-                &TAGS[i],
+                TAGS[i],
                 (urg & 1 << i) != 0,
             );
 
@@ -1835,7 +1835,7 @@ fn isuniquegeom(
 
 fn cleanup(dpy: &Display) {
     let a = Arg::Uint(!0);
-    let foo = Box::new(Layout {
+    let l = Box::new(Layout {
         symbol: "",
         arrange: |_| {},
     });
@@ -1844,7 +1844,7 @@ fn cleanup(dpy: &Display) {
 
     view(dpy, a);
     unsafe {
-        (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(foo);
+        (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(l);
         m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {

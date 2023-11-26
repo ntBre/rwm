@@ -51,7 +51,7 @@ fn utf8validate(u: &mut usize, i: usize) -> usize {
     while *u > UTFMAX[i] {
         i += 1;
     }
-    return i;
+    i
 }
 
 fn utf8decode(c: &str, u: &mut usize, clen: usize) -> usize {
@@ -83,7 +83,7 @@ fn utf8decode(c: &str, u: &mut usize, clen: usize) -> usize {
     }
     *u = udecoded;
     utf8validate(u, len);
-    return len;
+    len
 }
 
 pub struct Fnt {
@@ -205,7 +205,7 @@ impl Drw {
             dpy: self.dpy,
             h: unsafe { (*xfont).ascent + (*xfont).descent } as usize,
             xfont,
-            pattern: pattern as *mut FcPattern,
+            pattern,
             next: std::ptr::null_mut(),
         };
         Box::into_raw(Box::new(font))
@@ -425,7 +425,7 @@ impl Drw {
                     self.text(ellipsis_x, y, ellipsis_w, h, 0, "...", invert);
                 }
 
-                if !(text_idx < text.len()) || overflow {
+                if text_idx >= text.len() || overflow {
                     break;
                 } else if !nextfont.is_null() {
                     charexists = false;
@@ -511,7 +511,7 @@ impl Drw {
                 XftDrawDestroy(d);
             }
         }
-        (x as usize + if render { w } else { 0 }) as usize
+        x as usize + if render { w } else { 0 }
     }
 
     pub(crate) fn rect(
