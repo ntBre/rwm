@@ -2408,7 +2408,15 @@ fn focusin(dpy: &Display, e: *mut XEvent) {
 }
 
 fn expose(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let ev = (*e).expose;
+        if ev.count == 0 {
+            let m = wintomon(dpy, ev.window);
+            if !m.is_null() {
+                drawbar(m);
+            }
+        }
+    }
 }
 
 fn enternotify(dpy: &Display, e: *mut XEvent) {
