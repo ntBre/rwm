@@ -1280,7 +1280,14 @@ pub fn toggleview(dpy: &Display, arg: Arg) {
 }
 
 pub fn tag(dpy: &Display, arg: Arg) {
-    todo!()
+    let Arg::Uint(ui) = arg else { return };
+    unsafe {
+        if !(*SELMON).sel.is_null() && ui & TAGMASK != 0 {
+            (*(*SELMON).sel).tags = ui & TAGMASK;
+            focus(dpy, null_mut());
+            arrange(dpy, SELMON);
+        }
+    }
 }
 
 pub fn toggletag(dpy: &Display, arg: Arg) {
