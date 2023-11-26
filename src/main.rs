@@ -27,25 +27,27 @@ use x11::xlib::{
     BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
     CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
-    ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime, DestroyAll,
-    DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
-    ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync, GrabModeSync,
-    InputHint, IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask,
-    MapRequest, MappingKeyboard, MappingNotify, MotionNotify, NoEventMask,
-    PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative,
-    PointerMotionMask, PointerRoot, PropModeAppend, PropModeReplace,
-    PropertyChangeMask, PropertyDelete, PropertyNotify, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
-    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
-    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
-    XFreeStringList, XGetClassHint, XGetKeyboardMapping, XGetModifierMapping,
-    XGetTextProperty, XGetTransientForHint, XGetWMHints, XGetWMNormalHints,
-    XGetWMProtocols, XGetWindowAttributes, XGetWindowProperty, XGrabButton,
-    XGrabKey, XGrabServer, XInternAtom, XKeysymToKeycode, XKillClient,
+    ConfigureNotify, ConfigureRequest, ControlMask, CopyFromParent,
+    CurrentTime, DestroyAll, DestroyNotify, Display as XDisplay, EnterNotify,
+    EnterWindowMask, ExposureMask, False, FocusChangeMask, FocusIn,
+    GrabModeAsync, GrabModeSync, InputHint, IsViewable, KeyPress, KeySym,
+    LeaveWindowMask, LockMask, MapRequest, MappingKeyboard, MappingNotify,
+    Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, MotionNotify,
+    NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
+    ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
+    PropModeReplace, PropertyChangeMask, PropertyDelete, PropertyNotify,
+    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    UnmapNotify, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
+    XClassHint, XCloseDisplay, XConfigureEvent, XConfigureWindow,
+    XConnectionNumber, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
+    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
+    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayKeycodes,
+    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
+    XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
+    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
+    XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient,
     XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent,
     XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
     XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
@@ -171,6 +173,7 @@ const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
 const TAGMASK: usize = (1 << TAGS.len()) - 1;
 
+#[derive(Clone)]
 pub enum Arg {
     Uint(usize),
     Int(isize),
@@ -2020,6 +2023,18 @@ fn height(x: *mut Client) -> i32 {
     unsafe { (*x).h + 2 * (*x).bw }
 }
 
+#[inline]
+const fn cleanmask(mask: u32) -> u32 {
+    mask & !(NUMLOCKMASK | LockMask)
+        & (ShiftMask
+            | ControlMask
+            | Mod1Mask
+            | Mod2Mask
+            | Mod3Mask
+            | Mod4Mask
+            | Mod5Mask)
+}
+
 fn getrootptr(dpy: &Display, x: &mut i32, y: &mut i32) -> bool {
     let mut di = 0;
     let mut dui = 0;
@@ -2370,7 +2385,17 @@ fn mappingnotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn keypress(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let ev = (*e).key;
+        let keysym = XKeycodeToKeysym(dpy.inner, ev.keycode as u8, 0);
+        for i in 0..KEYS.len() {
+            if keysym == KEYS[i].keysym as u64
+                && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
+            {
+                (KEYS[i].func)(dpy, KEYS[i].arg.clone());
+            }
+        }
+    }
 }
 
 fn focusin(dpy: &Display, e: *mut XEvent) {
