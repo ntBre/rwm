@@ -311,7 +311,7 @@ impl Key {
 #[derive(PartialEq)]
 pub struct Layout {
     symbol: &'static str,
-    arrange: Option<fn(mon: *mut Monitor)>,
+    arrange: Option<fn(dpy: &Display, mon: *mut Monitor)>,
 }
 
 pub struct Monitor {
@@ -820,22 +820,22 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
         }
 
         if !m.is_null() {
-            arrangemon(m);
+            arrangemon(dpy, m);
             restack(dpy, m);
         } else {
             m = MONS;
             while !m.is_null() {
-                arrangemon(m);
+                arrangemon(dpy, m);
             }
         }
     }
 }
 
-fn arrangemon(m: *mut Monitor) {
+fn arrangemon(dpy: &Display, m: *mut Monitor) {
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
         if let Some(arrange) = (*(*m).lt[(*m).sellt]).arrange {
-            (arrange)(m)
+            (arrange)(dpy, m)
         }
     }
 }
@@ -2770,14 +2770,40 @@ mod config;
 mod drw;
 
 pub mod layouts {
-    use crate::Monitor;
+    use crate::{is_visible, nexttiled, resize, Display, Monitor};
 
-    pub fn tile(m: *mut Monitor) {
+    pub fn tile(dpy: &Display, m: *mut Monitor) {
         todo!()
     }
 
-    pub fn monocle(m: *mut Monitor) {
-        todo!()
+    pub fn monocle(dpy: &Display, m: *mut Monitor) {
+        let mut n = 0;
+        unsafe {
+            let mut c = (*m).clients;
+            while !c.is_null() {
+                if is_visible(c) {
+                    n += 1;
+                }
+                c = (*c).next;
+            }
+            if n > 0 {
+                // override layout symbol
+                (*m).ltsymbol = format!("[{n}]");
+            }
+            let mut c = nexttiled((*m).clients);
+            while !c.is_null() {
+                resize(
+                    dpy,
+                    c,
+                    (*m).wx as i32,
+                    (*m).wy as i32,
+                    (*m).ww as i32 - (2 * (*c).bw) as i32,
+                    (*m).wh as i32 - (2 * (*c).bw) as i32,
+                    false,
+                );
+                c = nexttiled((*c).next);
+            }
+        }
     }
 }
 
