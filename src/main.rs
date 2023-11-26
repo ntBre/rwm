@@ -310,7 +310,7 @@ impl Key {
 #[derive(PartialEq)]
 pub struct Layout {
     symbol: &'static str,
-    arrange: fn(mon: *mut Monitor),
+    arrange: Option<fn(mon: *mut Monitor)>,
 }
 
 struct Monitor {
@@ -833,7 +833,9 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
 fn arrangemon(m: *mut Monitor) {
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
-        ((*(*m).lt[(*m).sellt]).arrange)(m)
+        if let Some(arrange) = (*(*m).lt[(*m).sellt]).arrange {
+            (arrange)(m)
+        }
     }
 }
 
@@ -1367,7 +1369,22 @@ pub fn incnmaster(dpy: &Display, arg: Arg) {
 }
 
 pub fn setmfact(dpy: &Display, arg: Arg) {
-    todo!()
+    let Arg::Float(mut f) = arg else { return };
+    unsafe {
+        if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none() {
+            return;
+        }
+        f = if f < 1.0 {
+            f + (*SELMON).mfact
+        } else {
+            f - 1.0
+        };
+        if f < 0.05 || f > 0.95 {
+            return;
+        }
+        (*SELMON).mfact = f;
+        arrange(dpy, SELMON);
+    }
 }
 
 pub fn killclient(dpy: &Display, arg: Arg) {
@@ -2034,7 +2051,7 @@ fn cleanup(dpy: &Display) {
     let a = Arg::Uint(!0);
     let l = Box::new(Layout {
         symbol: "",
-        arrange: |_| {},
+        arrange: None,
     });
     let mut m: *mut Monitor = std::ptr::null_mut();
     let mut i = 0;

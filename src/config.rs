@@ -55,17 +55,17 @@ pub const LAYOUTS: [Layout; 3] = [
     // tile
     Layout {
         symbol: "[]=",
-        arrange: |_mon| todo!(),
+        arrange: Some(|_mon| todo!()),
     },
     // floating
     Layout {
         symbol: "><>",
-        arrange: |_| {},
+        arrange: None,
     },
     // monocle
     Layout {
         symbol: "[M]",
-        arrange: |_mon| todo!(),
+        arrange: Some(|_mon| todo!()),
     },
 ];
 
