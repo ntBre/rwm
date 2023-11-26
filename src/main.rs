@@ -2301,7 +2301,18 @@ fn motionnotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn maprequest(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
+    unsafe {
+        let ev = &(*e).map_request;
+        if XGetWindowAttributes(dpy.inner, (*ev).window, wa.as_mut_ptr()) == 0
+            || (*wa.as_mut_ptr()).override_redirect != 0
+        {
+            return;
+        }
+        if wintoclient((*ev).window).is_null() {
+            manage(dpy, (*ev).window, wa.as_mut_ptr());
+        }
+    }
 }
 
 fn mappingnotify(dpy: &Display, e: *mut XEvent) {
