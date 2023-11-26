@@ -55,7 +55,9 @@ use x11::xlib::{
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
-use crate::config::{BORDERPX, BUTTONS, DMENUCMD, RESIZEHINTS, RULES, TAGS};
+use crate::config::{
+    BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, TAGS,
+};
 
 pub struct Display {
     inner: *mut XDisplay,
@@ -1312,7 +1314,48 @@ pub fn togglebar(dpy: &Display, arg: Arg) {
 }
 
 pub fn focusstack(dpy: &Display, arg: Arg) {
-    todo!()
+    let Arg::Int(ai) = arg else { return };
+    let mut c = null_mut();
+    unsafe {
+        if (*SELMON).sel.is_null()
+            || ((*(*SELMON).sel).isfullscreen && LOCKFULLSCREEN)
+        {
+            return;
+        }
+
+        if (ai > 0) {
+            c = (*(*SELMON).sel).next;
+            while !c.is_null() && !is_visible(c) {
+                c = (*c).next;
+            }
+            if c.is_null() {
+                c = (*SELMON).clients;
+                while !c.is_null() && !is_visible(c) {
+                    c = (*c).next;
+                }
+            }
+        } else {
+            let mut i = (*SELMON).clients;
+            while i != (*SELMON).sel {
+                if (is_visible(i)) {
+                    c = i;
+                }
+                i = (*i).next
+            }
+            if c.is_null() {
+                while !i.is_null() {
+                    if (is_visible(i)) {
+                        c = i;
+                    }
+                    i = (*i).next;
+                }
+            }
+        }
+        if !c.is_null() {
+            focus(dpy, c);
+            restack(dpy, SELMON);
+        }
+    }
 }
 
 pub fn incnmaster(dpy: &Display, arg: Arg) {

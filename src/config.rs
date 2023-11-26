@@ -18,12 +18,39 @@ use crate::{
 
 /// border pixel of windows
 pub const BORDERPX: i32 = 1;
-pub const FONTS: [&str; 1] = ["monospace:size=10"];
-pub const MFACT: f64 = 0.5;
-pub const NMASTER: i32 = 1;
+/// snap pixel
+pub const SNAP: i32 = 32;
 pub const SHOWBAR: bool = true;
 pub const TOPBAR: bool = true;
+pub const FONTS: [&str; 1] = ["monospace:size=10"];
+const COL_GRAY1: &str = "#222222";
+const COL_GRAY2: &str = "#444444";
+const COL_GRAY3: &str = "#bbbbbb";
+const COL_GRAY4: &str = "#eeeeee";
+const COL_CYAN: &str = "#005577";
+pub const COLORS: [[&str; 3]; 2] = [
+    [COL_GRAY3, COL_GRAY1, COL_GRAY2], // SchemeNorm
+    [COL_GRAY4, COL_CYAN, COL_CYAN],   // SchemeSel
+];
+
+pub const TAGS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/// handling rules for specific programs. use xprop(1) to obtain class,
+/// instance, and title information:
+///   WM_CLASS(STRING) = instance, class
+///   WM_NAME(STRING) = title
+pub const RULES: [Rule; 2] = [
+    // class, instance, title, tags mask, isfloating, monitor
+    Rule::new(Some("Gimp"), None, None, 0, true, -1),
+    Rule::new(Some("Firefox"), None, None, 1 << 8, false, -1),
+];
+
+pub const MFACT: f64 = 0.5;
+pub const NMASTER: i32 = 1;
 pub const RESIZEHINTS: bool = true;
+/// force focus on the fullscreen window
+pub const LOCKFULLSCREEN: bool = true;
+
 pub const LAYOUTS: [Layout; 3] = [
     // tile
     Layout {
@@ -40,29 +67,6 @@ pub const LAYOUTS: [Layout; 3] = [
         symbol: "[M]",
         arrange: |_mon| todo!(),
     },
-];
-
-const COL_GRAY1: &str = "#222222";
-const COL_GRAY2: &str = "#444444";
-const COL_GRAY3: &str = "#bbbbbb";
-const COL_GRAY4: &str = "#eeeeee";
-const COL_CYAN: &str = "#005577";
-
-pub const COLORS: [[&str; 3]; 2] = [
-    [COL_GRAY3, COL_GRAY1, COL_GRAY2], // SchemeNorm
-    [COL_GRAY4, COL_CYAN, COL_CYAN],   // SchemeSel
-];
-
-pub const TAGS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-
-/// handling rules for specific programs. use xprop(1) to obtain class,
-/// instance, and title information:
-///   WM_CLASS(STRING) = instance, class
-///   WM_NAME(STRING) = title
-pub const RULES: [Rule; 2] = [
-    // class, instance, title, tags mask, isfloating, monitor
-    Rule::new(Some("Gimp"), None, None, 0, true, -1),
-    Rule::new(Some("Firefox"), None, None, 1 << 8, false, -1),
 ];
 
 pub const MODKEY: u32 = Mod1Mask;
