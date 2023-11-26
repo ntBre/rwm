@@ -6,7 +6,7 @@ use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
 
-use config::{COLORS, FONTS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
+use config::{COLORS, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
 use drw::Drw;
 use libc::{
     c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT,
@@ -18,26 +18,28 @@ use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
 use x11::xlib::{
-    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow, Below,
-    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor,
-    CWEventMask, CWHeight, CWOverrideRedirect, CWSibling, CWStackMode, CWWidth,
-    ClientMessage, ConfigureNotify, CopyFromParent, CurrentTime,
-    Display as XDisplay, EnterWindowMask, ExposureMask, False, GrabModeAsync,
-    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, PAspect, PBaseSize,
-    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
-    XClassHint, XConfigureEvent, XConfigureWindow, XCreateSimpleWindow,
-    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
-    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
-    XDisplayHeight, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
-    XFreeStringList, XGetModifierMapping, XGetTextProperty, XGetWMHints,
-    XGetWMNormalHints, XGetWMProtocols, XGrabButton, XInternAtom,
-    XKeysymToKeycode, XMapRaised, XMoveWindow, XQueryPointer, XRaiseWindow,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
-    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync,
-    XUngrabButton, XUnmapWindow, XUrgencyHint, XWindowChanges,
+    AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
+    BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
+    CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
+    CWSibling, CWStackMode, CWWidth, ClientMessage, ConfigureNotify,
+    CopyFromParent, CurrentTime, Display as XDisplay, EnterWindowMask,
+    ExposureMask, False, GrabModeAsync, GrabModeSync, KeySym, LeaveWindowMask,
+    LockMask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc,
+    PSize, ParentRelative, PointerMotionMask, PropModeReplace,
+    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
+    XConfigureEvent, XConfigureWindow, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
+    XFreeStringList, XGetKeyboardMapping, XGetModifierMapping,
+    XGetTextProperty, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode, XMapRaised,
+    XMoveWindow, XQueryPointer, XRaiseWindow, XRootWindow, XSelectInput,
+    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
+    XUngrabKey, XUnmapWindow, XUrgencyHint, XWindowChanges,
     XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
     XA_WM_NAME,
 };
@@ -144,6 +146,8 @@ const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
 pub enum Arg {
     Uint(usize),
+    Int(isize),
+    Float(f64),
     Str(&'static str),
     Layout(&'static Layout),
 }
@@ -154,6 +158,24 @@ pub struct Button {
     pub button: u32,
     pub func: fn(dpy: &Display, arg: Arg),
     pub arg: Arg,
+}
+
+impl Button {
+    pub const fn new(
+        click: Clk,
+        mask: u32,
+        button: u32,
+        func: fn(dpy: &Display, arg: Arg),
+        arg: Arg,
+    ) -> Self {
+        Self {
+            click,
+            mask,
+            button,
+            func,
+            arg,
+        }
+    }
 }
 
 struct Client {
@@ -196,6 +218,29 @@ type Window = u64;
 type Atom = u64;
 type Cursor = u64;
 type Clr = XftColor;
+
+pub struct Key {
+    pub modkey: u32,
+    pub keysym: u32,
+    pub func: fn(dpy: &Display, arg: Arg),
+    pub arg: Arg,
+}
+
+impl Key {
+    pub const fn new(
+        modkey: u32,
+        keysym: u32,
+        func: fn(dpy: &Display, arg: Arg),
+        arg: Arg,
+    ) -> Self {
+        Self {
+            modkey,
+            keysym,
+            func,
+            arg,
+        }
+    }
+}
 
 #[derive(PartialEq)]
 pub struct Layout {
@@ -491,7 +536,7 @@ fn setup(dpy: &mut Display) {
             &mut wa as *mut _,
         );
         XSelectInput(dpy.inner, ROOT, wa.event_mask);
-        grabkeys();
+        grabkeys(dpy);
         focus(dpy, std::ptr::null_mut());
     }
 }
@@ -995,18 +1040,97 @@ fn updatesizehints(dpy: &Display, c: *mut Client) {
     }
 }
 
-pub fn zoom(dpy: &Display, arg: Arg) {}
-pub fn spawn(dpy: &Display, arg: Arg) {}
-pub fn movemouse(dpy: &Display, arg: Arg) {}
-pub fn togglefloating(dpy: &Display, arg: Arg) {}
-pub fn resizemouse(dpy: &Display, arg: Arg) {}
-pub fn view(dpy: &Display, arg: Arg) {}
-pub fn toggleview(dpy: &Display, arg: Arg) {}
-pub fn tag(dpy: &Display, arg: Arg) {}
-pub fn toggletag(dpy: &Display, arg: Arg) {}
-
-fn grabkeys() {
+pub fn zoom(dpy: &Display, arg: Arg) {
     todo!()
+}
+pub fn spawn(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn movemouse(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn togglefloating(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn resizemouse(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn view(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn toggleview(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn tag(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn toggletag(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn togglebar(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn focusstack(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn incnmaster(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn setmfact(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn killclient(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn focusmon(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn tagmon(dpy: &Display, arg: Arg) {
+    todo!()
+}
+pub fn quit(dpy: &Display, arg: Arg) {
+    todo!()
+}
+
+fn grabkeys(dpy: &Display) {
+    updatenumlockmask(dpy);
+    unsafe {
+        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+        let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
+        let mut syms = std::ptr::null_mut();
+        XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
+        XDisplayKeycodes(dpy.inner, &mut start as *mut _, &mut end as *mut _);
+        syms = XGetKeyboardMapping(
+            dpy.inner,
+            start as u8,
+            (end - start + 1) as i32,
+            &mut skip as *mut _,
+        );
+        if syms.is_null() {
+            return;
+        }
+        for k in start..end {
+            for i in 0..KEYS.len() {
+                // skip modifier codes, we do that ourselves
+                if KEYS[i].keysym
+                    == (*syms.offset((k - start * skip) as isize)) as u32
+                {
+                    for j in 0..modifiers.len() {
+                        XGrabKey(
+                            dpy.inner,
+                            k,
+                            KEYS[i].modkey | modifiers[j],
+                            ROOT,
+                            True,
+                            GrabModeAsync,
+                            GrabModeAsync,
+                        );
+                    }
+                }
+            }
+        }
+        XFree(syms.cast());
+    }
 }
 
 fn updatenumlockmask(dpy: &Display) {
