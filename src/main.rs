@@ -313,7 +313,7 @@ pub struct Layout {
     arrange: Option<fn(mon: *mut Monitor)>,
 }
 
-struct Monitor {
+pub struct Monitor {
     ltsymbol: String,
     mfact: f64,
     nmaster: i32,
@@ -2656,6 +2656,18 @@ fn not_xgetwindowattributes(
 
 mod config;
 mod drw;
+
+pub mod layouts {
+    use crate::Monitor;
+
+    pub fn tile(m: *mut Monitor) {
+        todo!()
+    }
+
+    pub fn monocle(m: *mut Monitor) {
+        todo!()
+    }
+}
 
 fn main() {
     let mut dpy = Display::open();

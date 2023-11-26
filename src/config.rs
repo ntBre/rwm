@@ -11,9 +11,11 @@ use x11::{
 };
 
 use crate::{
-    focusmon, focusstack, incnmaster, killclient, movemouse, quit, resizemouse,
-    setlayout, setmfact, spawn, tag, tagmon, togglebar, togglefloating,
-    toggletag, toggleview, view, zoom, Arg, Button, Clk, Key, Layout, Rule,
+    focusmon, focusstack, incnmaster, killclient,
+    layouts::{monocle, tile},
+    movemouse, quit, resizemouse, setlayout, setmfact, spawn, tag, tagmon,
+    togglebar, togglefloating, toggletag, toggleview, view, zoom, Arg, Button,
+    Clk, Key, Layout, Rule,
 };
 
 /// border pixel of windows
@@ -55,7 +57,7 @@ pub const LAYOUTS: [Layout; 3] = [
     // tile
     Layout {
         symbol: "[]=",
-        arrange: Some(|_mon| todo!()),
+        arrange: Some(tile),
     },
     // floating
     Layout {
@@ -65,7 +67,7 @@ pub const LAYOUTS: [Layout; 3] = [
     // monocle
     Layout {
         symbol: "[M]",
-        arrange: Some(|_mon| todo!()),
+        arrange: Some(monocle),
     },
 ];
 
