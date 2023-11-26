@@ -1041,7 +1041,47 @@ fn updatesizehints(dpy: &Display, c: *mut Client) {
 }
 
 pub fn zoom(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let c = (*SELMON).sel;
+        if c.is_null() || (*c).isfloating {
+            return;
+        }
+        if c == nexttiled((*SELMON).clients) {
+            let c = nexttiled((*c).next);
+            if c.is_null() {
+                return;
+            }
+        }
+        pop(dpy, c);
+    }
+}
+
+fn pop(dpy: &Display, c: *mut Client) {
+    detach(c);
+    attach(c);
+    focus(dpy, c);
+    unsafe {
+        arrange(dpy, (*c).mon);
+    }
+}
+
+fn detach(c: *mut Client) {
+    unsafe {
+        let mut tc = (*(*c).mon).clients;
+        while !tc.is_null() && tc != c {
+            tc = (*tc).next;
+        }
+        tc = (*c).next;
+    }
+}
+
+fn nexttiled(mut c: *mut Client) -> *mut Client {
+    while !c.is_null() || !is_visible(c) {
+        unsafe {
+            c = (*c).next;
+        }
+    }
+    c
 }
 
 pub fn spawn(dpy: &Display, arg: Arg) {
