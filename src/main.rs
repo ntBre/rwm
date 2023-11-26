@@ -1216,7 +1216,31 @@ pub fn movemouse(dpy: &Display, arg: Arg) {
 }
 
 pub fn togglefloating(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        if (*SELMON).sel.is_null() {
+            return;
+        }
+        if (*(*SELMON).sel).isfullscreen {
+            // no support for fullscreen windows
+            return;
+        }
+        // either toggle or use fixed value
+        (*(*SELMON).sel).isfloating =
+            !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed;
+
+        if (*(*SELMON).sel).isfloating {
+            resize(
+                dpy,
+                (*SELMON).sel,
+                (*(*SELMON).sel).x,
+                (*(*SELMON).sel).y,
+                (*(*SELMON).sel).w,
+                (*(*SELMON).sel).h,
+                false,
+            );
+        }
+        arrange(dpy, SELMON);
+    }
 }
 
 pub fn resizemouse(dpy: &Display, arg: Arg) {
