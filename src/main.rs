@@ -2399,7 +2399,12 @@ fn keypress(dpy: &Display, e: *mut XEvent) {
 }
 
 fn focusin(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let ev = (*e).focus_change;
+        if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
+            setfocus(dpy, (*SELMON).sel);
+        }
+    }
 }
 
 fn expose(dpy: &Display, e: *mut XEvent) {
