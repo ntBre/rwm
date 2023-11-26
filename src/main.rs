@@ -655,7 +655,7 @@ fn focus(dpy: &Display, c: *mut Client) {
                 seturgent(dpy, c, false);
             }
             detachstack(c);
-            attach_stack(c);
+            attachstack(c);
             grabbuttons(dpy, c, true);
             XSetWindowBorder(
                 dpy.inner,
@@ -1451,7 +1451,30 @@ fn dirtomon(dir: isize) -> *mut Monitor {
 }
 
 pub fn tagmon(dpy: &Display, arg: Arg) {
-    todo!()
+    let Arg::Int(ai) = arg else { return };
+    unsafe {
+        if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
+            return;
+        }
+        sendmon(dpy, (*SELMON).sel, dirtomon(ai));
+    }
+}
+
+fn sendmon(dpy: &Display, c: *mut Client, m: *mut Monitor) {
+    unsafe {
+        if (*c).mon == m {
+            return;
+        }
+        unfocus(dpy, c, true);
+        detach(c);
+        detachstack(c);
+        (*c).mon = m;
+        (*c).tags = (*m).tagset[(*m).seltags]; // assign tags of target monitor
+        attach(c);
+        attachstack(c);
+        focus(dpy, null_mut());
+        arrange(dpy, null_mut());
+    }
 }
 
 pub fn quit(dpy: &Display, arg: Arg) {
@@ -1881,7 +1904,7 @@ fn updategeom(dpy: &Display) -> i32 {
                     detachstack(c);
                     (*c).mon = MONS;
                     attach(c);
-                    attach_stack(c);
+                    attachstack(c);
                 }
                 if m == SELMON {
                     SELMON = MONS;
@@ -2025,7 +2048,7 @@ fn cleanupmon(mon: *mut Monitor, dpy: &Display) {
     }
 }
 
-fn attach_stack(c: *mut Client) {
+fn attachstack(c: *mut Client) {
     unsafe {
         (*c).snext = (*(*c).mon).stack;
         (*(*c).mon).stack = c;
@@ -2431,7 +2454,7 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             XRaiseWindow(dpy.inner, (*c).win);
         }
         attach(c);
-        attach_stack(c);
+        attachstack(c);
         XChangeProperty(
             dpy.inner,
             ROOT,
