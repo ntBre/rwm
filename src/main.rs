@@ -1359,7 +1359,11 @@ pub fn focusstack(dpy: &Display, arg: Arg) {
 }
 
 pub fn incnmaster(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let Arg::Int(ai) = arg else { return };
+        (*SELMON).nmaster = max((*SELMON).nmaster + ai as i32, 0);
+        arrange(dpy, SELMON);
+    }
 }
 
 pub fn setmfact(dpy: &Display, arg: Arg) {
