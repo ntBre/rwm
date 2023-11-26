@@ -6,6 +6,7 @@
 use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
+use std::ptr::null_mut;
 use std::sync::LazyLock;
 
 use config::{
@@ -1260,7 +1261,19 @@ pub fn tag(dpy: &Display, arg: Arg) {
 }
 
 pub fn toggletag(dpy: &Display, arg: Arg) {
-    todo!()
+    let mut newtags = 0;
+    unsafe {
+        if (*SELMON).sel.is_null() {
+            return;
+        }
+        let Arg::Uint(ui) = arg else { return };
+        newtags = (*(*SELMON).sel).tags ^ (ui & TAGMASK);
+        if newtags != 0 {
+            (*(*SELMON).sel).tags = newtags;
+            focus(dpy, null_mut());
+            arrange(dpy, SELMON);
+        }
+    }
 }
 
 pub fn togglebar(dpy: &Display, arg: Arg) {
