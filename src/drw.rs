@@ -610,9 +610,8 @@ impl Drw {
         }
     }
 
-    pub(crate) fn cur_free(&self, i: u64) {
-        todo!()
-    }
+    /// no-op, I'm pretty sure Cursors get cleaned up naturally
+    pub(crate) fn cur_free(&self, cursor: Cursor) {}
 }
 
 fn xfont_free(font: *mut Fnt) {
