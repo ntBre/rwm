@@ -88,6 +88,14 @@ const XC_LEFT_PTR: u8 = 68;
 const XC_SIZING: u8 = 120;
 const XC_FLEUR: u8 = 52;
 
+// from Xutil.h
+/// for windows that are not mapped
+const WITHDRAWN_STATE: usize = 0;
+/// most applications want to start this way
+const NORMAL_STATE: usize = 1;
+/// application wants to start as an icon
+const ICONIC_STATE: usize = 3;
+
 extern "C" fn xerror(dpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
     unsafe {
         let e = *ee;
@@ -1892,7 +1900,7 @@ fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
                 wc.as_mut_ptr(),
             );
             XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-            setclientstate(dpy, c, 0); // this 0 is WithdrawnState from Xutil.h
+            setclientstate(dpy, c, WITHDRAWN_STATE);
             XSync(dpy.inner, False);
             XSetErrorHandler(Some(xerror));
             XUngrabServer(dpy.inner);
