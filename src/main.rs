@@ -2167,24 +2167,80 @@ fn run(dpy: &Display) {
         XSync(dpy.inner, False);
         while RUNNING && XNextEvent(dpy.inner, ev.as_mut_ptr()) == 0 {
             match (*ev.as_mut_ptr()).type_ {
-                ButtonPress => todo!(),
-                ClientMessage => todo!(),
-                ConfigureRequest => todo!(),
-                ConfigureNotify => todo!(),
-                DestroyNotify => todo!(),
-                EnterNotify => todo!(),
-                Expose => todo!(),
-                FocusIn => todo!(),
-                KeyPress => todo!(),
-                MappingNotify => todo!(),
-                MapRequest => todo!(),
-                MotionNotify => todo!(),
-                PropertyNotify => todo!(),
-                UnmapNotify => todo!(),
+                ButtonPress => buttonpress(ev.as_mut_ptr()),
+                ClientMessage => clientmessage(ev.as_mut_ptr()),
+                ConfigureRequest => configurerequest(ev.as_mut_ptr()),
+                ConfigureNotify => configurenotify(ev.as_mut_ptr()),
+                DestroyNotify => destroynotify(ev.as_mut_ptr()),
+                EnterNotify => enternotify(ev.as_mut_ptr()),
+                Expose => expose(ev.as_mut_ptr()),
+                FocusIn => focusin(ev.as_mut_ptr()),
+                KeyPress => keypress(ev.as_mut_ptr()),
+                MappingNotify => mappingnotify(ev.as_mut_ptr()),
+                MapRequest => maprequest(ev.as_mut_ptr()),
+                MotionNotify => motionnotify(ev.as_mut_ptr()),
+                PropertyNotify => propertynotify(ev.as_mut_ptr()),
+                UnmapNotify => unmapnotify(ev.as_mut_ptr()),
                 _ => (),
             }
         }
     }
+}
+
+fn unmapnotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn propertynotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn motionnotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn maprequest(e: *mut XEvent) {
+    todo!()
+}
+
+fn mappingnotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn keypress(e: *mut XEvent) {
+    todo!()
+}
+
+fn focusin(e: *mut XEvent) {
+    todo!()
+}
+
+fn expose(e: *mut XEvent) {
+    todo!()
+}
+
+fn enternotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn destroynotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn configurenotify(e: *mut XEvent) {
+    todo!()
+}
+
+fn configurerequest(e: *mut XEvent) {
+    todo!()
+}
+
+fn clientmessage(e: *mut XEvent) {
+    todo!()
+}
+
+fn buttonpress(e: *mut XEvent) {
+    todo!()
 }
 
 fn scan(dpy: &Display) {
