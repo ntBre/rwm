@@ -28,25 +28,27 @@ use x11::xlib::{
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
     ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime,
     DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
-    ExposureMask, False, FocusIn, GrabModeAsync, GrabModeSync, KeyPress,
-    KeySym, LeaveWindowMask, LockMask, MapRequest, MappingNotify, MotionNotify,
-    NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
-    ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, PropertyNotify, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
-    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
-    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
-    XFreeStringList, XGetKeyboardMapping, XGetModifierMapping,
-    XGetTextProperty, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGrabButton, XGrabKey, XGrabServer, XInternAtom, XKeysymToKeycode,
-    XMapRaised, XMoveWindow, XNextEvent, XQueryPointer, XRaiseWindow,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
-    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync,
-    XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint,
+    ExposureMask, False, FocusIn, GrabModeAsync, GrabModeSync, IsViewable,
+    KeyPress, KeySym, LeaveWindowMask, LockMask, MapRequest, MappingNotify,
+    MotionNotify, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize,
+    PResizeInc, PSize, ParentRelative, PointerMotionMask, PointerRoot,
+    PropModeAppend, PropModeReplace, PropertyChangeMask, PropertyNotify,
+    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, UnmapNotify, XChangeProperty,
+    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XCloseDisplay,
+    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
+    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
+    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
+    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
+    XFreeModifiermap, XFreeStringList, XGetKeyboardMapping,
+    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
+    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
+    XGetWindowProperty, XGrabButton, XGrabKey, XGrabServer, XInternAtom,
+    XKeysymToKeycode, XMapRaised, XMoveWindow, XNextEvent, XQueryPointer,
+    XQueryTree, XRaiseWindow, XRootWindow, XSelectInput, XSendEvent,
+    XSetClassHint, XSetInputFocus, XSetWMHints, XSetWindowAttributes,
+    XSetWindowBorder, XSizeHints, XSync, XUngrabButton, XUngrabKey,
+    XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
     XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
     XA_WINDOW, XA_WM_NAME,
 };
@@ -1981,8 +1983,119 @@ fn run(dpy: &Display) {
     }
 }
 
-fn scan() {
+fn scan(dpy: &Display) {
+    let mut num = 0;
+    let mut d1 = 0;
+    let mut d2 = 0;
+    let mut wins: *mut Window = std::ptr::null_mut();
+    let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
+    unsafe {
+        if XQueryTree(
+            dpy.inner,
+            ROOT,
+            &mut d1,
+            &mut d2,
+            &mut wins as *mut _,
+            &mut num,
+        ) != 0
+        {
+            for i in 0..num {
+                if not_xgetwindowattributes(dpy, wins, i, &mut wa)
+                    || (*wa.as_mut_ptr()).override_redirect != 0
+                    || xgettransientforhint(dpy, wins, i, &mut d1)
+                {
+                    continue;
+                }
+                if (*wa.as_mut_ptr()).map_state == IsViewable
+                    || getstate(dpy, *wins.offset(i as isize))
+                        .is_ok_and(|v| v == ICONIC_STATE)
+                {
+                    manage(wins.offset(i as isize), wa.as_mut_ptr());
+                }
+            }
+            for i in 0..num {
+                // now the transients
+                if not_xgetwindowattributes(dpy, wins, i, &mut wa) {
+                    continue;
+                }
+                if xgettransientforhint(dpy, wins, i, &mut d1)
+                    && ((*wa.as_mut_ptr()).map_state == IsViewable
+                        || getstate(dpy, *wins.offset(i as isize))
+                            .is_ok_and(|v| v == ICONIC_STATE))
+                {
+                    manage(wins.offset(i as isize), wa.as_mut_ptr());
+                }
+            }
+            if !wins.is_null() {
+                XFree(wins.cast());
+            }
+        }
+    }
+}
+
+fn manage(w: *mut Window, wa: *mut XWindowAttributes) {
     todo!()
+}
+
+fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
+    let mut fmt = 0;
+    let mut p = std::ptr::null_mut();
+    let mut n = 0;
+    let mut extra = 0;
+    let mut real = 0;
+    let mut result = Err(());
+    unsafe {
+        let cond = XGetWindowProperty(
+            dpy.inner,
+            w,
+            WMATOM[WM::State as usize],
+            0,
+            2,
+            False,
+            WMATOM[WM::State as usize],
+            &mut real,
+            &mut fmt,
+            &mut n,
+            &mut extra,
+            p,
+        ) != Success as i32;
+        if cond {
+            return Err(());
+        }
+        if n != 0 {
+            // they do this cast in the call to XGetWindowProperty, not sure if
+            // it matters
+            result = Ok(**p as usize);
+        }
+        XFree(p.cast());
+        result
+    }
+}
+
+fn xgettransientforhint(
+    dpy: &Display,
+    wins: *mut u64,
+    i: u32,
+    d1: &mut u64,
+) -> bool {
+    unsafe {
+        XGetTransientForHint(dpy.inner, *wins.offset(i as isize), d1) != 0
+    }
+}
+
+fn not_xgetwindowattributes(
+    dpy: &Display,
+    wins: *mut u64,
+    i: u32,
+    wa: &mut MaybeUninit<XWindowAttributes>,
+) -> bool {
+    unsafe {
+        XGetWindowAttributes(
+            dpy.inner,
+            *wins.offset(i as isize),
+            wa.as_mut_ptr(),
+        ) == 0
+    }
 }
 
 mod config;
@@ -1992,7 +2105,7 @@ fn main() {
     let mut dpy = Display::open();
     checkotherwm(&dpy);
     setup(&mut dpy);
-    scan();
+    scan(&dpy);
     run(&dpy);
     cleanup(&dpy);
     unsafe {
