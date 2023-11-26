@@ -31,8 +31,8 @@ use x11::xlib::{
     ExposureMask, False, FocusIn, GrabModeAsync, GrabModeSync, KeyPress,
     KeySym, LeaveWindowMask, LockMask, MapRequest, MappingNotify, MotionNotify,
     NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
-    ParentRelative, PointerMotionMask, PointerRoot, PropModeReplace,
-    PropertyChangeMask, PropertyNotify, RevertToPointerRoot,
+    ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
+    PropModeReplace, PropertyChangeMask, PropertyNotify, RevertToPointerRoot,
     StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
     Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
     XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
@@ -42,13 +42,13 @@ use x11::xlib::{
     XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
     XFreeStringList, XGetKeyboardMapping, XGetModifierMapping,
     XGetTextProperty, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode, XMapRaised,
-    XMoveWindow, XNextEvent, XQueryPointer, XRaiseWindow, XRootWindow,
-    XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
-    XUngrabKey, XUnmapWindow, XUrgencyHint, XWindowChanges,
-    XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
-    XA_WM_NAME,
+    XGrabButton, XGrabKey, XGrabServer, XInternAtom, XKeysymToKeycode,
+    XMapRaised, XMoveWindow, XNextEvent, XQueryPointer, XRaiseWindow,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
+    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync,
+    XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint,
+    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -568,7 +568,7 @@ fn focus(dpy: &Display, c: *mut Client) {
             if (*c).isurgent {
                 seturgent(dpy, c, false);
             }
-            detach_stack(c);
+            detachstack(c);
             attach_stack(c);
             grabbuttons(dpy, c, true);
             XSetWindowBorder(
@@ -1609,7 +1609,7 @@ fn updategeom(dpy: &Display) -> i32 {
                 while !c.is_null() {
                     dirty = 1;
                     (*m).clients = (*c).next;
-                    detach_stack(c);
+                    detachstack(c);
                     (*c).mon = MONS;
                     attach(c);
                     attach_stack(c);
@@ -1770,7 +1770,7 @@ fn attach(c: *mut Client) {
     }
 }
 
-fn detach_stack(c: *mut Client) {
+fn detachstack(c: *mut Client) {
     unsafe {
         let mut tc = (*(*c).mon).stack;
         while !tc.is_null() && tc != c {
@@ -1848,7 +1848,7 @@ fn cleanup(dpy: &Display) {
         m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {
-                unmanage((*m).stack, false);
+                unmanage(dpy, (*m).stack, false);
             }
             m = (*m).next;
         }
@@ -1873,8 +1873,75 @@ fn cleanup(dpy: &Display) {
     }
 }
 
-fn unmanage(stack: *mut Client, destroyed: bool) {
-    todo!()
+fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
+    unsafe {
+        let m = (*c).mon;
+        let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+        detach(c);
+        detachstack(c);
+        if !destroyed {
+            (*wc.as_mut_ptr()).border_width = (*c).oldbw;
+            XGrabServer(dpy.inner); // avoid race conditions
+            XSetErrorHandler(None);
+            XSelectInput(dpy.inner, (*c).win, NoEventMask);
+            // restore border
+            XConfigureWindow(
+                dpy.inner,
+                (*c).win,
+                CWBorderWidth as u32,
+                wc.as_mut_ptr(),
+            );
+            XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
+            setclientstate(dpy, c, 0); // this 0 is WithdrawnState from Xutil.h
+            XSync(dpy.inner, False);
+            XSetErrorHandler(Some(xerror));
+            XUngrabServer(dpy.inner);
+        }
+        Box::from_raw(c);
+        focus(dpy, std::ptr::null_mut());
+        updateclientlist(dpy);
+        arrange(dpy, m);
+    }
+}
+
+fn updateclientlist(dpy: &Display) {
+    unsafe {
+        XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
+        let mut m = MONS;
+        while !m.is_null() {
+            let mut c = (*m).clients;
+            while !c.is_null() {
+                XChangeProperty(
+                    dpy.inner,
+                    ROOT,
+                    NETATOM[Net::ClientList as usize],
+                    XA_WINDOW,
+                    32,
+                    PropModeAppend,
+                    &mut ((*c).win as u8) as *mut _,
+                    1,
+                );
+                c = (*c).next;
+            }
+            m = (*m).next;
+        }
+    }
+}
+
+fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
+    let data = [state, 0]; // this zero is None
+    unsafe {
+        XChangeProperty(
+            dpy.inner,
+            (*c).win,
+            WMATOM[WM::State as usize],
+            WMATOM[WM::State as usize],
+            32,
+            PropModeReplace,
+            data.as_ptr() as *const _,
+            2,
+        );
+    }
 }
 
 // not sure how this is my problem...
