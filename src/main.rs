@@ -33,29 +33,30 @@ use x11::xlib::{
     GrabModeAsync, GrabModeSync, InputHint, IsViewable, KeyPress, KeySym,
     LeaveWindowMask, LockMask, MapRequest, MappingKeyboard, MappingNotify,
     Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, MotionNotify,
-    NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
-    ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, PropertyDelete, PropertyNotify,
-    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    UnmapNotify, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
-    XClassHint, XCloseDisplay, XConfigureEvent, XConfigureWindow,
-    XConnectionNumber, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
-    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
-    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayKeycodes,
-    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
-    XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
-    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
-    XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient,
-    XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent,
-    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
-    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
-    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
-    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
-    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
-    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
+    NoEventMask, NotifyInferior, NotifyNormal, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    PropertyDelete, PropertyNotify, RevertToPointerRoot, ShiftMask,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
+    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
+    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
+    XFreeStringList, XGetClassHint, XGetKeyboardMapping, XGetModifierMapping,
+    XGetTextProperty, XGetTransientForHint, XGetWMHints, XGetWMNormalHints,
+    XGetWMProtocols, XGetWindowAttributes, XGetWindowProperty, XGrabButton,
+    XGrabKey, XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode,
+    XKillClient, XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow,
+    XNextEvent, XQueryPointer, XQueryTree, XRaiseWindow,
+    XRefreshKeyboardMapping, XRootWindow, XSelectInput, XSendEvent,
+    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
+    XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
+    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -2420,7 +2421,27 @@ fn expose(dpy: &Display, e: *mut XEvent) {
 }
 
 fn enternotify(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let ev = (*e).crossing;
+        if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
+            && ev.window != ROOT
+        {
+            return;
+        }
+        let c = wintoclient(ev.window);
+        let m = if !c.is_null() {
+            (*c).mon
+        } else {
+            wintomon(dpy, ev.window)
+        };
+        if m != SELMON {
+            unfocus(dpy, (*SELMON).sel, true);
+            SELMON = m;
+        } else if c.is_null() || c == (*SELMON).sel {
+            return;
+        }
+        focus(dpy, c);
+    }
 }
 
 fn destroynotify(dpy: &Display, e: *mut XEvent) {
