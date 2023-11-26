@@ -27,7 +27,7 @@ use x11::xlib::{
     BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
     CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
-    ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime,
+    ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime, DestroyAll,
     DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
     ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync, GrabModeSync,
     InputHint, IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask,
@@ -45,13 +45,14 @@ use x11::xlib::{
     XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
     XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
     XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
-    XGrabServer, XInternAtom, XKeysymToKeycode, XMapRaised, XMapWindow,
-    XMoveResizeWindow, XMoveWindow, XNextEvent, XQueryPointer, XQueryTree,
-    XRaiseWindow, XRootWindow, XSelectInput, XSendEvent, XSetClassHint,
-    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
-    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
-    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
-    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    XGrabServer, XInternAtom, XKeysymToKeycode, XKillClient, XMapRaised,
+    XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent, XQueryPointer,
+    XQueryTree, XRaiseWindow, XRootWindow, XSelectInput, XSendEvent,
+    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
+    XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
+    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -1395,7 +1396,20 @@ pub fn setmfact(dpy: &Display, arg: Arg) {
 }
 
 pub fn killclient(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        if (*SELMON).sel.is_null() {
+            return;
+        }
+        if !sendevent(dpy, (*SELMON).sel, WMATOM[WM::Delete as usize]) {
+            XGrabServer(dpy.inner);
+            XSetErrorHandler(None);
+            XSetCloseDownMode(dpy.inner, DestroyAll);
+            XKillClient(dpy.inner, (*(*SELMON).sel).win);
+            XSync(dpy.inner, False);
+            XSetErrorHandler(Some(xerror));
+            XUngrabServer(dpy.inner);
+        }
+    }
 }
 
 pub fn focusmon(dpy: &Display, arg: Arg) {
