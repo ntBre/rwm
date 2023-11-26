@@ -1413,7 +1413,41 @@ pub fn killclient(dpy: &Display, arg: Arg) {
 }
 
 pub fn focusmon(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let Arg::Int(ai) = arg else { return };
+        if (*MONS).next.is_null() {
+            return;
+        }
+        let m = dirtomon(ai);
+        if m == SELMON {
+            return;
+        }
+        unfocus(dpy, (*SELMON).sel, false);
+        SELMON = m;
+        focus(dpy, null_mut());
+    }
+}
+
+fn dirtomon(dir: isize) -> *mut Monitor {
+    let mut m = null_mut();
+    unsafe {
+        if dir > 0 {
+            m = (*SELMON).next;
+            if m.is_null() {
+                m = MONS;
+            }
+        } else if SELMON == MONS {
+            m = MONS;
+            while !(*m).next.is_null() {
+                m = (*m).next;
+            }
+        } else {
+            while (*m).next != SELMON {
+                m = (*m).next;
+            }
+        }
+    }
+    m
 }
 
 pub fn tagmon(dpy: &Display, arg: Arg) {
