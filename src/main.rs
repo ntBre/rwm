@@ -29,9 +29,9 @@ use x11::xlib::{
     ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime,
     DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
     ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync, GrabModeSync,
-    IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask, MapRequest,
-    MappingNotify, MotionNotify, NoEventMask, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    InputHint, IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask,
+    MapRequest, MappingNotify, MotionNotify, NoEventMask, PAspect, PBaseSize,
+    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
     PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
     PropertyNotify, RevertToPointerRoot, StructureNotifyMask,
     SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
@@ -2220,11 +2220,124 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
 }
 
 fn updatewmhints(dpy: &Display, c: *mut Client) {
-    todo!()
+    unsafe {
+        let wmh = XGetWMHints(dpy.inner, (*c).win);
+        if !wmh.is_null() {
+            if (c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0) {
+                (*wmh).flags &= !XUrgencyHint;
+                XSetWMHints(dpy.inner, (*c).win, wmh);
+            } else {
+                (*c).isurgent = (*wmh).flags & XUrgencyHint != 0;
+            }
+            if (*wmh).flags & InputHint != 0 {
+                (*c).neverfocus = (*wmh).input == 0;
+            } else {
+                (*c).neverfocus = false;
+            }
+            XFree(wmh.cast());
+        }
+    }
 }
 
 fn updatewindowtype(dpy: &Display, c: *mut Client) {
-    todo!()
+    unsafe {
+        let state = getatomprop(dpy, c, NETATOM[Net::WMState as usize]);
+        let wtype = getatomprop(dpy, c, NETATOM[Net::WMWindowType as usize]);
+        if state == NETATOM[Net::WMFullscreen as usize] {
+            setfullscreen(dpy, c, true);
+        }
+        if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
+            (*c).isfloating = true;
+        }
+    }
+}
+
+fn setfullscreen(dpy: &Display, c: *mut Client, fullscreen: bool) {
+    unsafe {
+        if fullscreen && !(*c).isfullscreen {
+            XChangeProperty(
+                dpy.inner,
+                (*c).win,
+                NETATOM[Net::WMState as usize],
+                XA_ATOM,
+                32,
+                PropModeReplace,
+                &(NETATOM[Net::WMFullscreen as usize] as u8) as *const _,
+                1,
+            );
+            (*c).isfullscreen = true;
+            (*c).oldstate = (*c).isfloating;
+            (*c).oldbw = (*c).bw;
+            (*c).bw = 0;
+            (*c).isfloating = true;
+            resizeclient(
+                dpy,
+                c,
+                (*(*c).mon).mx as i32,
+                (*(*c).mon).my as i32,
+                (*(*c).mon).mw as i32,
+                (*(*c).mon).mh as i32,
+            );
+            XRaiseWindow(dpy.inner, (*c).win);
+        } else if !fullscreen && (*c).isfullscreen {
+            XChangeProperty(
+                dpy.inner,
+                (*c).win,
+                NETATOM[Net::WMState as usize],
+                XA_ATOM,
+                32,
+                PropModeReplace,
+                &0_u8 as *const _,
+                0,
+            );
+            (*c).isfullscreen = false;
+            (*c).isfloating = (*c).oldstate;
+            (*c).bw = (*c).oldbw;
+            (*c).x = (*c).oldx;
+            (*c).y = (*c).oldy;
+            (*c).w = (*c).oldw;
+            (*c).h = (*c).oldh;
+            resizeclient(
+                dpy,
+                c,
+                (*c).x as i32,
+                (*c).y as i32,
+                (*c).w as i32,
+                (*c).h as i32,
+            );
+            arrange(dpy, (*c).mon);
+        }
+    }
+}
+
+fn getatomprop(dpy: &Display, c: *mut Client, prop: Atom) -> Atom {
+    let mut di = 0;
+    let mut dl = 0;
+    let mut p = std::ptr::null_mut();
+    let mut da = 0;
+    let mut atom: Atom = 0;
+    unsafe {
+        if XGetWindowProperty(
+            dpy.inner,
+            (*c).win,
+            prop,
+            0,
+            std::mem::size_of::<Atom>() as i64,
+            False,
+            XA_ATOM,
+            &mut da,
+            &mut di,
+            &mut dl,
+            &mut dl,
+            &mut p,
+        ) == Success as i32
+            && !p.is_null()
+        {
+            atom = *p as u64;
+            XFree(p.cast());
+        }
+    }
+    atom
 }
 
 fn applyrules(dpy: &Display, c: *mut Client) {
