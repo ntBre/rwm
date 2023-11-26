@@ -1,16 +1,19 @@
 //! tiling window manager based on dwm
 
 #![allow(unused)]
+#![feature(vec_into_raw_parts)]
 
 use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
 
-use config::{COLORS, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR};
+use config::{
+    COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
+};
 use drw::Drw;
 use libc::{
-    c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT,
-    SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
+    c_uint, close, execvp, fork, setsid, sigaction, sigemptyset, waitpid,
+    SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN, WNOHANG,
 };
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
@@ -29,15 +32,15 @@ use x11::xlib::{
     PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
     SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
     XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
-    XConfigureEvent, XConfigureWindow, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
-    XFreeStringList, XGetKeyboardMapping, XGetModifierMapping,
-    XGetTextProperty, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode, XMapRaised,
-    XMoveWindow, XQueryPointer, XRaiseWindow, XRootWindow, XSelectInput,
-    XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
+    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
+    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
+    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
+    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
+    XFreeModifiermap, XFreeStringList, XGetKeyboardMapping,
+    XGetModifierMapping, XGetTextProperty, XGetWMHints, XGetWMNormalHints,
+    XGetWMProtocols, XGrabButton, XGrabKey, XInternAtom, XKeysymToKeycode,
+    XMapRaised, XMoveWindow, XQueryPointer, XRaiseWindow, XRootWindow,
+    XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus, XSetWMHints,
     XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
     XUngrabKey, XUnmapWindow, XUrgencyHint, XWindowChanges,
     XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
@@ -45,7 +48,7 @@ use x11::xlib::{
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
-use crate::config::{BUTTONS, RESIZEHINTS, TAGS};
+use crate::config::{BUTTONS, DMENUCMD, RESIZEHINTS, TAGS};
 
 pub struct Display {
     inner: *mut XDisplay,
@@ -148,7 +151,7 @@ pub enum Arg {
     Uint(usize),
     Int(isize),
     Float(f64),
-    Str(&'static str),
+    Str(&'static [&'static str]),
     Layout(&'static Layout),
 }
 
@@ -1085,7 +1088,39 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 }
 
 pub fn spawn(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
+        let Arg::Str(s) = arg else {
+            return;
+        };
+
+        if s == DMENUCMD {
+            // this looks like a memory leak, not sure how to fix it. at least
+            // we're only leaking a single-character &str at a time
+            let r: &'static str = format!("{}", (*SELMON).num).leak();
+            let r: Box<&'static str> = Box::new(r);
+            let mut r: &'static &'static str = Box::leak(r);
+            std::mem::swap(&mut DMENUMON, &mut r);
+        }
+
+        if fork() == 0 {
+            // might need to be if dpy but our dpy always is
+            close(XConnectionNumber(dpy.inner));
+            setsid();
+            sigemptyset(&mut (*sa.as_mut_ptr()).sa_mask as *mut _);
+            {
+                let sa = sa.as_mut_ptr();
+                (*sa).sa_flags = 0;
+                (*sa).sa_sigaction = SIG_DFL;
+            }
+            let mut sa = sa.assume_init();
+            sigaction(SIGCHLD, &mut sa as *mut _, std::ptr::null_mut());
+
+            let (s, _, _) = s.to_vec().into_raw_parts();
+            execvp(s.offset(0).cast(), s.cast());
+            panic!("execvp has failed");
+        }
+    }
 }
 
 pub fn movemouse(dpy: &Display, arg: Arg) {

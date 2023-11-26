@@ -56,14 +56,32 @@ pub const TAGS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 pub const MODKEY: u32 = Mod1Mask;
 
 pub const TERMCMD: &str = "st";
-pub const DMENUCMD: &str = "dmenu_run";
+pub const DMENUFONT: &str = "monospace:size=10";
+
+pub static DMENUCMD: &[&str] = &[
+    "dmenu_run",
+    "-m",
+    "0",
+    "-fn",
+    DMENUFONT,
+    "-nb",
+    COL_GRAY1,
+    "-nf",
+    COL_GRAY3,
+    "-sb",
+    COL_CYAN,
+    "-sf",
+    COL_GRAY4,
+];
+
+pub static mut DMENUMON: &&str = &DMENUCMD[2];
 
 use ControlMask as Ctrl;
 use ShiftMask as Shift;
 
-pub const KEYS: [Key; 60] = [
+pub static KEYS: [Key; 60] = [
     Key::new(MODKEY, XK_p, spawn, Arg::Str(DMENUCMD)),
-    Key::new(MODKEY | Shift, XK_Return, spawn, Arg::Str(TERMCMD)),
+    Key::new(MODKEY | Shift, XK_Return, spawn, Arg::Str(&[TERMCMD])),
     Key::new(MODKEY, XK_b, togglebar, Arg::Uint(0)),
     Key::new(MODKEY, XK_j, focusstack, Arg::Int(1)),
     Key::new(MODKEY, XK_k, focusstack, Arg::Int(-1)),
@@ -132,7 +150,7 @@ pub const BUTTONS: [Button; 11] = [
     Button::new(C::LtSymbol, 0, Button1, setlayout, Arg::Uint(0)),
     Button::new(C::LtSymbol, 0, Button3, setlayout, Arg::Layout(&LAYOUTS[2])),
     Button::new(C::WinTitle, 0, Button2, zoom, Arg::Uint(0)),
-    Button::new(C::StatusText, 0, Button2, spawn, Arg::Str(TERMCMD)),
+    Button::new(C::StatusText, 0, Button2, spawn, Arg::Str(&[TERMCMD])),
     Button::new(C::ClientWin, MODKEY, Button1, movemouse, Arg::Uint(0)),
     Button::new(C::ClientWin, MODKEY, Button2, togglefloating, Arg::Uint(0)),
     Button::new(C::ClientWin, MODKEY, Button3, resizemouse, Arg::Uint(0)),
