@@ -1264,7 +1264,19 @@ pub fn toggletag(dpy: &Display, arg: Arg) {
 }
 
 pub fn togglebar(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        (*SELMON).showbar = !(*SELMON).showbar;
+        updatebarpos(SELMON);
+        XMoveResizeWindow(
+            dpy.inner,
+            (*SELMON).barwin,
+            (*SELMON).wx as i32,
+            (*SELMON).by as i32,
+            (*SELMON).ww as u32,
+            BH as u32,
+        );
+        arrange(dpy, SELMON);
+    }
 }
 
 pub fn focusstack(dpy: &Display, arg: Arg) {
@@ -1697,7 +1709,7 @@ fn updategeom(dpy: &Display) -> i32 {
                     (*m).ww = unique[i].width;
                     (*m).mh = unique[i].height;
                     (*m).wh = unique[i].height;
-                    update_bar_pos(m);
+                    updatebarpos(m);
                 }
 
                 m = (*m).next;
@@ -1737,7 +1749,7 @@ fn updategeom(dpy: &Display) -> i32 {
                 (*MONS).ww = SW;
                 (*MONS).mh = SH;
                 (*MONS).wh = SH;
-                update_bar_pos(MONS);
+                updatebarpos(MONS);
             }
         }
         if dirty != 0 {
@@ -1901,7 +1913,7 @@ fn is_visible(c: *const Client) -> bool {
     unsafe { ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags]) != 0 }
 }
 
-fn update_bar_pos(m: *mut Monitor) {
+fn updatebarpos(m: *mut Monitor) {
     unsafe {
         (*m).wy = (*m).my;
         (*m).wh = (*m).mh;
