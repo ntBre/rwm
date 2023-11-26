@@ -34,7 +34,7 @@ use x11::xlib::{
     MapRequest, MappingNotify, MotionNotify, NoEventMask, PAspect, PBaseSize,
     PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
     PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    PropertyNotify, RevertToPointerRoot, StructureNotifyMask,
+    PropertyDelete, PropertyNotify, RevertToPointerRoot, StructureNotifyMask,
     SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
     UnmapNotify, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
     XClassHint, XCloseDisplay, XConfigureEvent, XConfigureWindow,
@@ -52,7 +52,8 @@ use x11::xlib::{
     XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
     XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
     XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -2280,7 +2281,50 @@ fn unmapnotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn propertynotify(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let mut trans: Window = 0;
+        let ev = (*e).property;
+        if ev.window == ROOT && ev.atom == XA_WM_NAME {
+            updatestatus(dpy);
+        } else if ev.state == PropertyDelete {
+            return;
+        } else {
+            let c = wintoclient(ev.window);
+            if !c.is_null() {
+                match ev.atom {
+                    XA_WM_TRANSIENT_FOR => {
+                        if !(*c).isfloating
+                            && xgettransientforhint(dpy, (*c).win, &mut trans)
+                        {
+                            (*c).isfloating = !wintoclient(trans).is_null();
+                            if (*c).isfloating {
+                                arrange(dpy, (*c).mon);
+                            }
+                        }
+                    }
+                    XA_WM_NORMAL_HINTS => {
+                        (*c).hintsvalid = false;
+                    }
+                    XA_WM_HINTS => {
+                        updatewmhints(dpy, c);
+                        drawbars();
+                    }
+                    _ => (),
+                }
+                if ev.atom == XA_WM_NAME
+                    || ev.atom == NETATOM[Net::WMName as usize]
+                {
+                    updatetitle(dpy, c);
+                    if c == (*(*c).mon).sel {
+                        drawbar((*c).mon);
+                    }
+                }
+                if ev.atom == NETATOM[Net::WMWindowType as usize] {
+                    updatewindowtype(dpy, c);
+                }
+            }
+        }
+    }
 }
 
 fn motionnotify(dpy: &Display, e: *mut XEvent) {
