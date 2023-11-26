@@ -2445,22 +2445,32 @@ fn enternotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn destroynotify(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let ev = (*e).destroy_window;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            unmanage(dpy, c, true);
+        }
+    }
 }
 
 fn configurenotify(dpy: &Display, e: *mut XEvent) {
+    unsafe {}
     todo!()
 }
 
 fn configurerequest(dpy: &Display, e: *mut XEvent) {
+    unsafe {}
     todo!()
 }
 
 fn clientmessage(dpy: &Display, e: *mut XEvent) {
+    unsafe {}
     todo!()
 }
 
 fn buttonpress(dpy: &Display, e: *mut XEvent) {
+    unsafe {}
     todo!()
 }
 
