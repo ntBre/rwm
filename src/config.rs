@@ -13,6 +13,7 @@ pub const MFACT: f64 = 0.5;
 pub const NMASTER: i32 = 1;
 pub const SHOWBAR: bool = true;
 pub const TOPBAR: bool = true;
+pub const RESIZEHINTS: bool = true;
 pub const LAYOUTS: [Layout; 3] = [
     // tile
     Layout {

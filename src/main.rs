@@ -2,6 +2,7 @@
 
 #![allow(unused)]
 
+use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
 use std::mem::MaybeUninit;
 
@@ -22,25 +23,27 @@ use x11::xlib::{
     CWEventMask, CWHeight, CWOverrideRedirect, CWSibling, CWStackMode, CWWidth,
     ClientMessage, ConfigureNotify, CopyFromParent, CurrentTime,
     Display as XDisplay, EnterWindowMask, ExposureMask, False, GrabModeAsync,
-    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, ParentRelative,
-    PointerMotionMask, PropModeReplace, PropertyChangeMask,
-    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, XChangeProperty,
-    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XConfigureEvent,
-    XConfigureWindow, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
-    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
-    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayWidth, XEvent,
-    XFree, XFreeModifiermap, XFreeStringList, XGetModifierMapping,
-    XGetTextProperty, XGetWMHints, XGetWMProtocols, XGrabButton, XInternAtom,
+    GrabModeSync, LeaveWindowMask, LockMask, NoEventMask, PAspect, PBaseSize,
+    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
+    XClassHint, XConfigureEvent, XConfigureWindow, XCreateSimpleWindow,
+    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
+    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
+    XDisplayHeight, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
+    XFreeStringList, XGetModifierMapping, XGetTextProperty, XGetWMHints,
+    XGetWMNormalHints, XGetWMProtocols, XGrabButton, XInternAtom,
     XKeysymToKeycode, XMapRaised, XMoveWindow, XQueryPointer, XRaiseWindow,
     XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetInputFocus,
-    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSync, XUngrabButton,
-    XUnmapWindow, XUrgencyHint, XWindowChanges, XmbTextPropertyToTextList, CWX,
-    CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    XSetWMHints, XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync,
+    XUngrabButton, XUnmapWindow, XUrgencyHint, XWindowChanges,
+    XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
+    XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
-use crate::config::{BUTTONS, TAGS};
+use crate::config::{BUTTONS, RESIZEHINTS, TAGS};
 
 pub struct Display {
     inner: *mut XDisplay,
@@ -173,7 +176,7 @@ struct Client {
     maxh: i32,
     minw: i32,
     minh: i32,
-    hintsvalid: i32,
+    hintsvalid: bool,
     bw: i32,
     oldbw: i32,
     tags: usize,
@@ -765,7 +768,7 @@ fn resize(
     mut h: i32,
     interact: bool,
 ) {
-    if applysizehints(c, &mut x, &mut y, &mut w, &mut h, interact) {
+    if applysizehints(dpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
         resizeclient(dpy, c, x, y, w, h);
     }
 }
@@ -831,6 +834,7 @@ fn configure(dpy: &Display, c: *mut Client) {
 }
 
 fn applysizehints(
+    dpy: &Display,
     c: *mut Client,
     x: &mut i32,
     y: &mut i32,
@@ -838,7 +842,7 @@ fn applysizehints(
     h: &mut i32,
     interact: bool,
 ) -> bool {
-    let baseismin = 0;
+    let mut baseismin = false;
     unsafe {
         let m = (*c).mon;
         // set minimum possible
@@ -871,8 +875,124 @@ fn applysizehints(
                 *y = (*m).wy as i32;
             }
         }
+        if (*h < BH as i32) {
+            *h = BH as i32;
+        }
+        if (*w < BH as i32) {
+            *w = BH as i32;
+        }
+        if (RESIZEHINTS || (*c).isfloating) {
+            if (!(*c).hintsvalid) {
+                updatesizehints(dpy, c);
+            }
+            /* see last two sentences in ICCCM 4.1.2.3 */
+            baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
+            if (!baseismin) {
+                /* temporarily remove base dimensions */
+                *w -= (*c).basew;
+                *h -= (*c).baseh;
+            }
+            /* adjust for aspect limits */
+            if ((*c).mina > 0.0 && (*c).maxa > 0.0) {
+                if ((*c).maxa < *w as f64 / *h as f64) {
+                    *w = (*h as f64 * (*c).maxa + 0.5) as i32;
+                } else if ((*c).mina < *h as f64 / *w as f64) {
+                    *h = (*w as f64 * (*c).mina + 0.5) as i32;
+                }
+            }
+            if (baseismin) {
+                /* increment calculation requires this */
+                *w -= (*c).basew;
+                *h -= (*c).baseh;
+            }
+            /* adjust for increment value */
+            if ((*c).incw != 0) {
+                *w -= *w % (*c).incw;
+            }
+            if ((*c).inch != 0) {
+                *h -= *h % (*c).inch;
+            }
+            /* restore base dimensions */
+            *w = max(*w + (*c).basew, (*c).minw);
+            *h = max(*h + (*c).baseh, (*c).minh);
+            if ((*c).maxw != 0) {
+                *w = min(*w, (*c).maxw);
+            }
+            if ((*c).maxh != 0) {
+                *h = min(*h, (*c).maxh);
+            }
+        }
+        return *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h;
     }
-    todo!()
+}
+
+fn updatesizehints(dpy: &Display, c: *mut Client) {
+    let mut msize: i64 = 0;
+    unsafe {
+        let mut size: MaybeUninit<XSizeHints> = MaybeUninit::uninit();
+        if XGetWMNormalHints(
+            dpy.inner,
+            (*c).win,
+            size.as_mut_ptr(),
+            &mut msize as *mut _,
+        ) != 0
+        {
+            (*size.as_mut_ptr()).flags = PSize;
+        }
+        let size = size.assume_init();
+
+        if size.flags & PBaseSize != 0 {
+            (*c).basew = size.base_width;
+            (*c).baseh = size.base_height;
+        } else if size.flags & PMinSize != 0 {
+            (*c).basew = size.min_width;
+            (*c).baseh = size.min_height;
+        } else {
+            (*c).basew = 0;
+            (*c).baseh = 0;
+        }
+
+        if size.flags & PResizeInc != 0 {
+            (*c).incw = size.width_inc;
+            (*c).inch = size.height_inc;
+        } else {
+            (*c).incw = 0;
+            (*c).inch = 0;
+        }
+
+        if size.flags & PMaxSize != 0 {
+            (*c).maxw = size.max_width;
+            (*c).maxh = size.max_height;
+        } else {
+            (*c).maxw = 0;
+            (*c).maxh = 0;
+        }
+
+        if size.flags & PMinSize != 0 {
+            (*c).minw = size.min_width;
+            (*c).minh = size.min_height;
+        } else if size.flags & PBaseSize != 0 {
+            (*c).minw = size.base_width;
+            (*c).minh = size.base_height;
+        } else {
+            (*c).minw = 0;
+            (*c).minh = 0;
+        }
+
+        if size.flags & PAspect != 0 {
+            (*c).mina = size.min_aspect.y as f64 / size.min_aspect.x as f64;
+            (*c).maxa = size.max_aspect.y as f64 / size.max_aspect.x as f64;
+        } else {
+            (*c).mina = 0.0;
+            (*c).maxa = 0.0;
+        }
+
+        (*c).isfixed = ((*c).maxw != 0
+            && (*c).maxh != 0
+            && (*c).maxw == (*c).minw
+            && (*c).maxh == (*c).minh);
+        (*c).hintsvalid = true;
+    }
 }
 
 pub fn zoom(dpy: &Display, arg: Arg) {}
