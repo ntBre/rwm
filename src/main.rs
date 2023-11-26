@@ -1253,7 +1253,15 @@ pub fn view(dpy: &Display, arg: Arg) {
 }
 
 pub fn toggleview(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let Arg::Uint(ui) = arg else { return };
+        let newtagset = (*SELMON).tagset[(*SELMON).seltags] ^ (ui & TAGMASK);
+        if newtagset != 0 {
+            (*SELMON).tagset[(*SELMON).seltags] = newtagset;
+            focus(dpy, null_mut());
+            arrange(dpy, SELMON);
+        }
+    }
 }
 
 pub fn tag(dpy: &Display, arg: Arg) {
