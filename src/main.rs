@@ -31,29 +31,29 @@ use x11::xlib::{
     DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
     ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync, GrabModeSync,
     InputHint, IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask,
-    MapRequest, MappingNotify, MotionNotify, NoEventMask, PAspect, PBaseSize,
-    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
-    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    PropertyDelete, PropertyNotify, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    UnmapNotify, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
-    XClassHint, XCloseDisplay, XConfigureEvent, XConfigureWindow,
-    XConnectionNumber, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
-    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
-    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayKeycodes,
-    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
-    XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
-    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
-    XGrabServer, XInternAtom, XKeysymToKeycode, XKillClient, XMapRaised,
-    XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent, XQueryPointer,
-    XQueryTree, XRaiseWindow, XRootWindow, XSelectInput, XSendEvent,
-    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
-    XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
-    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    MapRequest, MappingKeyboard, MappingNotify, MotionNotify, NoEventMask,
+    PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative,
+    PointerMotionMask, PointerRoot, PropModeAppend, PropModeReplace,
+    PropertyChangeMask, PropertyDelete, PropertyNotify, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
+    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
+    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
+    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
+    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
+    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
+    XFreeStringList, XGetClassHint, XGetKeyboardMapping, XGetModifierMapping,
+    XGetTextProperty, XGetTransientForHint, XGetWMHints, XGetWMNormalHints,
+    XGetWMProtocols, XGetWindowAttributes, XGetWindowProperty, XGrabButton,
+    XGrabKey, XGrabServer, XInternAtom, XKeysymToKeycode, XKillClient,
+    XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent,
+    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
+    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
+    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
+    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
+    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
+    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -2360,7 +2360,13 @@ fn maprequest(dpy: &Display, e: *mut XEvent) {
 }
 
 fn mappingnotify(dpy: &Display, e: *mut XEvent) {
-    todo!()
+    unsafe {
+        let mut ev = (*e).mapping;
+        XRefreshKeyboardMapping(&mut ev);
+        if ev.request == MappingKeyboard {
+            grabkeys(dpy);
+        }
+    }
 }
 
 fn keypress(dpy: &Display, e: *mut XEvent) {
