@@ -1249,7 +1249,18 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
 }
 
 pub fn view(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let Arg::Uint(ui) = arg else { return };
+        if ((ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags]) {
+            return;
+        }
+        (*SELMON).seltags ^= 1; /* toggle sel tagset */
+        if (ui & TAGMASK) != 0 {
+            (*SELMON).tagset[(*SELMON).seltags] = ui & TAGMASK;
+        }
+        focus(dpy, null_mut());
+        arrange(dpy, SELMON);
+    }
 }
 
 pub fn toggleview(dpy: &Display, arg: Arg) {
