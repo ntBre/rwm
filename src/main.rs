@@ -2245,79 +2245,102 @@ fn run(dpy: &Display) {
         XSync(dpy.inner, False);
         while RUNNING && XNextEvent(dpy.inner, ev.as_mut_ptr()) == 0 {
             match (*ev.as_mut_ptr()).type_ {
-                ButtonPress => buttonpress(ev.as_mut_ptr()),
-                ClientMessage => clientmessage(ev.as_mut_ptr()),
-                ConfigureRequest => configurerequest(ev.as_mut_ptr()),
-                ConfigureNotify => configurenotify(ev.as_mut_ptr()),
-                DestroyNotify => destroynotify(ev.as_mut_ptr()),
-                EnterNotify => enternotify(ev.as_mut_ptr()),
-                Expose => expose(ev.as_mut_ptr()),
-                FocusIn => focusin(ev.as_mut_ptr()),
-                KeyPress => keypress(ev.as_mut_ptr()),
-                MappingNotify => mappingnotify(ev.as_mut_ptr()),
-                MapRequest => maprequest(ev.as_mut_ptr()),
-                MotionNotify => motionnotify(ev.as_mut_ptr()),
-                PropertyNotify => propertynotify(ev.as_mut_ptr()),
-                UnmapNotify => unmapnotify(ev.as_mut_ptr()),
+                ButtonPress => buttonpress(dpy, ev.as_mut_ptr()),
+                ClientMessage => clientmessage(dpy, ev.as_mut_ptr()),
+                ConfigureRequest => configurerequest(dpy, ev.as_mut_ptr()),
+                ConfigureNotify => configurenotify(dpy, ev.as_mut_ptr()),
+                DestroyNotify => destroynotify(dpy, ev.as_mut_ptr()),
+                EnterNotify => enternotify(dpy, ev.as_mut_ptr()),
+                Expose => expose(dpy, ev.as_mut_ptr()),
+                FocusIn => focusin(dpy, ev.as_mut_ptr()),
+                KeyPress => keypress(dpy, ev.as_mut_ptr()),
+                MappingNotify => mappingnotify(dpy, ev.as_mut_ptr()),
+                MapRequest => maprequest(dpy, ev.as_mut_ptr()),
+                MotionNotify => motionnotify(dpy, ev.as_mut_ptr()),
+                PropertyNotify => propertynotify(dpy, ev.as_mut_ptr()),
+                UnmapNotify => unmapnotify(dpy, ev.as_mut_ptr()),
                 _ => (),
             }
         }
     }
 }
 
-fn unmapnotify(e: *mut XEvent) {
+fn unmapnotify(dpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = &(*e).unmap;
+        let c = wintoclient((*ev).window);
+        if !c.is_null() {
+            if (*ev).send_event != 0 {
+                setclientstate(dpy, c, WITHDRAWN_STATE);
+            } else {
+                unmanage(dpy, c, false);
+            }
+        }
+    }
+}
+
+fn propertynotify(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn propertynotify(e: *mut XEvent) {
+fn motionnotify(dpy: &Display, e: *mut XEvent) {
+    let mut mon = null_mut();
+    unsafe {
+        let ev = &(*e).motion;
+        if (*ev).window != ROOT {
+            return;
+        }
+        let m = recttomon((*ev).x_root, (*ev).y_root, 1, 1);
+        if m != mon && !mon.is_null() {
+            unfocus(dpy, (*SELMON).sel, true);
+            SELMON = m;
+            focus(dpy, null_mut());
+        }
+        mon = m;
+    }
+}
+
+fn maprequest(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn motionnotify(e: *mut XEvent) {
+fn mappingnotify(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn maprequest(e: *mut XEvent) {
+fn keypress(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn mappingnotify(e: *mut XEvent) {
+fn focusin(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn keypress(e: *mut XEvent) {
+fn expose(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn focusin(e: *mut XEvent) {
+fn enternotify(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn expose(e: *mut XEvent) {
+fn destroynotify(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn enternotify(e: *mut XEvent) {
+fn configurenotify(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn destroynotify(e: *mut XEvent) {
+fn configurerequest(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn configurenotify(e: *mut XEvent) {
+fn clientmessage(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
-fn configurerequest(e: *mut XEvent) {
-    todo!()
-}
-
-fn clientmessage(e: *mut XEvent) {
-    todo!()
-}
-
-fn buttonpress(e: *mut XEvent) {
+fn buttonpress(dpy: &Display, e: *mut XEvent) {
     todo!()
 }
 
