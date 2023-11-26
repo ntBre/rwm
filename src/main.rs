@@ -28,33 +28,33 @@ use x11::xlib::{
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
     ConfigureNotify, ConfigureRequest, CopyFromParent, CurrentTime,
     DestroyNotify, Display as XDisplay, EnterNotify, EnterWindowMask,
-    ExposureMask, False, FocusIn, GrabModeAsync, GrabModeSync, IsViewable,
-    KeyPress, KeySym, LeaveWindowMask, LockMask, MapRequest, MappingNotify,
-    MotionNotify, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize,
-    PResizeInc, PSize, ParentRelative, PointerMotionMask, PointerRoot,
-    PropModeAppend, PropModeReplace, PropertyChangeMask, PropertyNotify,
-    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, UnmapNotify, XChangeProperty,
-    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XCloseDisplay,
-    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
-    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
-    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
-    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetKeyboardMapping,
-    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
-    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
-    XGetWindowProperty, XGrabButton, XGrabKey, XGrabServer, XInternAtom,
-    XKeysymToKeycode, XMapRaised, XMoveWindow, XNextEvent, XQueryPointer,
-    XQueryTree, XRaiseWindow, XRootWindow, XSelectInput, XSendEvent,
-    XSetClassHint, XSetInputFocus, XSetWMHints, XSetWindowAttributes,
-    XSetWindowBorder, XSizeHints, XSync, XUngrabButton, XUngrabKey,
-    XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
-    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync, GrabModeSync,
+    IsViewable, KeyPress, KeySym, LeaveWindowMask, LockMask, MapRequest,
+    MappingNotify, MotionNotify, NoEventMask, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    PropertyNotify, RevertToPointerRoot, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    UnmapNotify, XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent,
+    XClassHint, XCloseDisplay, XConfigureEvent, XConfigureWindow,
+    XConnectionNumber, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
+    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
+    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayKeycodes,
+    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
+    XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
+    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
+    XGrabServer, XInternAtom, XKeysymToKeycode, XMapRaised, XMapWindow,
+    XMoveResizeWindow, XMoveWindow, XNextEvent, XQueryPointer, XQueryTree,
+    XRaiseWindow, XRootWindow, XSelectInput, XSendEvent, XSetClassHint,
+    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
+    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
+    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
+    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
-use crate::config::{BUTTONS, DMENUCMD, RESIZEHINTS, TAGS};
+use crate::config::{BORDERPX, BUTTONS, DMENUCMD, RESIZEHINTS, RULES, TAGS};
 
 pub struct Display {
     inner: *mut XDisplay,
@@ -137,6 +137,7 @@ static mut DRW: *mut Drw = std::ptr::null_mut();
 
 static mut SCREEN: i32 = 0;
 
+const BROKEN: &str = "broken";
 static mut STEXT: String = String::new();
 
 /// bar height
@@ -162,6 +163,8 @@ static mut LRPAD: usize = 0;
 
 const NUMLOCKMASK: u32 = 0;
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
+
+const TAGMASK: usize = (1 << TAGS.len()) - 1;
 
 pub enum Arg {
     Uint(usize),
@@ -231,6 +234,46 @@ struct Client {
     snext: *mut Client,
     mon: *mut Monitor,
     win: Window,
+}
+
+impl Default for Client {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            mina: Default::default(),
+            maxa: Default::default(),
+            x: Default::default(),
+            y: Default::default(),
+            w: Default::default(),
+            h: Default::default(),
+            oldx: Default::default(),
+            oldy: Default::default(),
+            oldw: Default::default(),
+            oldh: Default::default(),
+            basew: Default::default(),
+            baseh: Default::default(),
+            incw: Default::default(),
+            inch: Default::default(),
+            maxw: Default::default(),
+            maxh: Default::default(),
+            minw: Default::default(),
+            minh: Default::default(),
+            hintsvalid: Default::default(),
+            bw: Default::default(),
+            oldbw: Default::default(),
+            tags: Default::default(),
+            isfixed: Default::default(),
+            isfloating: Default::default(),
+            isurgent: Default::default(),
+            neverfocus: Default::default(),
+            oldstate: Default::default(),
+            isfullscreen: Default::default(),
+            next: std::ptr::null_mut(),
+            snext: std::ptr::null_mut(),
+            mon: std::ptr::null_mut(),
+            win: Default::default(),
+        }
+    }
 }
 
 type Window = u64;
@@ -325,6 +368,35 @@ impl Monitor {
             next: std::ptr::null_mut(),
             barwin: 0,
             lt: [&LAYOUTS[0], &LAYOUTS[1 % LAYOUTS.len()]],
+        }
+    }
+}
+
+pub struct Rule {
+    pub class: Option<&'static str>,
+    pub instance: Option<&'static str>,
+    pub title: Option<&'static str>,
+    pub tags: usize,
+    pub isfloating: bool,
+    pub monitor: isize,
+}
+
+impl Rule {
+    pub const fn new(
+        class: Option<&'static str>,
+        instance: Option<&'static str>,
+        title: Option<&'static str>,
+        tags: usize,
+        isfloating: bool,
+        monitor: isize,
+    ) -> Self {
+        Self {
+            class,
+            instance,
+            title,
+            tags,
+            isfloating,
+            monitor,
         }
     }
 }
@@ -2002,7 +2074,11 @@ fn scan(dpy: &Display) {
             for i in 0..num {
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa)
                     || (*wa.as_mut_ptr()).override_redirect != 0
-                    || xgettransientforhint(dpy, wins, i, &mut d1)
+                    || xgettransientforhint(
+                        dpy,
+                        *wins.offset(i as isize),
+                        &mut d1,
+                    )
                 {
                     continue;
                 }
@@ -2010,7 +2086,7 @@ fn scan(dpy: &Display) {
                     || getstate(dpy, *wins.offset(i as isize))
                         .is_ok_and(|v| v == ICONIC_STATE)
                 {
-                    manage(wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(dpy, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             for i in 0..num {
@@ -2018,12 +2094,12 @@ fn scan(dpy: &Display) {
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa) {
                     continue;
                 }
-                if xgettransientforhint(dpy, wins, i, &mut d1)
+                if xgettransientforhint(dpy, *wins.offset(i as isize), &mut d1)
                     && ((*wa.as_mut_ptr()).map_state == IsViewable
                         || getstate(dpy, *wins.offset(i as isize))
                             .is_ok_and(|v| v == ICONIC_STATE))
                 {
-                    manage(wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(dpy, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             if !wins.is_null() {
@@ -2033,8 +2109,194 @@ fn scan(dpy: &Display) {
     }
 }
 
-fn manage(w: *mut Window, wa: *mut XWindowAttributes) {
+fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
+    let mut trans = 0;
+    unsafe {
+        let wa = *wa;
+        let c = Box::into_raw(Box::new(Client {
+            x: wa.x,
+            y: wa.y,
+            w: wa.width,
+            h: wa.height,
+            oldx: wa.x,
+            oldy: wa.y,
+            oldw: wa.width,
+            oldh: wa.height,
+            oldbw: wa.border_width,
+            win: w,
+            ..Default::default()
+        }));
+        updatetitle(dpy, c);
+        if xgettransientforhint(dpy, w, &mut trans) {
+            let t = wintoclient(trans);
+            if !t.is_null() {
+                (*c).mon = (*t).mon;
+                (*c).tags = (*t).tags;
+            } else {
+                (*c).mon = SELMON;
+                applyrules(dpy, c);
+            }
+        } else {
+            // copied else case from above because the condition is supposed
+            // to be xgettransientforhint && (t = wintoclient)
+            (*c).mon = SELMON;
+            applyrules(dpy, c);
+        }
+
+        if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
+            (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
+        }
+        if (*c).y + height(c) > ((*(*c).mon).wy + (*(*c).mon).wh) as i32 {
+            (*c).y = ((*(*c).mon).wy + (*(*c).mon).wh) as i32 - height(c);
+        }
+        (*c).x = max((*c).x, (*(*c).mon).wx as i32);
+        (*c).y = max((*c).y, (*(*c).mon).wy as i32);
+        (*c).bw = BORDERPX;
+        let mut wc = XWindowChanges {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            border_width: (*c).bw,
+            sibling: 0,
+            stack_mode: 0,
+        };
+        XConfigureWindow(dpy.inner, w, CWBorderWidth as u32, &mut wc);
+        XSetWindowBorder(
+            dpy.inner,
+            w,
+            SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
+        );
+        configure(dpy, c); // propagates border width, if size doesn't change
+        updatewindowtype(dpy, c);
+        updatesizehints(dpy, c);
+        updatewmhints(dpy, c);
+        XSelectInput(
+            dpy.inner,
+            w,
+            EnterWindowMask
+                | FocusChangeMask
+                | PropertyChangeMask
+                | StructureNotifyMask,
+        );
+        grabbuttons(dpy, c, false);
+        if !(*c).isfloating {
+            (*c).oldstate = trans != 0 || (*c).isfixed;
+            (*c).isfloating = (*c).oldstate;
+        }
+        if (*c).isfloating {
+            XRaiseWindow(dpy.inner, (*c).win);
+        }
+        attach(c);
+        attach_stack(c);
+        XChangeProperty(
+            dpy.inner,
+            ROOT,
+            NETATOM[Net::ClientList as usize],
+            XA_WINDOW,
+            32,
+            PropModeAppend,
+            ((*c).win as i8) as *const _,
+            1,
+        );
+        // some windows require this
+        XMoveResizeWindow(
+            dpy.inner,
+            (*c).win,
+            (*c).x + (2 * SW) as i32,
+            (*c).y,
+            (*c).w as u32,
+            (*c).h as u32,
+        );
+        setclientstate(dpy, c, NORMAL_STATE);
+        if (*c).mon == SELMON {
+            unfocus(dpy, (*SELMON).sel, false);
+        }
+        (*(*c).mon).sel = c;
+        arrange(dpy, (*c).mon);
+        XMapWindow(dpy.inner, (*c).win);
+        focus(dpy, std::ptr::null_mut());
+    }
+}
+
+fn updatewmhints(dpy: &Display, c: *mut Client) {
     todo!()
+}
+
+fn updatewindowtype(dpy: &Display, c: *mut Client) {
+    todo!()
+}
+
+fn applyrules(dpy: &Display, c: *mut Client) {
+    unsafe {
+        let mut ch = XClassHint {
+            res_name: std::ptr::null_mut(),
+            res_class: std::ptr::null_mut(),
+        };
+        // rule matching
+        (*c).isfloating = false;
+        (*c).tags = 0;
+        XGetClassHint(dpy.inner, (*c).win, &mut ch);
+        let class = if !ch.res_class.is_null() {
+            CString::from_raw(ch.res_class).into_string().unwrap()
+        } else {
+            BROKEN.to_owned()
+        };
+        let instance = if !ch.res_name.is_null() {
+            CString::from_raw(ch.res_name).into_string().unwrap()
+        } else {
+            BROKEN.to_owned()
+        };
+
+        for i in 0..RULES.len() {
+            let r = &RULES[i];
+            if (r.title.is_none()
+                || r.title.is_some_and(|t| (*c).name.contains(t)))
+                && (r.class.is_none()
+                    || r.class.is_some_and(|t| class.contains(t)))
+                && (r.instance.is_none()
+                    || r.instance.is_some_and(|t| instance.contains(t)))
+            {
+                (*c).isfloating = r.isfloating;
+                (*c).tags |= r.tags;
+                let mut m = MONS;
+                while !m.is_null() && (*m).num != r.monitor as i32 {
+                    m = (*m).next;
+                }
+                if !m.is_null() {
+                    (*c).mon = m;
+                }
+            }
+        }
+        if !ch.res_class.is_null() {
+            XFree(ch.res_class.cast());
+        }
+        if !ch.res_name.is_null() {
+            XFree(ch.res_name.cast());
+        }
+        (*c).tags = if (*c).tags & TAGMASK != 0 {
+            (*c).tags & TAGMASK
+        } else {
+            (*(*c).mon).tagset[(*(*c).mon).seltags]
+        };
+    }
+}
+
+fn updatetitle(dpy: &Display, c: *mut Client) {
+    unsafe {
+        if !gettextprop(
+            dpy,
+            (*c).win,
+            NETATOM[Net::WMName as usize],
+            &mut (*c).name,
+        ) {
+            gettextprop(dpy, (*c).win, XA_WM_NAME, &mut (*c).name);
+        }
+        if (*c).name.is_empty() {
+            /* hack to mark broken clients */
+            (*c).name = BROKEN.to_owned();
+        }
+    }
 }
 
 fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
@@ -2072,15 +2334,8 @@ fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
     }
 }
 
-fn xgettransientforhint(
-    dpy: &Display,
-    wins: *mut u64,
-    i: u32,
-    d1: &mut u64,
-) -> bool {
-    unsafe {
-        XGetTransientForHint(dpy.inner, *wins.offset(i as isize), d1) != 0
-    }
+fn xgettransientforhint(dpy: &Display, w: u64, d1: &mut u64) -> bool {
+    unsafe { XGetTransientForHint(dpy.inner, w, d1) != 0 }
 }
 
 fn not_xgetwindowattributes(

@@ -13,9 +13,11 @@ use x11::{
 use crate::{
     focusmon, focusstack, incnmaster, killclient, movemouse, quit, resizemouse,
     setlayout, setmfact, spawn, tag, tagmon, togglebar, togglefloating,
-    toggletag, toggleview, view, zoom, Arg, Button, Clk, Key, Layout,
+    toggletag, toggleview, view, zoom, Arg, Button, Clk, Key, Layout, Rule,
 };
 
+/// border pixel of windows
+pub const BORDERPX: i32 = 1;
 pub const FONTS: [&str; 1] = ["monospace:size=10"];
 pub const MFACT: f64 = 0.5;
 pub const NMASTER: i32 = 1;
@@ -52,6 +54,16 @@ pub const COLORS: [[&str; 3]; 2] = [
 ];
 
 pub const TAGS: [&str; 9] = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+/// handling rules for specific programs. use xprop(1) to obtain class,
+/// instance, and title information:
+///   WM_CLASS(STRING) = instance, class
+///   WM_NAME(STRING) = title
+pub const RULES: [Rule; 2] = [
+    // class, instance, title, tags mask, isfloating, monitor
+    Rule::new(Some("Gimp"), None, None, 0, true, -1),
+    Rule::new(Some("Firefox"), None, None, 1 << 8, false, -1),
+];
 
 pub const MODKEY: u32 = Mod1Mask;
 
