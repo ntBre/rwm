@@ -1455,7 +1455,7 @@ pub fn tagmon(dpy: &Display, arg: Arg) {
 }
 
 pub fn quit(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe { RUNNING = false }
 }
 
 fn grabkeys(dpy: &Display) {
