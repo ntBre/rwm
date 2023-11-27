@@ -9,6 +9,7 @@ use std::fs::File;
 use std::mem::MaybeUninit;
 use std::os::fd::AsRawFd;
 use std::path::Path;
+use std::process::Command;
 use std::ptr::null_mut;
 
 use config::{
@@ -17,11 +18,10 @@ use config::{
 use drw::Drw;
 use env_logger::Env;
 use libc::{
-    abs, c_uchar, c_uint, close, execvp, fork, setsid, sigaction, sigemptyset,
-    waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN,
-    WNOHANG,
+    abs, c_uchar, c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP,
+    SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
-use log::{debug, info};
+use log::debug;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -45,24 +45,24 @@ use x11::xlib::{
     ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
     SubstructureRedirectMask, Success, True, UnmapNotify, XAllowEvents,
     XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
-    XCloseDisplay, XConfigureEvent, XConfigureWindow, XConnectionNumber,
-    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
-    XDestroyWindow, XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent,
-    XFree, XFreeModifiermap, XFreeStringList, XGetClassHint,
-    XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
-    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
-    XGrabPointer, XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode,
-    XKillClient, XMapRaised, XMapWindow, XMaskEvent, XMoveResizeWindow,
-    XMoveWindow, XNextEvent, XQueryPointer, XQueryTree, XRaiseWindow,
-    XRefreshKeyboardMapping, XRootWindow, XSelectInput, XSendEvent,
-    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
-    XUngrabKey, XUngrabPointer, XUngrabServer, XUnmapWindow, XUrgencyHint,
-    XWarpPointer, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
-    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
-    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
+    XCloseDisplay, XConfigureEvent, XConfigureWindow, XCreateSimpleWindow,
+    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
+    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
+    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
+    XFreeModifiermap, XFreeStringList, XGetClassHint, XGetKeyboardMapping,
+    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
+    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
+    XGetWindowProperty, XGrabButton, XGrabKey, XGrabPointer, XGrabServer,
+    XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient, XMapRaised,
+    XMapWindow, XMaskEvent, XMoveResizeWindow, XMoveWindow, XNextEvent,
+    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
+    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
+    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabPointer,
+    XUngrabServer, XUnmapWindow, XUrgencyHint, XWarpPointer, XWindowAttributes,
+    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{BadAlloc, BadValue, Display as XDisplay};
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
@@ -847,8 +847,10 @@ pub fn setlayout(dpy: &Display, arg: Arg) {
 fn arrange(dpy: &Display, mut m: *mut Monitor) {
     unsafe {
         if !m.is_null() {
+            debug!("arrange: m is null");
             showhide(dpy, (*m).stack);
         } else {
+            debug!("arrange: m is not null");
             m = MONS;
             while !m.is_null() {
                 showhide(dpy, (*m).stack);
@@ -856,8 +858,11 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
             }
         }
 
+        debug!("arrange: middle");
         if !m.is_null() {
+            debug!("arrange: calling arrangemon");
             arrangemon(dpy, m);
+            debug!("arrange: calling restack");
             restack(dpy, m);
         } else {
             m = MONS;
@@ -871,7 +876,9 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
 fn arrangemon(dpy: &Display, m: *mut Monitor) {
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
-        if let Some(arrange) = (*(*m).lt[(*m).sellt]).arrange {
+        let layout = &(*(*m).lt[(*m).sellt]);
+        debug!("arranging monitor with layout: {}", layout.symbol);
+        if let Some(arrange) = layout.arrange {
             (arrange)(dpy, m)
         }
     }
@@ -947,9 +954,12 @@ fn resize(
     mut h: i32,
     interact: bool,
 ) {
+    debug!("resize");
     if applysizehints(dpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
+        debug!("got size hints");
         resizeclient(dpy, c, x, y, w, h);
     }
+    debug!("leaving resize");
 }
 
 fn resizeclient(dpy: &Display, c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
@@ -1900,6 +1910,9 @@ fn drawbar(m: *mut Monitor) {
             }
             x += w as i32;
         }
+
+        debug!("drew tags");
+
         let w = DRW.as_ref().unwrap().textw(&(*m).ltsymbol, LRPAD);
         DRW.as_mut()
             .unwrap()
@@ -1958,6 +1971,7 @@ fn drawbar(m: *mut Monitor) {
             }
         }
         DRW.as_ref().unwrap().map((*m).barwin, 0, 0, (*m).ww, BH);
+        debug!("finished drawbar");
     }
 }
 
@@ -2619,6 +2633,7 @@ fn maprequest(dpy: &Display, e: *mut XEvent) {
             manage(dpy, ev.window, wa.as_mut_ptr());
         }
     }
+    debug!("leaving maprequest");
 }
 
 fn mappingnotify(dpy: &Display, e: *mut XEvent) {
@@ -2990,6 +3005,7 @@ fn scan(dpy: &Display) {
 }
 
 fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
+    debug!("entering manage");
     let mut trans = 0;
     unsafe {
         let wa = *wa;
@@ -3006,8 +3022,11 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             win: w,
             ..Default::default()
         }));
+        debug!("manage: allocated box");
         updatetitle(dpy, c);
+        debug!("manage: finished updatetitle");
         if xgettransientforhint(dpy, w, &mut trans) {
+            debug!("gottransientforhint");
             let t = wintoclient(trans);
             if !t.is_null() {
                 (*c).mon = (*t).mon;
@@ -3017,12 +3036,13 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
                 applyrules(dpy, c);
             }
         } else {
+            debug!("didn't gottransientforhint");
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
             (*c).mon = SELMON;
             applyrules(dpy, c);
         }
-
+        debug!("middle of manage");
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
             (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
         }
@@ -3047,10 +3067,12 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             w,
             SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
         );
+        debug!("manage: calling configure");
         configure(dpy, c); // propagates border width, if size doesn't change
         updatewindowtype(dpy, c);
         updatesizehints(dpy, c);
         updatewmhints(dpy, c);
+        debug!("manage: finished rust fns");
         XSelectInput(
             dpy.inner,
             w,
@@ -3059,6 +3081,7 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
                 | PropertyChangeMask
                 | StructureNotifyMask,
         );
+        debug!("manage: grabbing buttons");
         grabbuttons(dpy, c, false);
         if !(*c).isfloating {
             (*c).oldstate = trans != 0 || (*c).isfixed;
@@ -3067,8 +3090,11 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
         if (*c).isfloating {
             XRaiseWindow(dpy.inner, (*c).win);
         }
+        debug!("manage: attaching");
         attach(c);
+        debug!("manage: attaching stack");
         attachstack(c);
+        debug!("manage: changing property");
         XChangeProperty(
             dpy.inner,
             ROOT,
@@ -3089,15 +3115,20 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             (*c).w as u32,
             (*c).h as u32,
         );
+        debug!("manage: setting client state");
         setclientstate(dpy, c, NORMAL_STATE);
         if (*c).mon == SELMON {
             unfocus(dpy, (*SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
+        debug!("manage: arrange");
         arrange(dpy, (*c).mon);
+        debug!("manage: mapping window");
         XMapWindow(dpy.inner, (*c).win);
+        debug!("manage: focus");
         focus(dpy, std::ptr::null_mut());
     }
+    debug!("end of manage");
 }
 
 fn updatewmhints(dpy: &Display, c: *mut Client) {
@@ -3215,6 +3246,7 @@ fn getatomprop(dpy: &Display, c: *mut Client, prop: Atom) -> Atom {
 }
 
 fn applyrules(dpy: &Display, c: *mut Client) {
+    debug!("entering applyrules");
     unsafe {
         let mut ch = XClassHint {
             res_name: std::ptr::null_mut(),
@@ -3273,9 +3305,11 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
             NETATOM[Net::WMName as usize],
             &mut (*c).name,
         ) {
+            debug!("getting textprop");
             gettextprop(dpy, (*c).win, XA_WM_NAME, &mut (*c).name);
         }
         if (*c).name.is_empty() {
+            debug!("naming broken");
             /* hack to mark broken clients */
             (*c).name = BROKEN.to_owned();
         }
@@ -3346,8 +3380,7 @@ mod drw;
 mod layouts;
 
 fn main() {
-    let env = Env::default().default_filter_or("info");
-    env_logger::init_from_env(env);
+    env_logger::init();
     let home = &std::env::var("HOME").unwrap();
     let home = Path::new(home);
     let outfile =

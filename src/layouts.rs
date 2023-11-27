@@ -1,9 +1,12 @@
 use std::cmp::min;
 
+use log::debug;
+
 use crate::{height, is_visible, nexttiled, resize, Display, Monitor};
 
 pub fn tile(dpy: &Display, m: *mut Monitor) {
     let mut n = 0;
+    debug!("tiling");
     unsafe {
         let mut c = nexttiled((*m).clients);
         while !c.is_null() {
@@ -14,6 +17,7 @@ pub fn tile(dpy: &Display, m: *mut Monitor) {
             return;
         }
 
+        debug!("tiling: quarter");
         let mw = if n > (*m).nmaster {
             if (*m).nmaster > 0 {
                 // no casts in dwm, not really sure which conversions are
@@ -25,11 +29,13 @@ pub fn tile(dpy: &Display, m: *mut Monitor) {
         } else {
             (*m).ww
         };
+        debug!("tiling: halfway");
         let mut i = 0;
         let mut my = 0;
         let mut ty = 0;
         let mut c = nexttiled((*m).clients);
         while !c.is_null() {
+            debug!("tiling: looping");
             if i < (*m).nmaster {
                 let h = ((*m).wh - my) as i32 / (min(n, (*m).nmaster) - i);
                 resize(
@@ -62,6 +68,7 @@ pub fn tile(dpy: &Display, m: *mut Monitor) {
             c = nexttiled((*c).next);
             i += 1;
         }
+        debug!("finished tiling");
     }
 }
 
