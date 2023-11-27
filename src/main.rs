@@ -1209,17 +1209,18 @@ fn detach(c: *mut Client) {
 }
 
 fn nexttiled(mut c: *mut Client) -> *mut Client {
-    while !c.is_null() || !is_visible(c) {
-        unsafe {
+    debug!("nexttiled");
+    unsafe {
+        while !c.is_null() && ((*c).isfloating || !is_visible(c)) {
             c = (*c).next;
         }
     }
+    debug!("nexttiled: returning");
     c
 }
 
-pub fn spawn(dpy: &Display, arg: Arg) {
+pub fn spawn(_dpy: &Display, arg: Arg) {
     unsafe {
-        let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
         let Arg::Str(s) = arg else {
             return;
         };
@@ -1232,24 +1233,11 @@ pub fn spawn(dpy: &Display, arg: Arg) {
             let mut r: &'static &'static str = Box::leak(r);
             std::mem::swap(&mut DMENUMON, &mut r);
         }
-
-        if fork() == 0 {
-            // might need to be if dpy but our dpy always is
-            close(XConnectionNumber(dpy.inner));
-            setsid();
-            sigemptyset(&mut (*sa.as_mut_ptr()).sa_mask as *mut _);
-            {
-                let sa = sa.as_mut_ptr();
-                (*sa).sa_flags = 0;
-                (*sa).sa_sigaction = SIG_DFL;
-            }
-            let mut sa = sa.assume_init();
-            sigaction(SIGCHLD, &mut sa as *mut _, std::ptr::null_mut());
-
-            let (s, _, _) = s.to_vec().into_raw_parts();
-            execvp(s.offset(0).cast(), s.cast());
-            panic!("execvp has failed");
-        }
+        dbg!(s);
+        Command::new(s[0])
+            .args(&s[1..])
+            .spawn()
+            .expect("spawn failed");
     }
 }
 
