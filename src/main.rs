@@ -1014,7 +1014,6 @@ fn applysizehints(
     h: &mut i32,
     interact: bool,
 ) -> bool {
-    let mut baseismin = false;
     unsafe {
         let m = (*c).mon;
         // set minimum possible
@@ -1058,7 +1057,7 @@ fn applysizehints(
                 updatesizehints(dpy, c);
             }
             /* see last two sentences in ICCCM 4.1.2.3 */
-            baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
+            let baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
             if !baseismin {
                 /* temporarily remove base dimensions */
                 *w -= (*c).basew;
