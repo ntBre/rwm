@@ -2460,8 +2460,83 @@ fn configurenotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn configurerequest(dpy: &Display, e: *mut XEvent) {
-    unsafe {}
-    todo!()
+    unsafe {
+        let ev = (*e).configure_request;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            if ev.value_mask & CWBorderWidth as u64 != 0 {
+                (*c).bw = ev.border_width;
+            } else if (*c).isfloating
+                || (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+            {
+                let m = (*c).mon;
+                let vm = ev.value_mask as u16;
+                if vm & CWX != 0 {
+                    (*c).oldx = (*c).x;
+                    (*c).x = (*m).mx as i32 + ev.x;
+                }
+                if vm & CWY != 0 {
+                    (*c).oldy = (*c).y;
+                    (*c).y = (*m).my as i32 + ev.y;
+                }
+                if vm & CWWidth != 0 {
+                    (*c).oldw = (*c).w;
+                    (*c).w = (*m).mw as i32 + ev.width;
+                }
+                if vm & CWHeight != 0 {
+                    (*c).oldh = (*c).h;
+                    (*c).h = (*m).mh as i32 + ev.height;
+                }
+                if (((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
+                    && (*c).isfloating)
+                {
+                    // center in x direction
+                    (*c).x =
+                        ((*m).mx + ((*m).mw / 2 - width(c) as i16 / 2)) as i32;
+                }
+                if (((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
+                    && (*c).isfloating)
+                {
+                    // center in y direction
+                    (*c).y =
+                        ((*m).my + ((*m).mh / 2 - height(c) as i16 / 2)) as i32;
+                }
+                if ((vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0)
+                {
+                    configure(dpy, c);
+                }
+                if (is_visible(c)) {
+                    XMoveResizeWindow(
+                        dpy.inner,
+                        (*c).win,
+                        (*c).x,
+                        (*c).y,
+                        (*c).w as u32,
+                        (*c).h as u32,
+                    );
+                }
+            } else {
+                configure(dpy, c);
+            }
+        } else {
+            let mut wc = XWindowChanges {
+                x: ev.x,
+                y: ev.y,
+                width: ev.width,
+                height: ev.height,
+                border_width: ev.border_width,
+                sibling: ev.above,
+                stack_mode: ev.detail,
+            };
+            XConfigureWindow(
+                dpy.inner,
+                ev.window,
+                ev.value_mask as u32,
+                &mut wc,
+            );
+        }
+        XSync(dpy.inner, False);
+    }
 }
 
 fn clientmessage(dpy: &Display, e: *mut XEvent) {
