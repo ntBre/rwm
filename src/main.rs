@@ -3083,9 +3083,10 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             XA_WINDOW,
             32,
             PropModeAppend,
-            ((*c).win as i8) as *const _,
+            &((*c).win as c_uchar) as *const _,
             1,
         );
+        debug!("manage: resizing window");
         // some windows require this
         XMoveResizeWindow(
             dpy.inner,
