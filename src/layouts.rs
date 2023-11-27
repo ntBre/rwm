@@ -51,7 +51,7 @@ pub fn tile(dpy: &Display, m: *mut Monitor) {
                     c,
                     ((*m).wx + mw) as i32,
                     ((*m).wy + ty) as i32,
-                    ((*m).ww - mw as i16 - (2 * (*c).bw) as i16) as i32,
+                    ((*m).ww - mw - (2 * (*c).bw) as i16) as i32,
                     h as i32 - (2 * (*c).bw),
                     false,
                 );

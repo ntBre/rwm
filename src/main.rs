@@ -1428,18 +1428,16 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
                         && (*(*c).mon).wy + nh as i16 >= (*SELMON).wy
                         && (*(*c).mon).wy + nh as i16
                             <= (*SELMON).wy + (*SELMON).wh)
-                    {
-                        if (!(*c).isfloating
+                        && (!(*c).isfloating
                             && (*(*SELMON).lt[(*SELMON).sellt])
                                 .arrange
                                 .is_some()
                             && (abs(nw - (*c).w) > SNAP
                                 || abs(nh - (*c).h) > SNAP))
-                        {
-                            togglefloating(dpy, Arg::None);
-                        }
+                    {
+                        togglefloating(dpy, Arg::None);
                     }
-                    if (!(*(*SELMON).lt[(*SELMON).sellt]).arrange.is_some()
+                    if ((*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
                         || (*c).isfloating)
                     {
                         resize(dpy, c, (*c).x, (*c).y, nw, nh, true);
@@ -1605,7 +1603,7 @@ pub fn setmfact(dpy: &Display, arg: Arg) {
         } else {
             f - 1.0
         };
-        if f < 0.05 || f > 0.95 {
+        if !(0.05..=0.95).contains(&f) {
             return;
         }
         (*SELMON).mfact = f;
@@ -2504,9 +2502,9 @@ fn handler(dpy: &Display, ev: *mut XEvent) {
 fn unmapnotify(dpy: &Display, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).unmap;
-        let c = wintoclient((*ev).window);
+        let c = wintoclient(ev.window);
         if !c.is_null() {
-            if (*ev).send_event != 0 {
+            if ev.send_event != 0 {
                 setclientstate(dpy, c, WITHDRAWN_STATE);
             } else {
                 unmanage(dpy, c, false);
@@ -2566,10 +2564,10 @@ fn motionnotify(dpy: &Display, e: *mut XEvent) {
     let mut mon = null_mut();
     unsafe {
         let ev = &(*e).motion;
-        if (*ev).window != ROOT {
+        if ev.window != ROOT {
             return;
         }
-        let m = recttomon((*ev).x_root, (*ev).y_root, 1, 1);
+        let m = recttomon(ev.x_root, ev.y_root, 1, 1);
         if m != mon && !mon.is_null() {
             unfocus(dpy, (*SELMON).sel, true);
             SELMON = m;
@@ -2583,13 +2581,13 @@ fn maprequest(dpy: &Display, e: *mut XEvent) {
     let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
     unsafe {
         let ev = &(*e).map_request;
-        if XGetWindowAttributes(dpy.inner, (*ev).window, wa.as_mut_ptr()) == 0
+        if XGetWindowAttributes(dpy.inner, ev.window, wa.as_mut_ptr()) == 0
             || (*wa.as_mut_ptr()).override_redirect != 0
         {
             return;
         }
-        if wintoclient((*ev).window).is_null() {
-            manage(dpy, (*ev).window, wa.as_mut_ptr());
+        if wintoclient(ev.window).is_null() {
+            manage(dpy, ev.window, wa.as_mut_ptr());
         }
     }
 }
@@ -2817,10 +2815,11 @@ fn clientmessage(dpy: &Display, e: *mut XEvent) {
                         || (cme.data.get_long(0) == 2 && !(*c).isfullscreen)),
                 );
             }
-        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize] {
-            if c != (*SELMON).sel && !(*c).isurgent {
-                seturgent(dpy, c, true);
-            }
+        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
+            && c != (*SELMON).sel
+            && !(*c).isurgent
+        {
+            seturgent(dpy, c, true);
         }
     }
 }
@@ -3131,14 +3130,7 @@ fn setfullscreen(dpy: &Display, c: *mut Client, fullscreen: bool) {
             (*c).y = (*c).oldy;
             (*c).w = (*c).oldw;
             (*c).h = (*c).oldh;
-            resizeclient(
-                dpy,
-                c,
-                (*c).x as i32,
-                (*c).y as i32,
-                (*c).w as i32,
-                (*c).h as i32,
-            );
+            resizeclient(dpy, c, (*c).x, (*c).y, (*c).w, (*c).h);
             arrange(dpy, (*c).mon);
         }
     }
