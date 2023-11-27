@@ -3261,21 +3261,17 @@ fn applyrules(dpy: &Display, c: *mut Client) {
                 }
             }
         }
-        if !ch.res_class.is_null() {
-            XFree(ch.res_class.cast());
-        }
-        if !ch.res_name.is_null() {
-            XFree(ch.res_name.cast());
-        }
         (*c).tags = if (*c).tags & TAGMASK != 0 {
             (*c).tags & TAGMASK
         } else {
             (*(*c).mon).tagset[(*(*c).mon).seltags]
         };
+        debug!("leaving applyrules");
     }
 }
 
 fn updatetitle(dpy: &Display, c: *mut Client) {
+    debug!("entering updatetitle");
     unsafe {
         if !gettextprop(
             dpy,
