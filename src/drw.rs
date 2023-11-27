@@ -15,10 +15,11 @@ use x11::{
         XftTextExtentsUtf8,
     },
     xlib::{
-        CapButt, Drawable, False, JoinMiter, LineSolid, XCopyArea,
-        XCreateFontCursor, XCreateGC, XCreatePixmap, XDefaultColormap,
-        XDefaultDepth, XDefaultVisual, XDrawRectangle, XFillRectangle,
-        XFreePixmap, XGCValues, XSetForeground, XSetLineAttributes, XSync, GC,
+        BadColor, CapButt, Drawable, False, JoinMiter, LineSolid,
+        XAllocNamedColor, XCopyArea, XCreateFontCursor, XCreateGC,
+        XCreatePixmap, XDefaultColormap, XDefaultDepth, XDefaultVisual,
+        XDrawRectangle, XFillRectangle, XFreePixmap, XGCValues, XSetForeground,
+        XSetLineAttributes, XSync, GC,
     },
 };
 
@@ -231,21 +232,31 @@ impl Drw {
     fn clr_create(&self, clrname: &str) -> Clr {
         unsafe {
             let name = CString::new(clrname).unwrap();
-            dbg!(&name);
             let mut dest = MaybeUninit::uninit();
+            let cmap = XDefaultColormap((*self.dpy).inner, self.screen);
+            {
+                let mut screen = MaybeUninit::uninit();
+                let mut exact = MaybeUninit::uninit();
+                let ret = XAllocNamedColor(
+                    (*self.dpy).inner,
+                    cmap,
+                    name.as_ptr(),
+                    screen.as_mut_ptr(),
+                    exact.as_mut_ptr(),
+                );
+                dbg!(ret, BadColor);
+            }
             let ret = XftColorAllocName(
-                dbg!((*self.dpy).inner),
-                dbg!(XDefaultVisual((*self.dpy).inner, dbg!(self.screen))),
-                dbg!(XDefaultColormap((*self.dpy).inner, self.screen)),
-                dbg!(name.as_ptr()),
-                dbg!(dest.as_mut_ptr()),
+                (*self.dpy).inner,
+                XDefaultVisual((*self.dpy).inner, self.screen),
+                cmap,
+                name.as_ptr(),
+                dest.as_mut_ptr(),
             );
-            let val = dest.assume_init();
-            dbg!(&val);
             if ret != 0 {
                 panic!("cannot allocate color {clrname} with status {ret}");
             }
-            val
+            dest.assume_init()
         }
     }
 
