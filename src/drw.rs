@@ -231,6 +231,7 @@ impl Drw {
     fn clr_create(&self, clrname: &str) -> Clr {
         unsafe {
             let name = CString::new(clrname).unwrap();
+            dbg!(&name);
             let mut dest = MaybeUninit::uninit();
             let ret = XftColorAllocName(
                 dbg!((*self.dpy).inner),
@@ -239,10 +240,12 @@ impl Drw {
                 dbg!(name.as_ptr()),
                 dbg!(dest.as_mut_ptr()),
             );
+            let val = dest.assume_init();
+            dbg!(&val);
             if ret != 0 {
                 panic!("cannot allocate color {clrname} with status {ret}");
             }
-            dest.assume_init()
+            val
         }
     }
 
