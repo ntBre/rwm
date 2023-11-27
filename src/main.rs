@@ -14,7 +14,7 @@ use config::{
 };
 use drw::Drw;
 use libc::{
-    c_uint, close, execvp, fork, setsid, sigaction, sigemptyset, waitpid,
+    abs, c_uint, close, execvp, fork, setsid, sigaction, sigemptyset, waitpid,
     SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN, WNOHANG,
 };
 use x11::keysym::XK_Num_Lock;
@@ -29,39 +29,41 @@ use x11::xlib::{
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
     ConfigureNotify, ConfigureRequest, ControlMask, CopyFromParent,
     CurrentTime, DestroyAll, DestroyNotify, Display as XDisplay, EnterNotify,
-    EnterWindowMask, ExposureMask, False, FocusChangeMask, FocusIn,
-    GrabModeAsync, GrabModeSync, InputHint, IsViewable, KeyPress, KeySym,
-    LeaveWindowMask, LockMask, MapRequest, MappingKeyboard, MappingNotify,
-    Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, MotionNotify,
-    NoEventMask, NotifyInferior, NotifyNormal, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
-    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    PropertyDelete, PropertyNotify, ReplayPointer, RevertToPointerRoot,
-    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, UnmapNotify, XAllowEvents,
-    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
-    XCloseDisplay, XConfigureEvent, XConfigureWindow, XConnectionNumber,
-    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
-    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
-    XDestroyWindow, XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent,
-    XFree, XFreeModifiermap, XFreeStringList, XGetClassHint,
-    XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
-    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
-    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
-    XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient,
-    XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent,
+    EnterWindowMask, Expose, ExposureMask, False, FocusChangeMask, FocusIn,
+    GrabModeAsync, GrabModeSync, GrabSuccess, InputHint, IsViewable, KeyPress,
+    KeySym, LeaveWindowMask, LockMask, MapRequest, MappingKeyboard,
+    MappingNotify, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask,
+    MotionNotify, NoEventMask, NotifyInferior, NotifyNormal, PAspect,
+    PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative,
+    PointerMotionMask, PointerRoot, PropModeAppend, PropModeReplace,
+    PropertyChangeMask, PropertyDelete, PropertyNotify, ReplayPointer,
+    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    UnmapNotify, XAllowEvents, XButtonReleasedEvent, XChangeProperty,
+    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XCloseDisplay,
+    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
+    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
+    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
+    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
+    XFreeModifiermap, XFreeStringList, XGetClassHint, XGetKeyboardMapping,
+    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
+    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
+    XGetWindowProperty, XGrabButton, XGrabKey, XGrabPointer, XGrabServer,
+    XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient, XMapRaised,
+    XMapWindow, XMaskEvent, XMoveResizeWindow, XMoveWindow, XNextEvent,
     XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
     XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
     XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
-    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
-    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
-    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
-    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
+    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabPointer,
+    XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
+    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
 use crate::config::{
-    BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, TAGS,
+    BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
 };
 
 pub struct Display {
@@ -97,6 +99,9 @@ const X_COPY_AREA: u8 = 62;
 const XC_LEFT_PTR: u8 = 68;
 const XC_SIZING: u8 = 120;
 const XC_FLEUR: u8 = 52;
+
+// from X.h
+const BUTTON_RELEASE: i32 = 5;
 
 // from Xutil.h
 /// for windows that are not mapped
@@ -173,6 +178,7 @@ const NUMLOCKMASK: u32 = 0;
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
 const TAGMASK: usize = (1 << TAGS.len()) - 1;
+const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 #[derive(Clone)]
 pub enum Arg {
@@ -181,6 +187,7 @@ pub enum Arg {
     Float(f64),
     Str(&'static [&'static str]),
     Layout(&'static Layout),
+    None,
 }
 
 pub struct Button {
@@ -1223,7 +1230,107 @@ pub fn spawn(dpy: &Display, arg: Arg) {
 }
 
 pub fn movemouse(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let c = (*SELMON).sel;
+        if c.is_null() {
+            return;
+        }
+        // no support moving fullscreen windows by mouse
+        if (*c).isfullscreen {
+            return;
+        }
+        restack(dpy, SELMON);
+        let ocx = (*c).x;
+        let ocy = (*c).y;
+        let mut lasttime = 0;
+        let mut x = 0;
+        let mut y = 0;
+        if XGrabPointer(
+            dpy.inner,
+            ROOT,
+            False,
+            MOUSEMASK as u32,
+            GrabModeAsync,
+            GrabModeAsync,
+            0,
+            CURSOR[Cur::Move as usize],
+            CurrentTime,
+        ) != GrabSuccess
+        {
+            return;
+        }
+        if !getrootptr(dpy, &mut x, &mut y) {
+            return;
+        }
+        let mut first = true;
+        let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
+        // emulating do while
+        while first || (*ev.as_mut_ptr()).type_ != BUTTON_RELEASE {
+            XMaskEvent(
+                dpy.inner,
+                MOUSEMASK | ExposureMask | SubstructureRedirectMask,
+                ev.as_mut_ptr(),
+            );
+            #[allow(non_upper_case_globals)]
+            match (*ev.as_mut_ptr()).type_ {
+                ConfigureRequest | Expose | MapRequest => {
+                    handler(dpy, ev.as_mut_ptr())
+                }
+                MotionNotify => {
+                    let ev = ev.as_mut_ptr();
+                    if ((*ev).motion.time - lasttime) <= (1000 / 60) {
+                        continue;
+                    }
+                    lasttime = (*ev).motion.time;
+
+                    let mut nx = ocx + (*ev).motion.x - x;
+                    let mut ny = ocy + (*ev).motion.y - y;
+                    let snap = SNAP as i16;
+                    if ((*SELMON).wx - nx as i16).abs() < snap {
+                        nx = (*SELMON).wx as i32;
+                    } else if (((*SELMON).wx + (*SELMON).ww)
+                        - (nx + width(c)) as i16)
+                        .abs()
+                        < snap
+                    {
+                        nx = ((*SELMON).wx + (*SELMON).ww) as i32 - width(c);
+                    }
+
+                    if ((*SELMON).wy - ny as i16).abs() < snap {
+                        ny = (*SELMON).wy as i32;
+                    } else if ((((*SELMON).wy + (*SELMON).wh)
+                        - (ny + height(c)) as i16)
+                        .abs()
+                        < snap)
+                    {
+                        ny = ((*SELMON).wy + (*SELMON).wh) as i32 - height(c);
+                    }
+
+                    if !(*c).isfloating
+                        && (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_some()
+                        && ((nx - (*c).x).abs() > SNAP
+                            || (ny - (*c).y).abs() > SNAP)
+                    {
+                        togglefloating(dpy, Arg::None);
+                    }
+                    if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+                        || (*c).isfloating
+                    {
+                        resize(dpy, c, nx, ny, (*c).w, (*c).h, true);
+                    }
+                }
+                _ => {}
+            }
+            first = false;
+        }
+        XUngrabPointer(dpy.inner, CurrentTime);
+        let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
+        if m != SELMON {
+            sendmon(dpy, c, m);
+            SELMON = m;
+            focus(dpy, null_mut());
+        }
+    }
 }
 
 pub fn togglefloating(dpy: &Display, arg: Arg) {
@@ -2253,31 +2360,37 @@ fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
     }
 }
 
-// not sure how this is my problem...
-#[allow(non_upper_case_globals, non_snake_case)]
 fn run(dpy: &Display) {
     // main event loop
     let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
     unsafe {
         XSync(dpy.inner, False);
         while RUNNING && XNextEvent(dpy.inner, ev.as_mut_ptr()) == 0 {
-            match (*ev.as_mut_ptr()).type_ {
-                ButtonPress => buttonpress(dpy, ev.as_mut_ptr()),
-                ClientMessage => clientmessage(dpy, ev.as_mut_ptr()),
-                ConfigureRequest => configurerequest(dpy, ev.as_mut_ptr()),
-                ConfigureNotify => configurenotify(dpy, ev.as_mut_ptr()),
-                DestroyNotify => destroynotify(dpy, ev.as_mut_ptr()),
-                EnterNotify => enternotify(dpy, ev.as_mut_ptr()),
-                Expose => expose(dpy, ev.as_mut_ptr()),
-                FocusIn => focusin(dpy, ev.as_mut_ptr()),
-                KeyPress => keypress(dpy, ev.as_mut_ptr()),
-                MappingNotify => mappingnotify(dpy, ev.as_mut_ptr()),
-                MapRequest => maprequest(dpy, ev.as_mut_ptr()),
-                MotionNotify => motionnotify(dpy, ev.as_mut_ptr()),
-                PropertyNotify => propertynotify(dpy, ev.as_mut_ptr()),
-                UnmapNotify => unmapnotify(dpy, ev.as_mut_ptr()),
-                _ => (),
-            }
+            handler(dpy, ev.as_mut_ptr());
+        }
+    }
+}
+
+// not sure how this is my problem...
+#[allow(non_upper_case_globals, non_snake_case)]
+fn handler(dpy: &Display, ev: *mut XEvent) {
+    unsafe {
+        match (*ev).type_ {
+            ButtonPress => buttonpress(dpy, ev),
+            ClientMessage => clientmessage(dpy, ev),
+            ConfigureRequest => configurerequest(dpy, ev),
+            ConfigureNotify => configurenotify(dpy, ev),
+            DestroyNotify => destroynotify(dpy, ev),
+            EnterNotify => enternotify(dpy, ev),
+            Expose => expose(dpy, ev),
+            FocusIn => focusin(dpy, ev),
+            KeyPress => keypress(dpy, ev),
+            MappingNotify => mappingnotify(dpy, ev),
+            MapRequest => maprequest(dpy, ev),
+            MotionNotify => motionnotify(dpy, ev),
+            PropertyNotify => propertynotify(dpy, ev),
+            UnmapNotify => unmapnotify(dpy, ev),
+            _ => (),
         }
     }
 }
