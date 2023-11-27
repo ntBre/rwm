@@ -1293,7 +1293,6 @@ pub fn spawn(_dpy: &Display, arg: Arg) {
             let mut r: &'static &'static str = Box::leak(r);
             std::mem::swap(&mut DMENUMON, &mut r);
         }
-        dbg!(s);
         Command::new(s[0])
             .args(&s[1..])
             .spawn()
@@ -2560,7 +2559,7 @@ fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
     unsafe {
         xchangeproperty(
             dpy,
-            dbg!((*c).win),
+            (*c).win,
             WMATOM[WM::State as usize],
             WMATOM[WM::State as usize],
             32,
