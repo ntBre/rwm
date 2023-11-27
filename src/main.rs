@@ -16,10 +16,12 @@ use config::{
     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
 };
 use drw::Drw;
+use env_logger::Env;
 use libc::{
     abs, c_uint, close, execvp, fork, setsid, sigaction, sigemptyset, waitpid,
     SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN, WNOHANG,
 };
+use log::info;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -3300,6 +3302,8 @@ mod drw;
 mod layouts;
 
 fn main() {
+    let env = Env::default().default_filter_or("info");
+    env_logger::init();
     let home = &std::env::var("HOME").unwrap();
     let home = Path::new(home);
     let outfile =
@@ -3312,13 +3316,22 @@ fn main() {
         libc::dup2(out_fd, 1);
         libc::dup2(log_fd, 2);
     }
+
+    info!("dup2 finished");
     let mut dpy = Display::open();
+    info!("display opened");
     checkotherwm(&dpy);
+    info!("checked other wm");
     setup(&mut dpy);
+    info!("setup finished");
     scan(&dpy);
+    info!("scan finished");
     run(&dpy);
+    info!("run finished");
     cleanup(&dpy);
+    info!("cleanup finished");
     unsafe {
         XCloseDisplay(dpy.inner);
     }
+    info!("exiting");
 }
