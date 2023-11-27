@@ -7,7 +7,9 @@ use x11::{
         XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
         XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
     },
-    xlib::{Button1, Button2, Button3, ControlMask, Mod1Mask, ShiftMask},
+    xlib::{
+        Button1, Button2, Button3, ControlMask, Mod1Mask, Mod4Mask, ShiftMask,
+    },
 };
 
 use crate::{
@@ -71,7 +73,7 @@ pub const LAYOUTS: [Layout; 3] = [
     },
 ];
 
-pub const MODKEY: u32 = Mod1Mask;
+pub const MODKEY: u32 = Mod4Mask;
 
 pub const TERMCMD: &str = "st";
 pub const DMENUFONT: &str = "monospace:size=10";
