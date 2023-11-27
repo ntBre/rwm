@@ -2579,8 +2579,31 @@ fn configurerequest(dpy: &Display, e: *mut XEvent) {
 }
 
 fn clientmessage(dpy: &Display, e: *mut XEvent) {
-    unsafe {}
-    todo!()
+    unsafe {
+        let cme = (*e).client_message;
+        let c = wintoclient(cme.window);
+        if c.is_null() {
+            return;
+        }
+        if cme.message_type == NETATOM[Net::WMState as usize] {
+            if cme.data.get_long(1)
+                == NETATOM[Net::WMFullscreen as usize] as i64
+                || cme.data.get_long(2)
+                    == NETATOM[Net::WMFullscreen as usize] as i64
+            {
+                setfullscreen(
+                    dpy,
+                    c,
+                    (cme.data.get_long(0) == 1
+                        || (cme.data.get_long(0) == 2 && !(*c).isfullscreen)),
+                );
+            }
+        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize] {
+            if c != (*SELMON).sel && !(*c).isurgent {
+                seturgent(dpy, c, true);
+            }
+        }
+    }
 }
 
 fn buttonpress(dpy: &Display, e: *mut XEvent) {
