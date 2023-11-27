@@ -5,7 +5,10 @@
 
 use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
+use std::fs::File;
 use std::mem::MaybeUninit;
+use std::os::fd::AsRawFd;
+use std::path::Path;
 use std::ptr::null_mut;
 use std::sync::LazyLock;
 
@@ -3297,6 +3300,18 @@ mod drw;
 mod layouts;
 
 fn main() {
+    let home = &std::env::var("HOME").unwrap();
+    let home = Path::new(home);
+    let outfile =
+        File::create(home.join("rwm.out")).expect("failed to create outfile");
+    let logfile =
+        File::create(home.join("rwm.err")).expect("failed to create log file");
+    let out_fd = outfile.as_raw_fd();
+    let log_fd = logfile.as_raw_fd();
+    unsafe {
+        libc::dup2(out_fd, 1);
+        libc::dup2(log_fd, 2);
+    }
     let mut dpy = Display::open();
     checkotherwm(&dpy);
     setup(&mut dpy);
