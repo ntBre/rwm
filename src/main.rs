@@ -55,7 +55,7 @@ use x11::xlib::{
     XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
     XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
     XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabPointer,
-    XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
+    XUngrabServer, XUnmapWindow, XUrgencyHint, XWarpPointer, XWindowAttributes,
     XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
     XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
     XA_WM_TRANSIENT_FOR,
@@ -1362,7 +1362,113 @@ pub fn togglefloating(dpy: &Display, arg: Arg) {
 }
 
 pub fn resizemouse(dpy: &Display, arg: Arg) {
-    todo!()
+    unsafe {
+        let c = (*SELMON).sel;
+        if c.is_null() {
+            return;
+        }
+        // no support for resizing fullscreen windows by mouse
+        if (*c).isfullscreen {
+            return;
+        }
+        restack(dpy, SELMON);
+        let ocx = (*c).x;
+        let ocy = (*c).y;
+        let mut lasttime = 0;
+        if XGrabPointer(
+            dpy.inner,
+            ROOT,
+            False,
+            MOUSEMASK as u32,
+            GrabModeAsync,
+            GrabModeAsync,
+            0,
+            CURSOR[Cur::Resize as usize],
+            CurrentTime,
+        ) != GrabSuccess
+        {
+            return;
+        }
+        XWarpPointer(
+            dpy.inner,
+            0,
+            (*c).win,
+            0,
+            0,
+            0,
+            0,
+            (*c).w + (*c).bw - 1,
+            (*c).h + (*c).bw - 1,
+        );
+        let mut first = true;
+        // is this allowed? no warning from the compiler. probably I should use
+        // an Option since this gets initialized in the first iteration of the
+        // loop
+        let mut ev: *mut XEvent = MaybeUninit::uninit().as_mut_ptr();
+        while first || (*ev).type_ != BUTTON_RELEASE {
+            XMaskEvent(
+                dpy.inner,
+                MOUSEMASK | ExposureMask | SubstructureRedirectMask,
+                ev,
+            );
+            #[allow(non_upper_case_globals)]
+            match (*ev).type_ {
+                ConfigureRequest | Expose | MapRequest => handler(dpy, ev),
+                MotionNotify => {
+                    if (((*ev).motion.time - lasttime) <= (1000 / 60)) {
+                        continue;
+                    }
+                    lasttime = (*ev).motion.time;
+
+                    let nw = max((*ev).motion.x - ocx - 2 * (*c).bw + 1, 1);
+                    let nh = max((*ev).motion.y - ocy - 2 * (*c).bw + 1, 1);
+                    if ((*(*c).mon).wx + nw as i16 >= (*SELMON).wx
+                        && (*(*c).mon).wx + nw as i16
+                            <= (*SELMON).wx + (*SELMON).ww
+                        && (*(*c).mon).wy + nh as i16 >= (*SELMON).wy
+                        && (*(*c).mon).wy + nh as i16
+                            <= (*SELMON).wy + (*SELMON).wh)
+                    {
+                        if (!(*c).isfloating
+                            && (*(*SELMON).lt[(*SELMON).sellt])
+                                .arrange
+                                .is_some()
+                            && (abs(nw - (*c).w) > SNAP
+                                || abs(nh - (*c).h) > SNAP))
+                        {
+                            togglefloating(dpy, Arg::None);
+                        }
+                    }
+                    if (!(*(*SELMON).lt[(*SELMON).sellt]).arrange.is_some()
+                        || (*c).isfloating)
+                    {
+                        resize(dpy, c, (*c).x, (*c).y, nw, nh, true);
+                    }
+                }
+                _ => {}
+            }
+            first = false;
+        }
+        XWarpPointer(
+            dpy.inner,
+            0,
+            (*c).win,
+            0,
+            0,
+            0,
+            0,
+            (*c).w + (*c).bw - 1,
+            (*c).h + (*c).bw - 1,
+        );
+        XUngrabPointer(dpy.inner, CurrentTime);
+        while XCheckMaskEvent(dpy.inner, EnterWindowMask, ev) != 0 {}
+        let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
+        if m != SELMON {
+            sendmon(dpy, c, m);
+            SELMON = m;
+            focus(dpy, null_mut());
+        }
+    }
 }
 
 pub fn view(dpy: &Display, arg: Arg) {
