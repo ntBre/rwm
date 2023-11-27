@@ -1,6 +1,7 @@
 //! tiling window manager based on dwm
 
 #![feature(vec_into_raw_parts, lazy_cell)]
+#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
 use std::cmp::{max, min};
 use std::ffi::{c_int, CString};
@@ -177,7 +178,7 @@ static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
 /// sum of left and right padding for text
 static mut LRPAD: usize = 0;
 
-const NUMLOCKMASK: u32 = 0;
+static mut NUMLOCKMASK: u32 = 0;
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
 const TAGMASK: usize = (1 << TAGS.len()) - 1;
@@ -779,8 +780,8 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
 
 fn grabbuttons(dpy: &Display, c: *mut Client, focused: bool) {
     updatenumlockmask(dpy);
-    let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
     unsafe {
+        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
         if !focused {
             XGrabButton(
@@ -1525,13 +1526,12 @@ pub fn tag(dpy: &Display, arg: Arg) {
 }
 
 pub fn toggletag(dpy: &Display, arg: Arg) {
-    let mut newtags = 0;
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
         }
         let Arg::Uint(ui) = arg else { return };
-        newtags = (*(*SELMON).sel).tags ^ (ui & TAGMASK);
+        let newtags = (*(*SELMON).sel).tags ^ (ui & TAGMASK);
         if newtags != 0 {
             (*(*SELMON).sel).tags = newtags;
             focus(dpy, null_mut());
@@ -1719,10 +1719,9 @@ fn grabkeys(dpy: &Display) {
     unsafe {
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        let mut syms = std::ptr::null_mut();
         XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
         XDisplayKeycodes(dpy.inner, &mut start as *mut _, &mut end as *mut _);
-        syms = XGetKeyboardMapping(
+        let syms = XGetKeyboardMapping(
             dpy.inner,
             start as u8,
             end - start + 1,
@@ -1756,7 +1755,6 @@ fn grabkeys(dpy: &Display) {
 }
 
 fn updatenumlockmask(dpy: &Display) {
-    let mut numlockmask = 0;
     unsafe {
         let modmap = XGetModifierMapping(dpy.inner);
         for i in 0..8 {
@@ -1766,7 +1764,7 @@ fn updatenumlockmask(dpy: &Display) {
                     .offset((i * (*modmap).max_keypermod + j) as isize)
                     == XKeysymToKeycode(dpy.inner, XK_Num_Lock as u64)
                 {
-                    numlockmask = 1 << i;
+                    NUMLOCKMASK = 1 << i;
                 }
             }
         }
@@ -2101,7 +2099,7 @@ fn updategeom(dpy: &Display) -> bool {
                 if !m.is_null() {
                     (*m).next = createmon();
                 } else {
-                    m = createmon();
+                    MONS = createmon();
                 }
             }
 
@@ -2261,15 +2259,17 @@ fn height(x: *mut Client) -> i32 {
 }
 
 #[inline]
-const fn cleanmask(mask: u32) -> u32 {
-    mask & !(NUMLOCKMASK | LockMask)
-        & (ShiftMask
-            | ControlMask
-            | Mod1Mask
-            | Mod2Mask
-            | Mod3Mask
-            | Mod4Mask
-            | Mod5Mask)
+fn cleanmask(mask: u32) -> u32 {
+    unsafe {
+        mask & !(NUMLOCKMASK | LockMask)
+            & (ShiftMask
+                | ControlMask
+                | Mod1Mask
+                | Mod2Mask
+                | Mod3Mask
+                | Mod4Mask
+                | Mod5Mask)
+    }
 }
 
 fn getrootptr(dpy: &Display, x: &mut i32, y: &mut i32) -> bool {
@@ -2297,7 +2297,7 @@ fn cleanupmon(mon: *mut Monitor, dpy: &Display) {
         }
         XUnmapWindow(dpy.inner, (*mon).barwin);
         XDestroyWindow(dpy.inner, (*mon).barwin);
-        Box::from_raw(mon); // free mon
+        drop(Box::from_raw(mon)); // free mon
     }
 }
 
@@ -2317,11 +2317,11 @@ fn attach(c: *mut Client) {
 
 fn detachstack(c: *mut Client) {
     unsafe {
-        let mut tc = (*(*c).mon).stack;
-        while !tc.is_null() && tc != c {
-            tc = (*tc).snext;
+        let mut tc: *mut *mut Client = &mut (*(*c).mon).stack;
+        while !tc.is_null() && *tc != c {
+            tc = &mut (*(*tc)).snext;
         }
-        tc = (*c).snext;
+        *tc = (*c).snext;
 
         if c == (*(*c).mon).sel {
             let mut t = (*(*c).mon).stack;
@@ -2384,13 +2384,12 @@ fn cleanup(dpy: &Display) {
         symbol: "",
         arrange: None,
     });
-    let mut m: *mut Monitor = std::ptr::null_mut();
     let _i = 0;
 
     view(dpy, a);
     unsafe {
         (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(l);
-        m = MONS;
+        let mut m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {
                 unmanage(dpy, (*m).stack, false);
@@ -2406,7 +2405,7 @@ fn cleanup(dpy: &Display) {
         }
         // shouldn't have to free SCHEME because it's actually a vec
         XDestroyWindow(dpy.inner, WMCHECKWIN);
-        Box::from_raw(DRW);
+        drop(Box::from_raw(DRW));
         XSync(dpy.inner, False);
         XSetInputFocus(
             dpy.inner,
@@ -2442,7 +2441,7 @@ fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
             XSetErrorHandler(Some(xerror));
             XUngrabServer(dpy.inner);
         }
-        Box::from_raw(c);
+        drop(Box::from_raw(c));
         focus(dpy, std::ptr::null_mut());
         updateclientlist(dpy);
         arrange(dpy, m);
@@ -2585,20 +2584,22 @@ fn propertynotify(dpy: &Display, e: *mut XEvent) {
     }
 }
 
+/// declared static inside motionnotify, which apparently means it persists
+/// between function calls
+static mut MOTIONNOTIFY_MON: *mut Monitor = null_mut();
 fn motionnotify(dpy: &Display, e: *mut XEvent) {
-    let mut mon = null_mut();
     unsafe {
         let ev = &(*e).motion;
         if ev.window != ROOT {
             return;
         }
         let m = recttomon(ev.x_root, ev.y_root, 1, 1);
-        if m != mon && !mon.is_null() {
+        if m != MOTIONNOTIFY_MON && !MOTIONNOTIFY_MON.is_null() {
             unfocus(dpy, (*SELMON).sel, true);
             SELMON = m;
             focus(dpy, null_mut());
         }
-        mon = m;
+        MOTIONNOTIFY_MON = m;
     }
 }
 

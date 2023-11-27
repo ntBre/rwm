@@ -193,22 +193,21 @@ impl Drw {
     }
 
     fn xfont_create2(&self, fontpattern: *mut FcPattern) -> *mut Fnt {
-        let mut xfont = std::ptr::null_mut();
         let pattern = std::ptr::null_mut();
         unsafe {
-            xfont = XftFontOpenPattern((*self.dpy).inner, fontpattern);
+            let xfont = XftFontOpenPattern((*self.dpy).inner, fontpattern);
             if xfont.is_null() {
                 panic!("cannot load font from pattern");
             }
+            let font = Fnt {
+                dpy: self.dpy,
+                h: ((*xfont).ascent + (*xfont).descent) as usize,
+                xfont,
+                pattern,
+                next: std::ptr::null_mut(),
+            };
+            Box::into_raw(Box::new(font))
         }
-        let font = Fnt {
-            dpy: self.dpy,
-            h: unsafe { (*xfont).ascent + (*xfont).descent } as usize,
-            xfont,
-            pattern,
-            next: std::ptr::null_mut(),
-        };
-        Box::into_raw(Box::new(font))
     }
 
     pub(crate) fn cur_create(&self, shape: u8) -> Cursor {
@@ -272,7 +271,6 @@ impl Drw {
         let mut ellipsis_x = 0;
         let mut ellipsis_w = 0;
         let mut d: *mut XftDraw = std::ptr::null_mut();
-        let mut usedfont: *mut Fnt = std::ptr::null_mut();
         let render = x != 0 || y != 0 || w != 0 || h != 0;
         let mut utf8codepoint = 0;
         let mut charexists = false;
@@ -329,7 +327,7 @@ impl Drw {
                 w -= lpad;
             }
 
-            usedfont = self.fonts;
+            let mut usedfont = self.fonts;
             if ellipsis_width == 0 && render {
                 ellipsis_width = self.fontset_getwidth("...");
             }
@@ -641,6 +639,6 @@ fn xfont_free(font: *mut Fnt) {
             FcPatternDestroy((*font).pattern.cast());
         }
         XftFontClose((*(*font).dpy).inner, (*font).xfont);
-        Box::from_raw(font); // free
+        drop(Box::from_raw(font)); // free
     }
 }
