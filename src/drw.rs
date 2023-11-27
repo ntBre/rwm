@@ -7,6 +7,7 @@ use fontconfig_sys::{
     FcPatternAddBool, FcPatternAddCharSet, FcPatternDestroy,
     FcPatternDuplicate,
 };
+use log::debug;
 use x11::{
     xft::{
         FcPattern, XftCharExists, XftColor, XftColorAllocName, XftDraw,
@@ -293,6 +294,7 @@ impl Drw {
             || text.is_empty()
             || self.fonts.is_null()
         {
+            debug!("text: returning 0");
             return 0;
         }
 
@@ -510,6 +512,7 @@ impl Drw {
                 XftDrawDestroy(d);
             }
         }
+        debug!("returning from Drw::text");
         x as usize + if render { w } else { 0 }
     }
 

@@ -34,34 +34,34 @@ use x11::xlib::{
     ConfigureNotify, ConfigureRequest, ControlMask, CopyFromParent,
     CurrentTime, DestroyAll, DestroyNotify, EnterNotify, EnterWindowMask,
     Expose, ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync,
-    GrabModeSync, GrabSuccess, InputHint, IsViewable, KeyPress,
-    LeaveWindowMask, LockMask, MapRequest, MappingKeyboard, MappingNotify,
-    Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, MotionNotify,
-    NoEventMask, NotifyInferior, NotifyNormal, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
-    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    PropertyDelete, PropertyNotify, ReplayPointer, RevertToPointerRoot,
-    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, UnmapNotify, XAllowEvents,
-    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
-    XCloseDisplay, XConfigureEvent, XConfigureWindow, XCreateSimpleWindow,
-    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
-    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
-    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetClassHint, XGetKeyboardMapping,
-    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
-    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
-    XGetWindowProperty, XGrabButton, XGrabKey, XGrabPointer, XGrabServer,
-    XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient, XMapRaised,
-    XMapWindow, XMaskEvent, XMoveResizeWindow, XMoveWindow, XNextEvent,
-    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
-    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
-    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabPointer,
-    XUngrabServer, XUnmapWindow, XUrgencyHint, XWarpPointer, XWindowAttributes,
-    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    GrabModeSync, GrabSuccess, InputHint, IsViewable, KeyPress, KeySym,
+    LeaveNotify, LeaveWindowMask, LockMask, MapNotify, MapRequest,
+    MappingKeyboard, MappingNotify, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask,
+    Mod5Mask, MotionNotify, NoEventMask, NoExpose, NotifyInferior,
+    NotifyNormal, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize,
+    ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
+    PropModeReplace, PropertyChangeMask, PropertyDelete, PropertyNotify,
+    ReplayPointer, RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    UnmapNotify, XAllowEvents, XChangeProperty, XChangeWindowAttributes,
+    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
+    XConfigureWindow, XCreateSimpleWindow, XCreateWindow, XDefaultDepth,
+    XDefaultRootWindow, XDefaultScreen, XDefaultVisual, XDefineCursor,
+    XDeleteProperty, XDestroyWindow, XDisplayHeight, XDisplayKeycodes,
+    XDisplayWidth, XEvent, XFree, XFreeModifiermap, XFreeStringList,
+    XGetClassHint, XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
+    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
+    XGrabPointer, XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode,
+    XKillClient, XMapRaised, XMapWindow, XMaskEvent, XMoveResizeWindow,
+    XMoveWindow, XNextEvent, XQueryPointer, XQueryTree, XRaiseWindow,
+    XRefreshKeyboardMapping, XRootWindow, XSelectInput, XSendEvent,
+    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
+    XUngrabKey, XUngrabPointer, XUngrabServer, XUnmapWindow, XUrgencyHint,
+    XWarpPointer, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
+    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
+    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{BadAlloc, BadValue, Display as XDisplay};
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
@@ -489,7 +489,7 @@ enum Col {
     Border,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 #[repr(C)]
 pub enum Clk {
     TagBar,
@@ -664,13 +664,10 @@ fn setup(dpy: &mut Display) {
                 | PropertyChangeMask;
         }
         let mut wa = wa.assume_init();
-        xchangewindowattributes(
-            dpy,
-            ROOT,
-            CWEventMask | CWCursor,
-            &mut wa as *mut _,
-        );
-        XSelectInput(dpy.inner, ROOT, wa.event_mask);
+        xchangewindowattributes(dpy, ROOT, CWEventMask | CWCursor, &mut wa);
+        if XSelectInput(dpy.inner, ROOT, wa.event_mask) == BadWindow as i32 {
+            panic!("selecting bad window");
+        }
         grabkeys(dpy);
         focus(dpy, std::ptr::null_mut());
     }
@@ -700,6 +697,7 @@ fn xchangewindowattributes(
 }
 
 fn focus(dpy: &Display, c: *mut Client) {
+    debug!("setting focus");
     unsafe {
         if c.is_null() || !is_visible(c) {
             let mut c = (*SELMON).stack;
@@ -774,6 +772,7 @@ fn xchangeproperty(
 }
 
 fn setfocus(dpy: &Display, c: *mut Client) {
+    debug!("== setfocus");
     unsafe {
         if !(*c).neverfocus {
             XSetInputFocus(
@@ -789,7 +788,7 @@ fn setfocus(dpy: &Display, c: *mut Client) {
                 XA_WINDOW,
                 32,
                 PropModeReplace,
-                &mut ((*c).win as u8) as *mut _,
+                &mut ((*c).win as u8),
                 1,
             );
         }
@@ -798,12 +797,14 @@ fn setfocus(dpy: &Display, c: *mut Client) {
 }
 
 fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
+    debug!("== sendevent ==");
     let mut n = 0;
     let mut protocols = std::ptr::null_mut();
     let mut exists = false;
     let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
     unsafe {
         if XGetWMProtocols(dpy.inner, (*c).win, &mut protocols, &mut n) != 0 {
+            debug!("sendevent: getwmprotocols success");
             while !exists && n > 0 {
                 exists = *protocols.offset(n as isize) == proto;
                 n -= 1;
@@ -822,13 +823,7 @@ fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
                 (*ev).client_message.data.set_long(1, CurrentTime as i64);
             }
             let mut ev: XEvent = ev.assume_init();
-            XSendEvent(
-                dpy.inner,
-                (*c).win,
-                False,
-                NoEventMask,
-                &mut ev as *mut _,
-            );
+            XSendEvent(dpy.inner, (*c).win, False, NoEventMask, &mut ev);
         }
         exists
     }
@@ -2602,7 +2597,8 @@ fn handler(dpy: &Display, ev: *mut XEvent) {
             MotionNotify => motionnotify(dpy, ev),
             PropertyNotify => propertynotify(dpy, ev),
             UnmapNotify => unmapnotify(dpy, ev),
-            _ => (),
+            NoExpose | LeaveNotify | MapNotify => (),
+            t => debug!("unrecognized type {t}"),
         }
     }
 }
@@ -2724,15 +2720,18 @@ fn keypress(dpy: &Display, e: *mut XEvent) {
     debug!("keypress");
     unsafe {
         let ev = (*e).key;
-        let keysym = XKeycodeToKeysym(dpy.inner, ev.keycode as u8, 0);
+        let keysym: KeySym = XKeycodeToKeysym(dpy.inner, ev.keycode as u8, 0);
+        debug!("keysym = {keysym} = {keysym:#x}");
         for i in 0..KEYS.len() {
             if keysym == KEYS[i].keysym as u64
                 && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
             {
+                debug!("found key");
                 (KEYS[i].func)(dpy, KEYS[i].arg.clone());
             }
         }
     }
+    debug!("returning from keypress");
 }
 
 fn focusin(dpy: &Display, e: *mut XEvent) {
@@ -2955,7 +2954,6 @@ fn clientmessage(dpy: &Display, e: *mut XEvent) {
 fn buttonpress(dpy: &Display, e: *mut XEvent) {
     unsafe {
         debug!("buttonpress");
-        spawn(dpy, Arg::Str(&["st"]));
         let ev = (*e).button;
         let mut click = Clk::RootWin;
         let mut arg = Arg::Uint(0);
@@ -2966,7 +2964,9 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             SELMON = m;
             focus(dpy, null_mut());
         }
+        debug!("focused monitor");
         if ev.window == (*SELMON).barwin {
+            debug!("window is barwin");
             let mut x = 0;
             let mut i = 0;
             // do while with ++i in condition
@@ -2991,14 +2991,17 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
                 click = Clk::WinTitle;
             }
         } else {
+            debug!("window is not barwin");
             let c = wintoclient(ev.window);
             if !c.is_null() {
                 focus(dpy, c);
                 restack(dpy, SELMON);
+                debug!("allowevents");
                 XAllowEvents(dpy.inner, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
+        debug!("checking buttons with click = {click:?}");
         for i in 0..BUTTONS.len() {
             let b = &BUTTONS[i];
             if click == b.click
