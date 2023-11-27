@@ -1193,11 +1193,11 @@ fn pop(dpy: &Display, c: *mut Client) {
 
 fn detach(c: *mut Client) {
     unsafe {
-        let mut tc = (*(*c).mon).clients;
-        while !tc.is_null() && tc != c {
-            tc = (*tc).next;
+        let mut tc = &mut (*(*c).mon).clients;
+        while !(*tc).is_null() && *tc != c {
+            tc = &mut (*(*tc)).next;
         }
-        tc = (*c).next;
+        *tc = (*c).next;
     }
 }
 
