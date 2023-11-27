@@ -235,7 +235,7 @@ impl Drw {
             let mut dest = MaybeUninit::uninit();
             let ret = XftColorAllocName(
                 dbg!((*self.dpy).inner),
-                dbg!(XDefaultVisual((*self.dpy).inner, self.screen)),
+                dbg!(XDefaultVisual((*self.dpy).inner, dbg!(self.screen))),
                 dbg!(XDefaultColormap((*self.dpy).inner, self.screen)),
                 dbg!(name.as_ptr()),
                 dbg!(dest.as_mut_ptr()),
