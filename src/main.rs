@@ -17,8 +17,9 @@ use config::{
 use drw::Drw;
 use env_logger::Env;
 use libc::{
-    abs, c_uint, close, execvp, fork, setsid, sigaction, sigemptyset, waitpid,
-    SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN, WNOHANG,
+    abs, c_uchar, c_uint, close, execvp, fork, setsid, sigaction, sigemptyset,
+    waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_DFL, SIG_IGN,
+    WNOHANG,
 };
 use log::info;
 use x11::keysym::XK_Num_Lock;
@@ -26,7 +27,6 @@ use x11::xft::XftColor;
 use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
-use x11::xlib::Display as XDisplay;
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
     BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
@@ -64,6 +64,7 @@ use x11::xlib::{
     CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
     XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
+use x11::xlib::{BadAlloc, BadValue, Display as XDisplay};
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
 use crate::config::{
@@ -439,6 +440,7 @@ fn checkotherwm(dpy: &Display) {
     }
 }
 
+#[derive(Debug)]
 #[repr(C)]
 enum WM {
     Protocols,
@@ -545,7 +547,11 @@ fn setup(dpy: &mut Display) {
             (WM::TakeFocus, "WM_TAKE_FOCUS"),
         ] {
             let s = CString::new(s).unwrap();
-            WMATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
+            let v = XInternAtom(dpy.inner, s.as_ptr().cast(), False);
+            if v == BadAlloc as u64 || v == BadValue as u64 {
+                panic!("XInternAtom failed with {v}");
+            }
+            WMATOM[dbg!(k) as usize] = dbg!(v);
         }
 
         for (k, s) in [
@@ -2920,6 +2926,7 @@ fn scan(dpy: &Display) {
     let mut wins: *mut Window = std::ptr::null_mut();
     let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
     unsafe {
+        info!("entering scan unsafe");
         if XQueryTree(
             dpy.inner,
             ROOT,
@@ -2929,6 +2936,7 @@ fn scan(dpy: &Display) {
             &mut num,
         ) != 0
         {
+            info!("xquerytree success with num = {num}");
             for i in 0..num {
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa)
                     || (*wa.as_mut_ptr()).override_redirect != 0
@@ -2938,15 +2946,20 @@ fn scan(dpy: &Display) {
                         &mut d1,
                     )
                 {
+                    info!("continuing on i = {i}");
                     continue;
                 }
+                info!("maybe manage");
                 if (*wa.as_mut_ptr()).map_state == IsViewable
                     || getstate(dpy, *wins.offset(i as isize))
                         .is_ok_and(|v| v == ICONIC_STATE)
                 {
+                    info!("calling manage");
                     manage(dpy, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
+                info!("finished iter for {i}");
             }
+            info!("finished scan first loop");
             for i in 0..num {
                 // now the transients
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa) {
@@ -3264,36 +3277,41 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
 }
 
 fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
+    info!("calling getstate");
     let mut fmt = 0;
-    let p = std::ptr::null_mut();
+    let mut p: *mut c_uchar = std::ptr::null_mut();
     let mut n = 0;
     let mut extra = 0;
     let mut real = 0;
     let mut result = Err(());
     unsafe {
+        info!("calling XGetWindowProperty");
         let cond = XGetWindowProperty(
-            dpy.inner,
+            dbg!(dpy.inner),
             w,
-            WMATOM[WM::State as usize],
+            dbg!(WMATOM[WM::State as usize]),
             0,
             2,
             False,
-            WMATOM[WM::State as usize],
+            dbg!(WMATOM[WM::State as usize]),
             &mut real,
             &mut fmt,
             &mut n,
             &mut extra,
-            p,
-        ) != Success as i32;
-        if cond {
+            &mut p,
+        );
+        info!("called XGetWindowProperty");
+        if cond != Success as i32 {
+            info!("returning Err from getstate");
             return Err(());
         }
         if n != 0 {
             // they do this cast in the call to XGetWindowProperty, not sure if
             // it matters
-            result = Ok(**p as usize);
+            result = Ok(*p as usize);
         }
         XFree(p.cast());
+        info!("returning Ok from getstate");
         result
     }
 }
