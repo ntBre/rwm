@@ -234,18 +234,6 @@ impl Drw {
             let name = CString::new(clrname).unwrap();
             let mut dest = MaybeUninit::uninit();
             let cmap = XDefaultColormap((*self.dpy).inner, self.screen);
-            {
-                let mut screen = MaybeUninit::uninit();
-                let mut exact = MaybeUninit::uninit();
-                let ret = XAllocNamedColor(
-                    (*self.dpy).inner,
-                    cmap,
-                    name.as_ptr(),
-                    screen.as_mut_ptr(),
-                    exact.as_mut_ptr(),
-                );
-                dbg!(ret, BadColor);
-            }
             let ret = XftColorAllocName(
                 (*self.dpy).inner,
                 XDefaultVisual((*self.dpy).inner, self.screen),
@@ -253,7 +241,7 @@ impl Drw {
                 name.as_ptr(),
                 dest.as_mut_ptr(),
             );
-            if ret != 0 {
+            if ret == 0 {
                 panic!("cannot allocate color {clrname} with status {ret}");
             }
             dest.assume_init()
