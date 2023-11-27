@@ -4,7 +4,7 @@
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
 use std::cmp::{max, min};
-use std::ffi::{c_int, CString};
+use std::ffi::{c_int, c_ulong, CString};
 use std::fs::File;
 use std::mem::MaybeUninit;
 use std::os::fd::AsRawFd;
@@ -16,7 +16,6 @@ use config::{
     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
 };
 use drw::Drw;
-use env_logger::Env;
 use libc::{
     abs, c_uchar, c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP,
     SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
@@ -28,7 +27,7 @@ use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
 use x11::xlib::{
-    AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
+    AnyButton, AnyKey, AnyModifier, BadAccess, BadAtom, BadDrawable, BadMatch,
     BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
     CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
@@ -139,6 +138,10 @@ extern "C" fn xerror(dpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
         );
         (XERRORXLIB.unwrap())(dpy, ee)
     }
+}
+
+extern "C" fn xerrordummy(_dpy: *mut XDisplay, _ee: *mut XErrorEvent) -> c_int {
+    return 0;
 }
 
 /// I hate to start using globals already, but I'm not sure how else to do it.
@@ -597,8 +600,8 @@ fn setup(dpy: &mut Display) {
 
         // supporting window for NetWMCheck
         WMCHECKWIN = XCreateSimpleWindow(dpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
-        XChangeProperty(
-            dpy.inner,
+        xchangeproperty(
+            dpy,
             WMCHECKWIN,
             NETATOM[Net::WMCheck as usize],
             XA_WINDOW,
@@ -608,39 +611,39 @@ fn setup(dpy: &mut Display) {
             1,
         );
         let rwm = CString::new("rwm").unwrap();
-        XChangeProperty(
-            dpy.inner,
+        xchangeproperty(
+            dpy,
             WMCHECKWIN,
             NETATOM[Net::WMName as usize],
             utf8string,
             8,
             PropModeReplace,
-            rwm.as_ptr().cast(),
+            rwm.as_ptr() as *mut _,
             3,
         );
 
         debug!("3/4");
 
-        XChangeProperty(
-            dpy.inner,
+        xchangeproperty(
+            dpy,
             ROOT,
             NETATOM[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
-            &mut (WMCHECKWIN as u8) as *mut _,
+            &mut (WMCHECKWIN as u8),
             1,
         );
 
         // EWMH support per view
-        XChangeProperty(
-            dpy.inner,
+        xchangeproperty(
+            dpy,
             ROOT,
             NETATOM[Net::Supported as usize],
             XA_ATOM,
             32,
             PropModeReplace,
-            NETATOM.as_ptr().cast(),
+            NETATOM.as_ptr() as *mut _,
             Net::Last as i32,
         );
         XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
@@ -661,8 +664,8 @@ fn setup(dpy: &mut Display) {
                 | PropertyChangeMask;
         }
         let mut wa = wa.assume_init();
-        XChangeWindowAttributes(
-            dpy.inner,
+        xchangewindowattributes(
+            dpy,
             ROOT,
             CWEventMask | CWCursor,
             &mut wa as *mut _,
@@ -670,6 +673,29 @@ fn setup(dpy: &mut Display) {
         XSelectInput(dpy.inner, ROOT, wa.event_mask);
         grabkeys(dpy);
         focus(dpy, std::ptr::null_mut());
+    }
+}
+
+fn xchangewindowattributes(
+    dpy: &Display,
+    w: Window,
+    value_mask: c_ulong,
+    wa: *mut XSetWindowAttributes,
+) {
+    unsafe {
+        let ret = XChangeWindowAttributes(dpy.inner, w, value_mask, wa);
+        if matches!(
+            ret as u8,
+            x11::xlib::BadAccess
+                | x11::xlib::BadColor
+                | x11::xlib::BadCursor
+                | x11::xlib::BadMatch
+                | x11::xlib::BadPixmap
+                | x11::xlib::BadValue
+                | x11::xlib::BadWindow
+        ) {
+            panic!("failed");
+        }
     }
 }
 
@@ -723,6 +749,30 @@ fn drawbars() {
     }
 }
 
+#[allow(non_upper_case_globals)]
+fn xchangeproperty(
+    dpy: &Display,
+    w: Window,
+    prop: Atom,
+    typ: Atom,
+    fmt: c_int,
+    mode: c_int,
+    data: *mut c_uchar,
+    nelements: c_int,
+) {
+    unsafe {
+        let ret = XChangeProperty(
+            dpy.inner, w, prop, typ, fmt, mode, data, nelements,
+        );
+        if matches!(
+            ret as u8,
+            BadAlloc | BadAtom | BadMatch | BadValue | BadWindow
+        ) {
+            panic!("failed");
+        }
+    }
+}
+
 fn setfocus(dpy: &Display, c: *mut Client) {
     unsafe {
         if !(*c).neverfocus {
@@ -732,8 +782,8 @@ fn setfocus(dpy: &Display, c: *mut Client) {
                 RevertToPointerRoot,
                 CurrentTime,
             );
-            XChangeProperty(
-                dpy.inner,
+            xchangeproperty(
+                dpy,
                 ROOT,
                 NETATOM[Net::ActiveWindow as usize],
                 XA_WINDOW,
@@ -1639,7 +1689,7 @@ pub fn killclient(dpy: &Display, _arg: Arg) {
         }
         if !sendevent(dpy, (*SELMON).sel, WMATOM[WM::Delete as usize]) {
             XGrabServer(dpy.inner);
-            XSetErrorHandler(None);
+            XSetErrorHandler(Some(xerrordummy));
             XSetCloseDownMode(dpy.inner, DestroyAll);
             XKillClient(dpy.inner, (*(*SELMON).sel).win);
             XSync(dpy.inner, False);
@@ -1719,29 +1769,30 @@ pub fn quit(_dpy: &Display, _arg: Arg) {
 }
 
 fn grabkeys(dpy: &Display) {
+    debug!("grabbing keys");
     updatenumlockmask(dpy);
     unsafe {
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
-        XDisplayKeycodes(dpy.inner, &mut start as *mut _, &mut end as *mut _);
+        XDisplayKeycodes(dpy.inner, &mut start, &mut end);
         let syms = XGetKeyboardMapping(
             dpy.inner,
             start as u8,
             end - start + 1,
-            &mut skip as *mut _,
+            &mut skip,
         );
         if syms.is_null() {
             return;
         }
-        for k in start..end {
+        for k in start..=end {
             for i in 0..KEYS.len() {
                 // skip modifier codes, we do that ourselves
                 if KEYS[i].keysym
                     == (*syms.offset((k - start * skip) as isize)) as u32
                 {
                     for j in 0..modifiers.len() {
-                        XGrabKey(
+                        let ret = XGrabKey(
                             dpy.inner,
                             k,
                             KEYS[i].modkey | modifiers[j],
@@ -1750,16 +1801,23 @@ fn grabkeys(dpy: &Display) {
                             GrabModeAsync,
                             GrabModeAsync,
                         );
+                        if [BadAccess, BadValue, BadWindow]
+                            .contains(&(ret as u8))
+                        {
+                            panic!("XGrabKey error on {k}: {ret}");
+                        }
                     }
                 }
             }
         }
         XFree(syms.cast());
     }
+    debug!("leaving grabkeys");
 }
 
 fn updatenumlockmask(dpy: &Display) {
     unsafe {
+        NUMLOCKMASK = 0;
         let modmap = XGetModifierMapping(dpy.inner);
         for i in 0..8 {
             for j in 0..(*modmap).max_keypermod {
@@ -1768,6 +1826,7 @@ fn updatenumlockmask(dpy: &Display) {
                     .offset((i * (*modmap).max_keypermod + j) as isize)
                     == XKeysymToKeycode(dpy.inner, XK_Num_Lock as u64)
                 {
+                    debug!("setting numlockmask");
                     NUMLOCKMASK = 1 << i;
                 }
             }
@@ -2210,12 +2269,14 @@ fn wintomon(dpy: &Display, w: Window) -> *mut Monitor {
 }
 
 fn wintoclient(w: u64) -> *mut Client {
+    debug!("wintoclient");
     unsafe {
         let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
                 if (*c).win == w {
+                    debug!("wintoclient: found win = {w}");
                     return c;
                 }
                 c = (*c).next;
@@ -2223,6 +2284,7 @@ fn wintoclient(w: u64) -> *mut Client {
             m = (*m).next;
         }
     }
+    debug!("wintoclient: returning null");
     std::ptr::null_mut()
 }
 
@@ -2431,6 +2493,7 @@ fn cleanup(dpy: &Display) {
 }
 
 fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
+    debug!("unmanage");
     unsafe {
         let m = (*c).mon;
         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
@@ -2439,7 +2502,7 @@ fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
         if !destroyed {
             (*wc.as_mut_ptr()).border_width = (*c).oldbw;
             XGrabServer(dpy.inner); // avoid race conditions
-            XSetErrorHandler(None);
+            XSetErrorHandler(Some(xerrordummy));
             XSelectInput(dpy.inner, (*c).win, NoEventMask);
             // restore border
             XConfigureWindow(
@@ -2450,15 +2513,21 @@ fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
             );
             XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
             setclientstate(dpy, c, WITHDRAWN_STATE);
+            debug!("unmanage: calling xsync");
             XSync(dpy.inner, False);
+            debug!("unmanage: finished xsync");
             XSetErrorHandler(Some(xerror));
+            debug!("unmanage: sethandler");
             XUngrabServer(dpy.inner);
+            debug!("unmanage: ungrab");
         }
+        debug!("unmanage: finished if");
         drop(Box::from_raw(c));
         focus(dpy, std::ptr::null_mut());
         updateclientlist(dpy);
         arrange(dpy, m);
     }
+    debug!("leaving unmanage");
 }
 
 fn updateclientlist(dpy: &Display) {
@@ -2468,8 +2537,8 @@ fn updateclientlist(dpy: &Display) {
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
-                XChangeProperty(
-                    dpy.inner,
+                xchangeproperty(
+                    dpy,
                     ROOT,
                     NETATOM[Net::ClientList as usize],
                     XA_WINDOW,
@@ -2486,19 +2555,21 @@ fn updateclientlist(dpy: &Display) {
 }
 
 fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
-    let data = [state, 0]; // this zero is None
+    debug!("setclientstate");
+    let mut data: [c_uchar; 2] = [state as c_uchar, 0]; // this zero is None
     unsafe {
-        XChangeProperty(
-            dpy.inner,
-            (*c).win,
+        xchangeproperty(
+            dpy,
+            dbg!((*c).win),
             WMATOM[WM::State as usize],
             WMATOM[WM::State as usize],
             32,
             PropModeReplace,
-            data.as_ptr() as *const _,
+            data.as_mut_ptr(),
             2,
         );
     }
+    debug!("leaving setclientstate");
 }
 
 fn run(dpy: &Display) {
@@ -2510,6 +2581,7 @@ fn run(dpy: &Display) {
             handler(dpy, ev.as_mut_ptr());
         }
     }
+    debug!("run terminating");
 }
 
 // not sure how this is my problem...
@@ -2549,6 +2621,7 @@ fn unmapnotify(dpy: &Display, e: *mut XEvent) {
             }
         }
     }
+    debug!("leaving unmapnotify");
 }
 
 fn propertynotify(dpy: &Display, e: *mut XEvent) {
@@ -2603,7 +2676,6 @@ fn propertynotify(dpy: &Display, e: *mut XEvent) {
 /// between function calls
 static mut MOTIONNOTIFY_MON: *mut Monitor = null_mut();
 fn motionnotify(dpy: &Display, e: *mut XEvent) {
-    debug!("motionnotify");
     unsafe {
         let ev = &(*e).motion;
         if ev.window != ROOT {
@@ -2642,9 +2714,11 @@ fn mappingnotify(dpy: &Display, e: *mut XEvent) {
         let mut ev = (*e).mapping;
         XRefreshKeyboardMapping(&mut ev);
         if ev.request == MappingKeyboard {
+            debug!("mappingnotify: grabbing keys");
             grabkeys(dpy);
         }
     }
+    debug!("leaving mapping notify");
 }
 
 fn keypress(dpy: &Display, e: *mut XEvent) {
@@ -2692,6 +2766,7 @@ fn enternotify(dpy: &Display, e: *mut XEvent) {
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
             && ev.window != ROOT
         {
+            debug!("enternotify: return 1");
             return;
         }
         let c = wintoclient(ev.window);
@@ -2704,10 +2779,12 @@ fn enternotify(dpy: &Display, e: *mut XEvent) {
             unfocus(dpy, (*SELMON).sel, true);
             SELMON = m;
         } else if c.is_null() || c == (*SELMON).sel {
+            debug!("enternotify: return 2");
             return;
         }
         focus(dpy, c);
     }
+    debug!("enternotify: final");
 }
 
 fn destroynotify(dpy: &Display, e: *mut XEvent) {
@@ -3095,14 +3172,14 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
         debug!("manage: attaching stack");
         attachstack(c);
         debug!("manage: changing property");
-        XChangeProperty(
-            dpy.inner,
+        xchangeproperty(
+            dpy,
             ROOT,
             NETATOM[Net::ClientList as usize],
             XA_WINDOW,
             32,
             PropModeAppend,
-            &((*c).win as c_uchar) as *const _,
+            &mut ((*c).win as c_uchar),
             1,
         );
         debug!("manage: resizing window");
@@ -3167,14 +3244,14 @@ fn updatewindowtype(dpy: &Display, c: *mut Client) {
 fn setfullscreen(dpy: &Display, c: *mut Client, fullscreen: bool) {
     unsafe {
         if fullscreen && !(*c).isfullscreen {
-            XChangeProperty(
-                dpy.inner,
+            xchangeproperty(
+                dpy,
                 (*c).win,
                 NETATOM[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
-                &(NETATOM[Net::WMFullscreen as usize] as u8) as *const _,
+                &mut (NETATOM[Net::WMFullscreen as usize] as u8) as *mut _,
                 1,
             );
             (*c).isfullscreen = true;
@@ -3192,14 +3269,14 @@ fn setfullscreen(dpy: &Display, c: *mut Client, fullscreen: bool) {
             );
             XRaiseWindow(dpy.inner, (*c).win);
         } else if !fullscreen && (*c).isfullscreen {
-            XChangeProperty(
-                dpy.inner,
+            xchangeproperty(
+                dpy,
                 (*c).win,
                 NETATOM[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
-                &0_u8 as *const _,
+                &mut 0_u8 as *mut _,
                 0,
             );
             (*c).isfullscreen = false;
