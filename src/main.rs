@@ -1824,8 +1824,8 @@ fn updatebars(dpy: &Display) {
     }
 }
 
-fn updategeom(dpy: &Display) -> i32 {
-    let mut dirty = 0;
+fn updategeom(dpy: &Display) -> bool {
+    let mut dirty = false;
     unsafe {
         if XineramaIsActive(dpy.inner) != 0 {
             // I think this is the number of monitors
@@ -1878,7 +1878,7 @@ fn updategeom(dpy: &Display) -> i32 {
                     || unique[i].width != (*m).mw
                     || unique[i].height != (*m).mh
                 {
-                    dirty = 1;
+                    dirty = true;
                     (*m).num = i as i32;
                     (*m).mx = unique[i].x_org;
                     (*m).wx = unique[i].x_org;
@@ -1904,7 +1904,7 @@ fn updategeom(dpy: &Display) -> i32 {
 
                 let mut c = (*m).clients;
                 while !c.is_null() {
-                    dirty = 1;
+                    dirty = true;
                     (*m).clients = (*c).next;
                     detachstack(c);
                     (*c).mon = MONS;
@@ -1923,7 +1923,7 @@ fn updategeom(dpy: &Display) -> i32 {
             }
 
             if (*MONS).mw != SW || (*MONS).mh != SH {
-                dirty = 1;
+                dirty = true;
                 (*MONS).mw = SW;
                 (*MONS).ww = SW;
                 (*MONS).mh = SH;
@@ -1931,7 +1931,7 @@ fn updategeom(dpy: &Display) -> i32 {
                 updatebarpos(MONS);
             }
         }
-        if dirty != 0 {
+        if dirty {
             SELMON = MONS;
             SELMON = wintomon(dpy, ROOT);
         }
@@ -2455,8 +2455,47 @@ fn destroynotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn configurenotify(dpy: &Display, e: *mut XEvent) {
-    unsafe {}
-    todo!()
+    unsafe {
+        let ev = (*e).configure;
+        // dwm TODO updategeom handling sucks, needs to be simplified
+        if ev.window == ROOT {
+            let dirty = (SW != ev.width as i16) || (SH != ev.height as i16);
+            SW = ev.width as i16;
+            SH = ev.height as i16;
+            if updategeom(dpy) || dirty {
+                DRW.as_mut().unwrap().resize(SW, BH);
+                updatebars(dpy);
+                let mut m = MONS;
+                while !m.is_null() {
+                    let mut c = (*m).clients;
+                    while !c.is_null() {
+                        if (*c).isfullscreen {
+                            resizeclient(
+                                dpy,
+                                c,
+                                (*m).mx as i32,
+                                (*m).my as i32,
+                                (*m).mw as i32,
+                                (*m).mh as i32,
+                            );
+                        }
+                        c = (*c).next;
+                    }
+                    XMoveResizeWindow(
+                        dpy.inner,
+                        (*m).barwin,
+                        (*m).wx as i32,
+                        (*m).by as i32,
+                        (*m).ww as u32,
+                        BH as u32,
+                    );
+                    m = (*m).next;
+                }
+                focus(dpy, null_mut());
+                arrange(dpy, null_mut());
+            }
+        }
+    }
 }
 
 fn configurerequest(dpy: &Display, e: *mut XEvent) {

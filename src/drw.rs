@@ -18,7 +18,7 @@ use x11::{
         CapButt, Drawable, False, JoinMiter, LineSolid, XCopyArea,
         XCreateFontCursor, XCreateGC, XCreatePixmap, XDefaultColormap,
         XDefaultDepth, XDefaultVisual, XDrawRectangle, XFillRectangle,
-        XGCValues, XSetForeground, XSetLineAttributes, XSync, GC,
+        XFreePixmap, XGCValues, XSetForeground, XSetLineAttributes, XSync, GC,
     },
 };
 
@@ -612,6 +612,23 @@ impl Drw {
 
     /// no-op, I'm pretty sure Cursors get cleaned up naturally
     pub(crate) fn cur_free(&self, cursor: Cursor) {}
+
+    pub(crate) fn resize(&mut self, w: i16, h: i16) {
+        unsafe {
+            self.w = w as usize;
+            self.h = h as usize;
+            if self.drawable != 0 {
+                XFreePixmap((*self.dpy).inner, self.drawable);
+            }
+            self.drawable = XCreatePixmap(
+                (*self.dpy).inner,
+                self.root,
+                w as u32,
+                h as u32,
+                XDefaultDepth((*self.dpy).inner, self.screen) as u32,
+            );
+        }
+    }
 }
 
 fn xfont_free(font: *mut Fnt) {
