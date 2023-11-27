@@ -2,7 +2,7 @@ use std::{ffi::CString, mem::MaybeUninit};
 
 use fontconfig_sys::{
     constants::{FC_CHARSET, FC_SCALABLE},
-    FcBool, FcChar8, FcCharSetAddChar, FcCharSetCreate, FcCharSetDestroy,
+    FcChar8, FcCharSetAddChar, FcCharSetCreate, FcCharSetDestroy,
     FcConfigSubstitute, FcDefaultSubstitute, FcMatchPattern, FcNameParse,
     FcPatternAddBool, FcPatternAddCharSet, FcPatternDestroy,
     FcPatternDuplicate,
@@ -15,11 +15,10 @@ use x11::{
         XftTextExtentsUtf8,
     },
     xlib::{
-        BadColor, CapButt, Drawable, False, JoinMiter, LineSolid,
-        XAllocNamedColor, XCopyArea, XCreateFontCursor, XCreateGC,
-        XCreatePixmap, XDefaultColormap, XDefaultDepth, XDefaultVisual,
-        XDrawRectangle, XFillRectangle, XFreePixmap, XGCValues, XSetForeground,
-        XSetLineAttributes, XSync, GC,
+        CapButt, Drawable, False, JoinMiter, LineSolid, XCopyArea,
+        XCreateFontCursor, XCreateGC, XCreatePixmap, XDefaultColormap,
+        XDefaultDepth, XDefaultVisual, XDrawRectangle, XFillRectangle,
+        XFreePixmap, XGCValues, XSetForeground, XSetLineAttributes, XSync, GC,
     },
 };
 
@@ -195,7 +194,7 @@ impl Drw {
 
     fn xfont_create2(&self, fontpattern: *mut FcPattern) -> *mut Fnt {
         let mut xfont = std::ptr::null_mut();
-        let mut pattern = std::ptr::null_mut();
+        let pattern = std::ptr::null_mut();
         unsafe {
             xfont = XftFontOpenPattern((*self.dpy).inner, fontpattern);
             if xfont.is_null() {
@@ -342,7 +341,7 @@ impl Drw {
                 let mut ew = 0;
                 let mut ellipsis_len = 0;
                 let mut utf8strlen = 0;
-                let mut utf8str = text;
+                let utf8str = text;
                 let mut nextfont: *mut Fnt = std::ptr::null_mut();
                 while text_idx < text.len() {
                     let utf8charlen =
@@ -363,23 +362,23 @@ impl Drw {
                                 &mut tmpw,
                                 std::ptr::null_mut::<usize>(),
                             );
-                            if (ew + ellipsis_width <= w) {
+                            if ew + ellipsis_width <= w {
                                 // keep track where the ellipsis still fits
                                 ellipsis_x = x + ew as i32;
                                 ellipsis_w = w - ew;
                                 ellipsis_len = utf8strlen;
                             }
 
-                            if (ew + tmpw > w) {
+                            if ew + tmpw > w {
                                 overflow = true;
                                 // called from drw_fontset_getwidth_clamp():
                                 // it wants the width AFTER the overflow
-                                if (!render) {
+                                if !render {
                                     x += tmpw as i32;
                                 } else {
                                     utf8strlen = ellipsis_len;
                                 }
-                            } else if (curfont == usedfont) {
+                            } else if curfont == usedfont {
                                 utf8strlen += utf8charlen;
                                 text_idx += utf8charlen;
                                 ew += tmpw;
@@ -613,7 +612,7 @@ impl Drw {
     }
 
     /// no-op, I'm pretty sure Cursors get cleaned up naturally
-    pub(crate) fn cur_free(&self, cursor: Cursor) {}
+    pub(crate) fn cur_free(&self, _cursor: Cursor) {}
 
     pub(crate) fn resize(&mut self, w: i16, h: i16) {
         unsafe {

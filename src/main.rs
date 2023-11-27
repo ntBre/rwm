@@ -529,7 +529,7 @@ fn setup(dpy: &mut Display) {
             .unwrap()
             .fontset_create(FONTS)
             .expect("no fonts could be loaded");
-        let lrpa = (*(*DRW).fonts).h;
+        let _lrpa = (*(*DRW).fonts).h;
         BH = ((*(*DRW).fonts).h + 2) as i16;
         updategeom(dpy);
 
@@ -1027,10 +1027,10 @@ fn applysizehints(
             if *y > SH as i32 {
                 *y = SH as i32 - height(c);
             }
-            if (*x + *w + 2 * (*c).bw < 0) {
+            if *x + *w + 2 * (*c).bw < 0 {
                 *x = 0;
             }
-            if (*y + *h + 2 * (*c).bw < 0) {
+            if *y + *h + 2 * (*c).bw < 0 {
                 *y = 0;
             }
         } else {
@@ -1047,50 +1047,50 @@ fn applysizehints(
                 *y = (*m).wy as i32;
             }
         }
-        if (*h < BH as i32) {
+        if *h < BH as i32 {
             *h = BH as i32;
         }
-        if (*w < BH as i32) {
+        if *w < BH as i32 {
             *w = BH as i32;
         }
-        if (RESIZEHINTS || (*c).isfloating) {
-            if (!(*c).hintsvalid) {
+        if RESIZEHINTS || (*c).isfloating {
+            if !(*c).hintsvalid {
                 updatesizehints(dpy, c);
             }
             /* see last two sentences in ICCCM 4.1.2.3 */
             baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
-            if (!baseismin) {
+            if !baseismin {
                 /* temporarily remove base dimensions */
                 *w -= (*c).basew;
                 *h -= (*c).baseh;
             }
             /* adjust for aspect limits */
-            if ((*c).mina > 0.0 && (*c).maxa > 0.0) {
-                if ((*c).maxa < *w as f64 / *h as f64) {
+            if (*c).mina > 0.0 && (*c).maxa > 0.0 {
+                if (*c).maxa < *w as f64 / *h as f64 {
                     *w = (*h as f64 * (*c).maxa + 0.5) as i32;
-                } else if ((*c).mina < *h as f64 / *w as f64) {
+                } else if (*c).mina < *h as f64 / *w as f64 {
                     *h = (*w as f64 * (*c).mina + 0.5) as i32;
                 }
             }
-            if (baseismin) {
+            if baseismin {
                 /* increment calculation requires this */
                 *w -= (*c).basew;
                 *h -= (*c).baseh;
             }
             /* adjust for increment value */
-            if ((*c).incw != 0) {
+            if (*c).incw != 0 {
                 *w -= *w % (*c).incw;
             }
-            if ((*c).inch != 0) {
+            if (*c).inch != 0 {
                 *h -= *h % (*c).inch;
             }
             /* restore base dimensions */
             *w = max(*w + (*c).basew, (*c).minw);
             *h = max(*h + (*c).baseh, (*c).minh);
-            if ((*c).maxw != 0) {
+            if (*c).maxw != 0 {
                 *w = min(*w, (*c).maxw);
             }
-            if ((*c).maxh != 0) {
+            if (*c).maxh != 0 {
                 *h = min(*h, (*c).maxh);
             }
         }
@@ -1159,15 +1159,15 @@ fn updatesizehints(dpy: &Display, c: *mut Client) {
             (*c).maxa = 0.0;
         }
 
-        (*c).isfixed = ((*c).maxw != 0
+        (*c).isfixed = (*c).maxw != 0
             && (*c).maxh != 0
             && (*c).maxw == (*c).minw
-            && (*c).maxh == (*c).minh);
+            && (*c).maxh == (*c).minh;
         (*c).hintsvalid = true;
     }
 }
 
-pub fn zoom(dpy: &Display, arg: Arg) {
+pub fn zoom(dpy: &Display, _arg: Arg) {
     unsafe {
         let c = (*SELMON).sel;
         if c.is_null() || (*c).isfloating {
@@ -1247,7 +1247,7 @@ pub fn spawn(dpy: &Display, arg: Arg) {
     }
 }
 
-pub fn movemouse(dpy: &Display, arg: Arg) {
+pub fn movemouse(dpy: &Display, _arg: Arg) {
     unsafe {
         let c = (*SELMON).sel;
         if c.is_null() {
@@ -1316,10 +1316,10 @@ pub fn movemouse(dpy: &Display, arg: Arg) {
 
                     if ((*SELMON).wy - ny as i16).abs() < snap {
                         ny = (*SELMON).wy as i32;
-                    } else if ((((*SELMON).wy + (*SELMON).wh)
+                    } else if (((*SELMON).wy + (*SELMON).wh)
                         - (ny + height(c)) as i16)
                         .abs()
-                        < snap)
+                        < snap
                     {
                         ny = ((*SELMON).wy + (*SELMON).wh) as i32 - height(c);
                     }
@@ -1351,7 +1351,7 @@ pub fn movemouse(dpy: &Display, arg: Arg) {
     }
 }
 
-pub fn togglefloating(dpy: &Display, arg: Arg) {
+pub fn togglefloating(dpy: &Display, _arg: Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -1379,7 +1379,7 @@ pub fn togglefloating(dpy: &Display, arg: Arg) {
     }
 }
 
-pub fn resizemouse(dpy: &Display, arg: Arg) {
+pub fn resizemouse(dpy: &Display, _arg: Arg) {
     unsafe {
         let c = (*SELMON).sel;
         if c.is_null() {
@@ -1422,7 +1422,7 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
         // is this allowed? no warning from the compiler. probably I should use
         // an Option since this gets initialized in the first iteration of the
         // loop
-        let mut ev: *mut XEvent = MaybeUninit::uninit().as_mut_ptr();
+        let ev: *mut XEvent = MaybeUninit::uninit().as_mut_ptr();
         while first || (*ev).type_ != BUTTON_RELEASE {
             XMaskEvent(
                 dpy.inner,
@@ -1433,7 +1433,7 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
             match (*ev).type_ {
                 ConfigureRequest | Expose | MapRequest => handler(dpy, ev),
                 MotionNotify => {
-                    if (((*ev).motion.time - lasttime) <= (1000 / 60)) {
+                    if ((*ev).motion.time - lasttime) <= (1000 / 60) {
                         continue;
                     }
                     lasttime = (*ev).motion.time;
@@ -1455,8 +1455,8 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
                     {
                         togglefloating(dpy, Arg::None);
                     }
-                    if ((*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
-                        || (*c).isfloating)
+                    if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+                        || (*c).isfloating
                     {
                         resize(dpy, c, (*c).x, (*c).y, nw, nh, true);
                     }
@@ -1490,7 +1490,7 @@ pub fn resizemouse(dpy: &Display, arg: Arg) {
 pub fn view(dpy: &Display, arg: Arg) {
     unsafe {
         let Arg::Uint(ui) = arg else { return };
-        if ((ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags]) {
+        if (ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags] {
             return;
         }
         (*SELMON).seltags ^= 1; /* toggle sel tagset */
@@ -1541,7 +1541,7 @@ pub fn toggletag(dpy: &Display, arg: Arg) {
     }
 }
 
-pub fn togglebar(dpy: &Display, arg: Arg) {
+pub fn togglebar(dpy: &Display, _arg: Arg) {
     unsafe {
         (*SELMON).showbar = !(*SELMON).showbar;
         updatebarpos(SELMON);
@@ -1567,7 +1567,7 @@ pub fn focusstack(dpy: &Display, arg: Arg) {
             return;
         }
 
-        if (ai > 0) {
+        if ai > 0 {
             c = (*(*SELMON).sel).next;
             while !c.is_null() && !is_visible(c) {
                 c = (*c).next;
@@ -1581,14 +1581,14 @@ pub fn focusstack(dpy: &Display, arg: Arg) {
         } else {
             let mut i = (*SELMON).clients;
             while i != (*SELMON).sel {
-                if (is_visible(i)) {
+                if is_visible(i) {
                     c = i;
                 }
                 i = (*i).next
             }
             if c.is_null() {
                 while !i.is_null() {
-                    if (is_visible(i)) {
+                    if is_visible(i) {
                         c = i;
                     }
                     i = (*i).next;
@@ -1629,7 +1629,7 @@ pub fn setmfact(dpy: &Display, arg: Arg) {
     }
 }
 
-pub fn killclient(dpy: &Display, arg: Arg) {
+pub fn killclient(dpy: &Display, _arg: Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -1711,7 +1711,7 @@ fn sendmon(dpy: &Display, c: *mut Client, m: *mut Monitor) {
     }
 }
 
-pub fn quit(dpy: &Display, arg: Arg) {
+pub fn quit(_dpy: &Display, _arg: Arg) {
     unsafe { RUNNING = false }
 }
 
@@ -1767,7 +1767,7 @@ fn updatenumlockmask(dpy: &Display) {
                     .offset((i * (*modmap).max_keypermod + j) as isize)
                     == XKeysymToKeycode(dpy.inner, XK_Num_Lock as u64)
                 {
-                    numlockmask = (1 << i);
+                    numlockmask = 1 << i;
                 }
             }
         }
@@ -1862,7 +1862,7 @@ fn drawbar(m: *mut Monitor) {
             );
         }
 
-        let mut c = (*m).clients;
+        let c = (*m).clients;
         while !c.is_null() {
             occ |= (*c).tags;
             if (*c).isurgent {
@@ -1971,7 +1971,7 @@ fn gettextprop(
     atom: Atom,
     text: &mut String,
 ) -> bool {
-    let size = text.len();
+    let _size = text.len();
     if text.is_empty() {
         return false;
     }
@@ -1984,7 +1984,7 @@ fn gettextprop(
         }
 
         let mut n = 0;
-        let mut list = std::ptr::null_mut();
+        let list = std::ptr::null_mut();
         if name.encoding == XA_STRING {
             let t = CString::from_raw(name.value as *mut _);
             *text = t.to_str().unwrap().to_owned();
@@ -2133,13 +2133,13 @@ fn updategeom(dpy: &Display) -> bool {
             }
 
             // removed monitors if n > nn
-            for i in nn..n as i32 {
+            for _i in nn..n as i32 {
                 let mut m = MONS;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
                 }
 
-                let mut c = (*m).clients;
+                let c = (*m).clients;
                 while !c.is_null() {
                     dirty = true;
                     (*m).clients = (*c).next;
@@ -2242,11 +2242,11 @@ fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
         i32::max(
             0,
             i32::min((x) + (w), (*m).wx as i32 + (*m).ww as i32)
-                - i32::max((x), (*m).wx as i32),
+                - i32::max(x, (*m).wx as i32),
         ) * i32::max(
             0,
             i32::min((y) + (h), (*m).wy as i32 + (*m).wh as i32)
-                - i32::max((y), (*m).wy as i32),
+                - i32::max(y, (*m).wy as i32),
         )
     }
 }
@@ -2386,7 +2386,7 @@ fn cleanup(dpy: &Display) {
         arrange: None,
     });
     let mut m: *mut Monitor = std::ptr::null_mut();
-    let mut i = 0;
+    let _i = 0;
 
     view(dpy, a);
     unsafe {
@@ -2769,25 +2769,24 @@ fn configurerequest(dpy: &Display, e: *mut XEvent) {
                     (*c).oldh = (*c).h;
                     (*c).h = (*m).mh as i32 + ev.height;
                 }
-                if (((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
-                    && (*c).isfloating)
+                if ((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
+                    && (*c).isfloating
                 {
                     // center in x direction
                     (*c).x =
                         ((*m).mx + ((*m).mw / 2 - width(c) as i16 / 2)) as i32;
                 }
-                if (((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
-                    && (*c).isfloating)
+                if ((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
+                    && (*c).isfloating
                 {
                     // center in y direction
                     (*c).y =
                         ((*m).my + ((*m).mh / 2 - height(c) as i16 / 2)) as i32;
                 }
-                if ((vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0)
-                {
+                if (vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0 {
                     configure(dpy, c);
                 }
-                if (is_visible(c)) {
+                if is_visible(c) {
                     XMoveResizeWindow(
                         dpy.inner,
                         (*c).win,
@@ -2837,8 +2836,8 @@ fn clientmessage(dpy: &Display, e: *mut XEvent) {
                 setfullscreen(
                     dpy,
                     c,
-                    (cme.data.get_long(0) == 1
-                        || (cme.data.get_long(0) == 2 && !(*c).isfullscreen)),
+                    cme.data.get_long(0) == 1
+                        || (cme.data.get_long(0) == 2 && !(*c).isfullscreen),
                 );
             }
         } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
@@ -3082,7 +3081,7 @@ fn updatewmhints(dpy: &Display, c: *mut Client) {
     unsafe {
         let wmh = XGetWMHints(dpy.inner, (*c).win);
         if !wmh.is_null() {
-            if (c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0) {
+            if c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0 {
                 (*wmh).flags &= !XUrgencyHint;
                 XSetWMHints(dpy.inner, (*c).win, wmh);
             } else {
@@ -3266,7 +3265,7 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
 
 fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
     let mut fmt = 0;
-    let mut p = std::ptr::null_mut();
+    let p = std::ptr::null_mut();
     let mut n = 0;
     let mut extra = 0;
     let mut real = 0;
