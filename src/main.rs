@@ -1865,13 +1865,18 @@ fn drawbar(m: *mut Monitor) {
             );
         }
 
-        let c = (*m).clients;
+        debug!("drew status first");
+
+        let mut c = (*m).clients;
         while !c.is_null() {
             occ |= (*c).tags;
             if (*c).isurgent {
                 urg |= (*c).tags;
             }
+            c = (*c).next;
         }
+
+        debug!("setting urgency");
 
         let mut x = 0;
         for i in 0..TAGS.len() {
