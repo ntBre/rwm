@@ -3303,7 +3303,7 @@ mod layouts;
 
 fn main() {
     let env = Env::default().default_filter_or("info");
-    env_logger::init();
+    env_logger::init_from_env(env);
     let home = &std::env::var("HOME").unwrap();
     let home = Path::new(home);
     let outfile =
