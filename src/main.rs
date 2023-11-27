@@ -1,6 +1,5 @@
 //! tiling window manager based on dwm
 
-#![allow(unused)]
 #![feature(vec_into_raw_parts, lazy_cell)]
 
 use std::cmp::{max, min};
@@ -10,7 +9,6 @@ use std::mem::MaybeUninit;
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::ptr::null_mut;
-use std::sync::LazyLock;
 
 use config::{
     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
@@ -27,43 +25,43 @@ use x11::xft::XftColor;
 use x11::xinerama::{
     XineramaIsActive, XineramaQueryScreens, XineramaScreenInfo,
 };
+use x11::xlib::Display as XDisplay;
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
     BadWindow, Below, ButtonPress, ButtonPressMask, ButtonReleaseMask,
     CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
     CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
     ConfigureNotify, ConfigureRequest, ControlMask, CopyFromParent,
-    CurrentTime, DestroyAll, DestroyNotify, Display as XDisplay, EnterNotify,
-    EnterWindowMask, Expose, ExposureMask, False, FocusChangeMask, FocusIn,
-    GrabModeAsync, GrabModeSync, GrabSuccess, InputHint, IsViewable, KeyPress,
-    KeySym, LeaveWindowMask, LockMask, MapRequest, MappingKeyboard,
-    MappingNotify, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask,
-    MotionNotify, NoEventMask, NotifyInferior, NotifyNormal, PAspect,
-    PBaseSize, PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative,
-    PointerMotionMask, PointerRoot, PropModeAppend, PropModeReplace,
-    PropertyChangeMask, PropertyDelete, PropertyNotify, ReplayPointer,
-    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    UnmapNotify, XAllowEvents, XButtonReleasedEvent, XChangeProperty,
-    XChangeWindowAttributes, XCheckMaskEvent, XClassHint, XCloseDisplay,
-    XConfigureEvent, XConfigureWindow, XConnectionNumber, XCreateSimpleWindow,
-    XCreateWindow, XDefaultDepth, XDefaultRootWindow, XDefaultScreen,
-    XDefaultVisual, XDefineCursor, XDeleteProperty, XDestroyWindow,
-    XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent, XFree,
-    XFreeModifiermap, XFreeStringList, XGetClassHint, XGetKeyboardMapping,
-    XGetModifierMapping, XGetTextProperty, XGetTransientForHint, XGetWMHints,
-    XGetWMNormalHints, XGetWMProtocols, XGetWindowAttributes,
-    XGetWindowProperty, XGrabButton, XGrabKey, XGrabPointer, XGrabServer,
-    XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient, XMapRaised,
-    XMapWindow, XMaskEvent, XMoveResizeWindow, XMoveWindow, XNextEvent,
-    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
-    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
-    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
-    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabPointer,
-    XUngrabServer, XUnmapWindow, XUrgencyHint, XWarpPointer, XWindowAttributes,
-    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    CurrentTime, DestroyAll, DestroyNotify, EnterNotify, EnterWindowMask,
+    Expose, ExposureMask, False, FocusChangeMask, FocusIn, GrabModeAsync,
+    GrabModeSync, GrabSuccess, InputHint, IsViewable, KeyPress,
+    LeaveWindowMask, LockMask, MapRequest, MappingKeyboard, MappingNotify,
+    Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, MotionNotify,
+    NoEventMask, NotifyInferior, NotifyNormal, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    PropertyDelete, PropertyNotify, ReplayPointer, RevertToPointerRoot,
+    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, UnmapNotify, XAllowEvents,
+    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
+    XCloseDisplay, XConfigureEvent, XConfigureWindow, XConnectionNumber,
+    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
+    XDestroyWindow, XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent,
+    XFree, XFreeModifiermap, XFreeStringList, XGetClassHint,
+    XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
+    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
+    XGrabPointer, XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode,
+    XKillClient, XMapRaised, XMapWindow, XMaskEvent, XMoveResizeWindow,
+    XMoveWindow, XNextEvent, XQueryPointer, XQueryTree, XRaiseWindow,
+    XRefreshKeyboardMapping, XRootWindow, XSelectInput, XSendEvent,
+    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
+    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
+    XUngrabKey, XUngrabPointer, XUngrabServer, XUnmapWindow, XUrgencyHint,
+    XWarpPointer, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
+    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
+    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -497,6 +495,7 @@ pub enum Clk {
     Last,
 }
 
+// crash is in here
 fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
     let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
@@ -563,6 +562,8 @@ fn setup(dpy: &mut Display) {
             NETATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
         }
 
+        info!("halfway through");
+
         // init cursors
         CURSOR[Cur::Normal as usize] =
             DRW.as_ref().unwrap().cur_create(XC_LEFT_PTR);
@@ -570,15 +571,22 @@ fn setup(dpy: &mut Display) {
             DRW.as_ref().unwrap().cur_create(XC_SIZING);
         CURSOR[Cur::Move as usize] = DRW.as_ref().unwrap().cur_create(XC_FLEUR);
 
+        info!("init cursors");
+
         // init appearance
         SCHEME = Vec::with_capacity(COLORS.len());
         for i in 0..COLORS.len() {
             SCHEME.push(DRW.as_ref().unwrap().scm_create(COLORS[i], 3));
         }
 
+        info!("init appearance");
+
         // init bars
         updatebars(dpy);
+        info!("updatebars");
+
         updatestatus(dpy);
+        info!("updatestatus");
 
         // supporting window for NetWMCheck
         WMCHECKWIN = XCreateSimpleWindow(dpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
@@ -603,6 +611,9 @@ fn setup(dpy: &mut Display) {
             rwm.as_ptr().cast(),
             3,
         );
+
+        info!("3/4");
+
         XChangeProperty(
             dpy.inner,
             ROOT,
@@ -626,6 +637,8 @@ fn setup(dpy: &mut Display) {
             Net::Last as i32,
         );
         XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
+
+        info!("almost done");
 
         // select events
         {
@@ -1802,16 +1815,22 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
 }
 
 fn updatestatus(dpy: &Display) {
+    info!("entering updatestatus");
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
+        info!("gettextprop");
         if !c {
+            info!("setting STEXT");
             STEXT = "rwm-0.0.1".to_owned();
         }
+        info!("calling drawbar");
         drawbar(SELMON);
+        info!("returning from updatestatus");
     }
 }
 
 fn drawbar(m: *mut Monitor) {
+    info!("entering drawbar");
     unsafe {
         let boxs = (*(*DRW).fonts).h / 9;
         let boxw = (*(*DRW).fonts).h / 6 + 2;
@@ -1819,9 +1838,11 @@ fn drawbar(m: *mut Monitor) {
         let mut urg = 0;
         let mut tw = 0;
 
+        info!("checking showbar with {m:?}");
         if !(*m).showbar {
             return;
         }
+        info!("checked showbar");
 
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
