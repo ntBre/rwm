@@ -36,27 +36,27 @@ use x11::xlib::{
     NoEventMask, NotifyInferior, NotifyNormal, PAspect, PBaseSize, PMaxSize,
     PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
     PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    PropertyDelete, PropertyNotify, RevertToPointerRoot, ShiftMask,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, UnmapNotify, XChangeProperty, XChangeWindowAttributes,
-    XCheckMaskEvent, XClassHint, XCloseDisplay, XConfigureEvent,
-    XConfigureWindow, XConnectionNumber, XCreateSimpleWindow, XCreateWindow,
-    XDefaultDepth, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
-    XDefineCursor, XDeleteProperty, XDestroyWindow, XDisplayHeight,
-    XDisplayKeycodes, XDisplayWidth, XEvent, XFree, XFreeModifiermap,
-    XFreeStringList, XGetClassHint, XGetKeyboardMapping, XGetModifierMapping,
-    XGetTextProperty, XGetTransientForHint, XGetWMHints, XGetWMNormalHints,
-    XGetWMProtocols, XGetWindowAttributes, XGetWindowProperty, XGrabButton,
-    XGrabKey, XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode,
-    XKillClient, XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow,
-    XNextEvent, XQueryPointer, XQueryTree, XRaiseWindow,
-    XRefreshKeyboardMapping, XRootWindow, XSelectInput, XSendEvent,
-    XSetClassHint, XSetCloseDownMode, XSetInputFocus, XSetWMHints,
-    XSetWindowAttributes, XSetWindowBorder, XSizeHints, XSync, XUngrabButton,
-    XUngrabKey, XUngrabServer, XUnmapWindow, XUrgencyHint, XWindowAttributes,
-    XWindowChanges, XmbTextPropertyToTextList, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    PropertyDelete, PropertyNotify, ReplayPointer, RevertToPointerRoot,
+    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, UnmapNotify, XAllowEvents,
+    XChangeProperty, XChangeWindowAttributes, XCheckMaskEvent, XClassHint,
+    XCloseDisplay, XConfigureEvent, XConfigureWindow, XConnectionNumber,
+    XCreateSimpleWindow, XCreateWindow, XDefaultDepth, XDefaultRootWindow,
+    XDefaultScreen, XDefaultVisual, XDefineCursor, XDeleteProperty,
+    XDestroyWindow, XDisplayHeight, XDisplayKeycodes, XDisplayWidth, XEvent,
+    XFree, XFreeModifiermap, XFreeStringList, XGetClassHint,
+    XGetKeyboardMapping, XGetModifierMapping, XGetTextProperty,
+    XGetTransientForHint, XGetWMHints, XGetWMNormalHints, XGetWMProtocols,
+    XGetWindowAttributes, XGetWindowProperty, XGrabButton, XGrabKey,
+    XGrabServer, XInternAtom, XKeycodeToKeysym, XKeysymToKeycode, XKillClient,
+    XMapRaised, XMapWindow, XMoveResizeWindow, XMoveWindow, XNextEvent,
+    XQueryPointer, XQueryTree, XRaiseWindow, XRefreshKeyboardMapping,
+    XRootWindow, XSelectInput, XSendEvent, XSetClassHint, XSetCloseDownMode,
+    XSetInputFocus, XSetWMHints, XSetWindowAttributes, XSetWindowBorder,
+    XSizeHints, XSync, XUngrabButton, XUngrabKey, XUngrabServer, XUnmapWindow,
+    XUrgencyHint, XWindowAttributes, XWindowChanges, XmbTextPropertyToTextList,
+    CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_HINTS, XA_WM_NAME,
+    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
@@ -2607,8 +2607,67 @@ fn clientmessage(dpy: &Display, e: *mut XEvent) {
 }
 
 fn buttonpress(dpy: &Display, e: *mut XEvent) {
-    unsafe {}
-    todo!()
+    unsafe {
+        let ev = (*e).button;
+        let mut click = Clk::RootWin;
+        let mut arg = Arg::Uint(0);
+        // focus monitor if necessary
+        let m = wintomon(dpy, ev.window);
+        if m != SELMON {
+            unfocus(dpy, (*SELMON).sel, true);
+            SELMON = m;
+            focus(dpy, null_mut());
+        }
+        if ev.window == (*SELMON).barwin {
+            let mut x = 0;
+            let mut i = 0;
+            // do while with ++i in condition
+            x += DRW.as_ref().unwrap().textw(TAGS[i], LRPAD);
+            i += 1;
+            let drw = &DRW.as_ref().unwrap();
+            while ev.x >= x as i32 && i < TAGS.len() {
+                x += drw.textw(TAGS[i], LRPAD);
+                i += 1;
+            }
+            if i < TAGS.len() {
+                click = Clk::TagBar;
+                arg = Arg::Uint(1 << i);
+            } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol, LRPAD)) as i32
+            {
+                click = Clk::LtSymbol;
+            } else if ev.x
+                > ((*SELMON).ww as usize - drw.textw(&STEXT, LRPAD)) as i32
+            {
+                click = Clk::StatusText;
+            } else {
+                click = Clk::WinTitle;
+            }
+        } else {
+            let c = wintoclient(ev.window);
+            if !c.is_null() {
+                focus(dpy, c);
+                restack(dpy, SELMON);
+                XAllowEvents(dpy.inner, ReplayPointer, CurrentTime);
+                click = Clk::ClientWin;
+            }
+        }
+        for i in 0..BUTTONS.len() {
+            let b = &BUTTONS[i];
+            if click == b.click
+                && b.button == ev.button
+                && cleanmask(b.mask) == cleanmask(ev.state)
+            {
+                let arg = if click == Clk::TagBar
+                    && matches!(b.arg, Arg::Int(i) if i == 0)
+                {
+                    arg.clone()
+                } else {
+                    b.arg.clone()
+                };
+                (b.func)(dpy, arg);
+            }
+        }
+    }
 }
 
 fn scan(dpy: &Display) {
