@@ -141,7 +141,7 @@ extern "C" fn xerror(dpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
 }
 
 extern "C" fn xerrordummy(_dpy: *mut XDisplay, _ee: *mut XErrorEvent) -> c_int {
-    return 0;
+    0
 }
 
 /// I hate to start using globals already, but I'm not sure how else to do it.

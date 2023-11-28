@@ -1,7 +1,4 @@
-use std::{
-    ffi::{c_int, CString},
-    mem::MaybeUninit,
-};
+use std::{ffi::CString, mem::MaybeUninit};
 
 use fontconfig_sys::{
     constants::{FC_CHARSET, FC_SCALABLE},
