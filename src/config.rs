@@ -19,7 +19,7 @@ use crate::{
 };
 
 /// border pixel of windows
-pub const BORDERPX: i32 = 1;
+pub const BORDERPX: i32 = 3;
 /// snap pixel
 pub const SNAP: i32 = 32;
 pub const SHOWBAR: bool = true;
@@ -29,8 +29,9 @@ const COL_GRAY1: &str = "#222222";
 const COL_GRAY2: &str = "#444444";
 const COL_GRAY3: &str = "#bbbbbb";
 const COL_GRAY4: &str = "#eeeeee";
-const COL_CYAN: &str = "#005577";
+const COL_CYAN: &str = "#ff5577";
 pub const COLORS: [[&str; 3]; 2] = [
+    // fg, bg, border
     [COL_GRAY3, COL_GRAY1, COL_GRAY2], // SchemeNorm
     [COL_GRAY4, COL_CYAN, COL_CYAN],   // SchemeSel
 ];
