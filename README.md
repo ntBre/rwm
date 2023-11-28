@@ -5,12 +5,20 @@ For now this is (nearly) a line-for-line port of dwm 6.4 with tons of unsafe
 code. Once it's working in this state, I'll start moving toward a safe Rust
 version where possible. Linked lists are pretty cool, though.
 
+## Screenshot
+As you can see, it starts up, but the bar is not drawing correctly, and
+none of the key bindings work. I made mouse clicks spawn a terminal
+earlier and confirmed that programs can be spawned, but I took that
+back out.
+
+![Screenshot](screenshot.png)
+
 ## Installation
 I'm not really sure why you would want to install it yet, but the following
 command should work:
 
 ``` shell
-cargo install --path .
+make install
 ```
 
 I've been building with a Rust 1.75.0 nightly compiler from 2023-10-10, but
@@ -27,14 +35,17 @@ manager. But just to be safe, I recommend putting something like the following
 in your `$HOME/.xinitrc` script and launching with `startx`:
 
 ``` shell
-[[ -d ~/.log ]] || mkdir ~/.log
-
-while true; do
-	rwm &> ~/.log/rwm.log
-done
+exec rwm
 ```
 
-That's what I use for dwm and plan to use for rwm too.
+I usually wrap my dwm in a `while true` loop to allow smooth restarting, but
+that spawned endless instances of rwm when I tried it earlier. I also usually
+redirect output to a log file, but to simplify things, rwm calls `dup2` to
+redirect its own output to `$HOME/rwm.out` and `$HOME/rwm.err` by default.
+
+You can set the log level with the `RUST_LOG` environment variable. I've been
+running `RUST_LOG=debug RUST_BACKTRACE=1 startx` in my testing and tailing the
+err file over ssh.
 
 If you use a display manager, you can also include an `rwm.desktop` file
 wherever your distro keeps those (maybe `/usr/share/xsessions/`?) that looks
