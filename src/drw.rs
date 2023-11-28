@@ -24,68 +24,6 @@ use x11::{
 
 use crate::{Clr, Col, Cursor, Display};
 
-const UTF_SIZ: usize = 4;
-const UTF_INVALID: usize = 0xFFFD;
-
-const UTFBYTE: [usize; UTF_SIZ + 1] = [0x80, 0, 0xC0, 0xE0, 0xF0];
-const UTFMASK: [usize; UTF_SIZ + 1] = [0xC0, 0x80, 0xE0, 0xF0, 0xF8];
-const UTFMIN: [usize; UTF_SIZ + 1] = [0, 0, 0x80, 0x800, 0x10000];
-const UTFMAX: [usize; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
-
-fn utf8decodebyte(c: u8, i: &mut usize) -> usize {
-    *i = 0;
-    while *i < (UTF_SIZ + 1) {
-        if (c as usize) & UTFMASK[*i] == UTFBYTE[*i] {
-            return (c as usize) & !UTFMASK[*i];
-        }
-        *i += 1;
-    }
-    0
-}
-
-fn utf8validate(u: &mut usize, i: usize) -> usize {
-    if !(UTFMIN[i]..UTFMAX[i]).contains(u) || (0xD800..0xDFFF).contains(u) {
-        *u = UTF_INVALID;
-    }
-    let mut i = 1;
-    while *u > UTFMAX[i] {
-        i += 1;
-    }
-    i
-}
-
-fn utf8decode(c: &str, u: &mut usize, clen: usize) -> usize {
-    *u = UTF_INVALID;
-    if clen == 0 {
-        return 0;
-    }
-    let c: Vec<_> = c.bytes().collect();
-    let mut len: usize = 0;
-    let mut udecoded: usize = utf8decodebyte(c[0], &mut len);
-    if !(1..UTF_SIZ).contains(&len) {
-        return 1;
-    }
-
-    let mut typ: usize = 0;
-    let mut i = 1;
-    let mut j = 1;
-    while i < clen && j < len {
-        udecoded = (udecoded << 6) | utf8decodebyte(c[i], &mut typ);
-        if typ != 0 {
-            return j;
-        }
-        i += 1;
-        j += 1;
-    }
-
-    if j < len {
-        return 0;
-    }
-    *u = udecoded;
-    utf8validate(u, len);
-    len
-}
-
 pub struct Fnt {
     dpy: *mut Display,
     pub h: usize,
