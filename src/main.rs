@@ -572,8 +572,6 @@ fn setup(dpy: &mut Display) {
             NETATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
         }
 
-        debug!("halfway through");
-
         // init cursors
         CURSOR[Cur::Normal as usize] =
             DRW.as_ref().unwrap().cur_create(XC_LEFT_PTR);
@@ -581,22 +579,16 @@ fn setup(dpy: &mut Display) {
             DRW.as_ref().unwrap().cur_create(XC_SIZING);
         CURSOR[Cur::Move as usize] = DRW.as_ref().unwrap().cur_create(XC_FLEUR);
 
-        debug!("init cursors");
-
         // init appearance
         SCHEME = Vec::with_capacity(COLORS.len());
         for i in 0..COLORS.len() {
             SCHEME.push(DRW.as_ref().unwrap().scm_create(COLORS[i], 3));
         }
 
-        debug!("init appearance");
-
         // init bars
         updatebars(dpy);
-        debug!("updatebars");
 
         updatestatus(dpy);
-        debug!("updatestatus");
 
         // supporting window for NetWMCheck
         WMCHECKWIN = XCreateSimpleWindow(dpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
@@ -621,9 +613,6 @@ fn setup(dpy: &mut Display) {
             rwm.as_ptr() as *mut _,
             3,
         );
-
-        debug!("3/4");
-
         xchangeproperty(
             dpy,
             ROOT,
@@ -647,8 +636,6 @@ fn setup(dpy: &mut Display) {
             Net::Last as i32,
         );
         XDeleteProperty(dpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
-
-        debug!("almost done");
 
         // select events
         {
@@ -697,7 +684,6 @@ fn xchangewindowattributes(
 }
 
 fn focus(dpy: &Display, c: *mut Client) {
-    debug!("setting focus");
     unsafe {
         if c.is_null() || !is_visible(c) {
             let mut c = (*SELMON).stack;
@@ -772,7 +758,6 @@ fn xchangeproperty(
 }
 
 fn setfocus(dpy: &Display, c: *mut Client) {
-    debug!("== setfocus");
     unsafe {
         if !(*c).neverfocus {
             XSetInputFocus(
@@ -797,14 +782,12 @@ fn setfocus(dpy: &Display, c: *mut Client) {
 }
 
 fn sendevent(dpy: &Display, c: *mut Client, proto: Atom) -> bool {
-    debug!("== sendevent ==");
     let mut n = 0;
     let mut protocols = std::ptr::null_mut();
     let mut exists = false;
     let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
     unsafe {
         if XGetWMProtocols(dpy.inner, (*c).win, &mut protocols, &mut n) != 0 {
-            debug!("sendevent: getwmprotocols success");
             while !exists && n > 0 {
                 exists = *protocols.offset(n as isize) == proto;
                 n -= 1;
@@ -892,10 +875,8 @@ pub fn setlayout(dpy: &Display, arg: Arg) {
 fn arrange(dpy: &Display, mut m: *mut Monitor) {
     unsafe {
         if !m.is_null() {
-            debug!("arrange: m is null");
             showhide(dpy, (*m).stack);
         } else {
-            debug!("arrange: m is not null");
             m = MONS;
             while !m.is_null() {
                 showhide(dpy, (*m).stack);
@@ -903,11 +884,8 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
             }
         }
 
-        debug!("arrange: middle");
         if !m.is_null() {
-            debug!("arrange: calling arrangemon");
             arrangemon(dpy, m);
-            debug!("arrange: calling restack");
             restack(dpy, m);
         } else {
             m = MONS;
@@ -922,7 +900,6 @@ fn arrangemon(dpy: &Display, m: *mut Monitor) {
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
         let layout = &(*(*m).lt[(*m).sellt]);
-        debug!("arranging monitor with layout: {}", layout.symbol);
         if let Some(arrange) = layout.arrange {
             (arrange)(dpy, m)
         }
@@ -999,12 +976,9 @@ fn resize(
     mut h: i32,
     interact: bool,
 ) {
-    debug!("resize");
     if applysizehints(dpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
-        debug!("got size hints");
         resizeclient(dpy, c, x, y, w, h);
     }
-    debug!("leaving resize");
 }
 
 fn resizeclient(dpy: &Display, c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
@@ -1264,13 +1238,11 @@ fn detach(c: *mut Client) {
 }
 
 fn nexttiled(mut c: *mut Client) -> *mut Client {
-    debug!("nexttiled");
     unsafe {
         while !c.is_null() && ((*c).isfloating || !is_visible(c)) {
             c = (*c).next;
         }
     }
-    debug!("nexttiled: returning");
     c
 }
 
@@ -1767,6 +1739,7 @@ fn grabkeys(dpy: &Display) {
     updatenumlockmask(dpy);
     unsafe {
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+        debug!("modifiers = {:?}", modifiers);
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
         XDisplayKeycodes(dpy.inner, &mut start, &mut end);
@@ -1806,7 +1779,6 @@ fn grabkeys(dpy: &Display) {
         }
         XFree(syms.cast());
     }
-    debug!("leaving grabkeys");
 }
 
 fn updatenumlockmask(dpy: &Display) {
@@ -1820,7 +1792,6 @@ fn updatenumlockmask(dpy: &Display) {
                     .offset((i * (*modmap).max_keypermod + j) as isize)
                     == XKeysymToKeycode(dpy.inner, XK_Num_Lock as u64)
                 {
-                    debug!("setting numlockmask");
                     NUMLOCKMASK = 1 << i;
                 }
             }
@@ -1869,22 +1840,16 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
 }
 
 fn updatestatus(dpy: &Display) {
-    debug!("entering updatestatus");
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
-        debug!("gettextprop");
         if !c {
-            debug!("setting STEXT");
             STEXT = "rwm-0.0.1".to_owned();
         }
-        debug!("calling drawbar");
         drawbar(SELMON);
-        debug!("returning from updatestatus");
     }
 }
 
 fn drawbar(m: *mut Monitor) {
-    debug!("entering drawbar");
     unsafe {
         let boxs = (*(*DRW).fonts).h / 9;
         let boxw = (*(*DRW).fonts).h / 6 + 2;
@@ -1892,11 +1857,9 @@ fn drawbar(m: *mut Monitor) {
         let mut urg = 0;
         let mut tw = 0;
 
-        debug!("checking showbar with {m:?}");
         if !(*m).showbar {
             return;
         }
-        debug!("checked showbar");
 
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
@@ -1916,8 +1879,6 @@ fn drawbar(m: *mut Monitor) {
             );
         }
 
-        debug!("drew status first");
-
         let mut c = (*m).clients;
         while !c.is_null() {
             occ |= (*c).tags;
@@ -1926,8 +1887,6 @@ fn drawbar(m: *mut Monitor) {
             }
             c = (*c).next;
         }
-
-        debug!("setting urgency");
 
         let mut x = 0;
         for i in 0..TAGS.len() {
@@ -1963,8 +1922,6 @@ fn drawbar(m: *mut Monitor) {
             }
             x += w as i32;
         }
-
-        debug!("drew tags");
 
         let w = DRW.as_ref().unwrap().textw(&(*m).ltsymbol, LRPAD);
         DRW.as_mut()
@@ -2024,7 +1981,6 @@ fn drawbar(m: *mut Monitor) {
             }
         }
         DRW.as_ref().unwrap().map((*m).barwin, 0, 0, (*m).ww, BH);
-        debug!("finished drawbar");
     }
 }
 
@@ -2263,14 +2219,12 @@ fn wintomon(dpy: &Display, w: Window) -> *mut Monitor {
 }
 
 fn wintoclient(w: u64) -> *mut Client {
-    debug!("wintoclient");
     unsafe {
         let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
                 if (*c).win == w {
-                    debug!("wintoclient: found win = {w}");
                     return c;
                 }
                 c = (*c).next;
@@ -2278,7 +2232,6 @@ fn wintoclient(w: u64) -> *mut Client {
             m = (*m).next;
         }
     }
-    debug!("wintoclient: returning null");
     std::ptr::null_mut()
 }
 
@@ -2487,7 +2440,6 @@ fn cleanup(dpy: &Display) {
 }
 
 fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
-    debug!("unmanage");
     unsafe {
         let m = (*c).mon;
         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
@@ -2507,21 +2459,15 @@ fn unmanage(dpy: &Display, c: *mut Client, destroyed: bool) {
             );
             XUngrabButton(dpy.inner, AnyButton as u32, AnyModifier, (*c).win);
             setclientstate(dpy, c, WITHDRAWN_STATE);
-            debug!("unmanage: calling xsync");
             XSync(dpy.inner, False);
-            debug!("unmanage: finished xsync");
             XSetErrorHandler(Some(xerror));
-            debug!("unmanage: sethandler");
             XUngrabServer(dpy.inner);
-            debug!("unmanage: ungrab");
         }
-        debug!("unmanage: finished if");
         drop(Box::from_raw(c));
         focus(dpy, std::ptr::null_mut());
         updateclientlist(dpy);
         arrange(dpy, m);
     }
-    debug!("leaving unmanage");
 }
 
 fn updateclientlist(dpy: &Display) {
@@ -2549,7 +2495,6 @@ fn updateclientlist(dpy: &Display) {
 }
 
 fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
-    debug!("setclientstate");
     let mut data: [c_uchar; 2] = [state as c_uchar, 0]; // this zero is None
     unsafe {
         xchangeproperty(
@@ -2563,7 +2508,6 @@ fn setclientstate(dpy: &Display, c: *mut Client, state: usize) {
             2,
         );
     }
-    debug!("leaving setclientstate");
 }
 
 fn run(dpy: &Display) {
@@ -2575,7 +2519,6 @@ fn run(dpy: &Display) {
             handler(dpy, ev.as_mut_ptr());
         }
     }
-    debug!("run terminating");
 }
 
 // not sure how this is my problem...
@@ -2598,13 +2541,12 @@ fn handler(dpy: &Display, ev: *mut XEvent) {
             PropertyNotify => propertynotify(dpy, ev),
             UnmapNotify => unmapnotify(dpy, ev),
             NoExpose | LeaveNotify | MapNotify => (),
-            t => debug!("unrecognized type {t}"),
+            _ => (),
         }
     }
 }
 
 fn unmapnotify(dpy: &Display, e: *mut XEvent) {
-    debug!("unmapnotify");
     unsafe {
         let ev = &(*e).unmap;
         let c = wintoclient(ev.window);
@@ -2616,11 +2558,9 @@ fn unmapnotify(dpy: &Display, e: *mut XEvent) {
             }
         }
     }
-    debug!("leaving unmapnotify");
 }
 
 fn propertynotify(dpy: &Display, e: *mut XEvent) {
-    debug!("propertynotify");
     unsafe {
         let mut trans: Window = 0;
         let ev = (*e).property;
@@ -2687,7 +2627,6 @@ fn motionnotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn maprequest(dpy: &Display, e: *mut XEvent) {
-    debug!("maprequest");
     let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
     unsafe {
         let ev = &(*e).map_request;
@@ -2700,42 +2639,33 @@ fn maprequest(dpy: &Display, e: *mut XEvent) {
             manage(dpy, ev.window, wa.as_mut_ptr());
         }
     }
-    debug!("leaving maprequest");
 }
 
 fn mappingnotify(dpy: &Display, e: *mut XEvent) {
-    debug!("mapping notify");
     unsafe {
         let mut ev = (*e).mapping;
         XRefreshKeyboardMapping(&mut ev);
         if ev.request == MappingKeyboard {
-            debug!("mappingnotify: grabbing keys");
             grabkeys(dpy);
         }
     }
-    debug!("leaving mapping notify");
 }
 
 fn keypress(dpy: &Display, e: *mut XEvent) {
-    debug!("keypress");
     unsafe {
         let ev = (*e).key;
         let keysym: KeySym = XKeycodeToKeysym(dpy.inner, ev.keycode as u8, 0);
-        debug!("keysym = {keysym} = {keysym:#x}");
         for i in 0..KEYS.len() {
             if keysym == KEYS[i].keysym as u64
                 && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
             {
-                debug!("found key");
                 (KEYS[i].func)(dpy, KEYS[i].arg.clone());
             }
         }
     }
-    debug!("returning from keypress");
 }
 
 fn focusin(dpy: &Display, e: *mut XEvent) {
-    debug!("focusin");
     unsafe {
         let ev = (*e).focus_change;
         if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
@@ -2745,7 +2675,6 @@ fn focusin(dpy: &Display, e: *mut XEvent) {
 }
 
 fn expose(dpy: &Display, e: *mut XEvent) {
-    debug!("expose");
     unsafe {
         let ev = (*e).expose;
         if ev.count == 0 {
@@ -2758,13 +2687,11 @@ fn expose(dpy: &Display, e: *mut XEvent) {
 }
 
 fn enternotify(dpy: &Display, e: *mut XEvent) {
-    debug!("enternotify");
     unsafe {
         let ev = (*e).crossing;
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
             && ev.window != ROOT
         {
-            debug!("enternotify: return 1");
             return;
         }
         let c = wintoclient(ev.window);
@@ -2777,16 +2704,13 @@ fn enternotify(dpy: &Display, e: *mut XEvent) {
             unfocus(dpy, (*SELMON).sel, true);
             SELMON = m;
         } else if c.is_null() || c == (*SELMON).sel {
-            debug!("enternotify: return 2");
             return;
         }
         focus(dpy, c);
     }
-    debug!("enternotify: final");
 }
 
 fn destroynotify(dpy: &Display, e: *mut XEvent) {
-    debug!("destroynotify");
     unsafe {
         let ev = (*e).destroy_window;
         let c = wintoclient(ev.window);
@@ -2797,7 +2721,6 @@ fn destroynotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn configurenotify(dpy: &Display, e: *mut XEvent) {
-    debug!("configurenotify");
     unsafe {
         let ev = (*e).configure;
         // dwm TODO updategeom handling sucks, needs to be simplified
@@ -2842,7 +2765,6 @@ fn configurenotify(dpy: &Display, e: *mut XEvent) {
 }
 
 fn configurerequest(dpy: &Display, e: *mut XEvent) {
-    debug!("configurerequest");
     unsafe {
         let ev = (*e).configure_request;
         let c = wintoclient(ev.window);
@@ -2922,7 +2844,6 @@ fn configurerequest(dpy: &Display, e: *mut XEvent) {
 }
 
 fn clientmessage(dpy: &Display, e: *mut XEvent) {
-    debug!("clientmessage");
     unsafe {
         let cme = (*e).client_message;
         let c = wintoclient(cme.window);
@@ -2953,7 +2874,6 @@ fn clientmessage(dpy: &Display, e: *mut XEvent) {
 
 fn buttonpress(dpy: &Display, e: *mut XEvent) {
     unsafe {
-        debug!("buttonpress");
         let ev = (*e).button;
         let mut click = Clk::RootWin;
         let mut arg = Arg::Uint(0);
@@ -2964,9 +2884,7 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             SELMON = m;
             focus(dpy, null_mut());
         }
-        debug!("focused monitor");
         if ev.window == (*SELMON).barwin {
-            debug!("window is barwin");
             let mut x = 0;
             let mut i = 0;
             // do while with ++i in condition
@@ -2991,17 +2909,14 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
                 click = Clk::WinTitle;
             }
         } else {
-            debug!("window is not barwin");
             let c = wintoclient(ev.window);
             if !c.is_null() {
                 focus(dpy, c);
                 restack(dpy, SELMON);
-                debug!("allowevents");
                 XAllowEvents(dpy.inner, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
-        debug!("checking buttons with click = {click:?}");
         for i in 0..BUTTONS.len() {
             let b = &BUTTONS[i];
             if click == b.click
@@ -3019,7 +2934,6 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             }
         }
     }
-    debug!("returning from buttonpress");
 }
 
 fn scan(dpy: &Display) {
@@ -3029,7 +2943,6 @@ fn scan(dpy: &Display) {
     let mut wins: *mut Window = std::ptr::null_mut();
     let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
     unsafe {
-        debug!("entering scan unsafe");
         if XQueryTree(
             dpy.inner,
             ROOT,
@@ -3039,7 +2952,6 @@ fn scan(dpy: &Display) {
             &mut num,
         ) != 0
         {
-            debug!("xquerytree success with num = {num}");
             for i in 0..num {
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa)
                     || (*wa.as_mut_ptr()).override_redirect != 0
@@ -3049,20 +2961,15 @@ fn scan(dpy: &Display) {
                         &mut d1,
                     )
                 {
-                    debug!("continuing on i = {i}");
                     continue;
                 }
-                debug!("maybe manage");
                 if (*wa.as_mut_ptr()).map_state == IsViewable
                     || getstate(dpy, *wins.offset(i as isize))
                         .is_ok_and(|v| v == ICONIC_STATE)
                 {
-                    debug!("calling manage");
                     manage(dpy, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
-                debug!("finished iter for {i}");
             }
-            debug!("finished scan first loop");
             for i in 0..num {
                 // now the transients
                 if not_xgetwindowattributes(dpy, wins, i, &mut wa) {
@@ -3084,7 +2991,6 @@ fn scan(dpy: &Display) {
 }
 
 fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
-    debug!("entering manage");
     let mut trans = 0;
     unsafe {
         let wa = *wa;
@@ -3101,11 +3007,8 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             win: w,
             ..Default::default()
         }));
-        debug!("manage: allocated box");
         updatetitle(dpy, c);
-        debug!("manage: finished updatetitle");
         if xgettransientforhint(dpy, w, &mut trans) {
-            debug!("gottransientforhint");
             let t = wintoclient(trans);
             if !t.is_null() {
                 (*c).mon = (*t).mon;
@@ -3115,13 +3018,11 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
                 applyrules(dpy, c);
             }
         } else {
-            debug!("didn't gottransientforhint");
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
             (*c).mon = SELMON;
             applyrules(dpy, c);
         }
-        debug!("middle of manage");
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
             (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
         }
@@ -3146,12 +3047,10 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             w,
             SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
         );
-        debug!("manage: calling configure");
         configure(dpy, c); // propagates border width, if size doesn't change
         updatewindowtype(dpy, c);
         updatesizehints(dpy, c);
         updatewmhints(dpy, c);
-        debug!("manage: finished rust fns");
         XSelectInput(
             dpy.inner,
             w,
@@ -3160,7 +3059,6 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
                 | PropertyChangeMask
                 | StructureNotifyMask,
         );
-        debug!("manage: grabbing buttons");
         grabbuttons(dpy, c, false);
         if !(*c).isfloating {
             (*c).oldstate = trans != 0 || (*c).isfixed;
@@ -3169,11 +3067,8 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
         if (*c).isfloating {
             XRaiseWindow(dpy.inner, (*c).win);
         }
-        debug!("manage: attaching");
         attach(c);
-        debug!("manage: attaching stack");
         attachstack(c);
-        debug!("manage: changing property");
         xchangeproperty(
             dpy,
             ROOT,
@@ -3184,7 +3079,6 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             &mut ((*c).win as c_uchar),
             1,
         );
-        debug!("manage: resizing window");
         // some windows require this
         XMoveResizeWindow(
             dpy.inner,
@@ -3194,20 +3088,15 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
             (*c).w as u32,
             (*c).h as u32,
         );
-        debug!("manage: setting client state");
         setclientstate(dpy, c, NORMAL_STATE);
         if (*c).mon == SELMON {
             unfocus(dpy, (*SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
-        debug!("manage: arrange");
         arrange(dpy, (*c).mon);
-        debug!("manage: mapping window");
         XMapWindow(dpy.inner, (*c).win);
-        debug!("manage: focus");
         focus(dpy, std::ptr::null_mut());
     }
-    debug!("end of manage");
 }
 
 fn updatewmhints(dpy: &Display, c: *mut Client) {
@@ -3325,7 +3214,6 @@ fn getatomprop(dpy: &Display, c: *mut Client, prop: Atom) -> Atom {
 }
 
 fn applyrules(dpy: &Display, c: *mut Client) {
-    debug!("entering applyrules");
     unsafe {
         let mut ch = XClassHint {
             res_name: std::ptr::null_mut(),
@@ -3371,12 +3259,10 @@ fn applyrules(dpy: &Display, c: *mut Client) {
         } else {
             (*(*c).mon).tagset[(*(*c).mon).seltags]
         };
-        debug!("leaving applyrules");
     }
 }
 
 fn updatetitle(dpy: &Display, c: *mut Client) {
-    debug!("entering updatetitle");
     unsafe {
         if !gettextprop(
             dpy,
@@ -3384,11 +3270,9 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
             NETATOM[Net::WMName as usize],
             &mut (*c).name,
         ) {
-            debug!("getting textprop");
             gettextprop(dpy, (*c).win, XA_WM_NAME, &mut (*c).name);
         }
         if (*c).name.is_empty() {
-            debug!("naming broken");
             /* hack to mark broken clients */
             (*c).name = BROKEN.to_owned();
         }
@@ -3396,7 +3280,6 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
 }
 
 fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
-    debug!("calling getstate");
     let mut fmt = 0;
     let mut p: *mut c_uchar = std::ptr::null_mut();
     let mut n = 0;
@@ -3404,7 +3287,6 @@ fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
     let mut real = 0;
     let mut result = Err(());
     unsafe {
-        debug!("calling XGetWindowProperty");
         let cond = XGetWindowProperty(
             dpy.inner,
             w,
@@ -3419,9 +3301,7 @@ fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
             &mut extra,
             &mut p,
         );
-        debug!("called XGetWindowProperty");
         if cond != Success as i32 {
-            debug!("returning Err from getstate");
             return Err(());
         }
         if n != 0 {
@@ -3430,7 +3310,6 @@ fn getstate(dpy: &Display, w: Window) -> Result<usize, ()> {
             result = Ok(*p as usize);
         }
         XFree(p.cast());
-        debug!("returning Ok from getstate");
         result
     }
 }
@@ -3473,21 +3352,13 @@ fn main() {
         libc::dup2(log_fd, 2);
     }
 
-    debug!("dup2 finished");
     let mut dpy = Display::open();
-    debug!("display opened");
     checkotherwm(&dpy);
-    debug!("checked other wm");
     setup(&mut dpy);
-    debug!("setup finished");
     scan(&dpy);
-    debug!("scan finished");
     run(&dpy);
-    debug!("run finished");
     cleanup(&dpy);
-    debug!("cleanup finished");
     unsafe {
         XCloseDisplay(dpy.inner);
     }
-    debug!("exiting");
 }
