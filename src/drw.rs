@@ -1,4 +1,7 @@
-use std::{ffi::CString, mem::MaybeUninit};
+use std::{
+    ffi::{c_int, CString},
+    mem::MaybeUninit,
+};
 
 use fontconfig_sys::{
     constants::{FC_CHARSET, FC_SCALABLE},
@@ -257,7 +260,21 @@ impl Drw {
     fn fontset_getwidth(&self, stext: &str) -> usize {
         self.text(0, 0, 0, 0, 0, stext, false)
     }
+}
 
+// these are statics defined inside text
+static mut ELLIPSIS_WIDTH: usize = 0;
+const NOMATCHES_LEN: usize = 64;
+struct NoMatches {
+    codepoint: [usize; NOMATCHES_LEN],
+    idx: usize,
+}
+static mut NOMATCHES: NoMatches = NoMatches {
+    codepoint: [0; NOMATCHES_LEN],
+    idx: 0,
+};
+
+impl Drw {
     pub(crate) fn text(
         &self,
         mut x: i32,
@@ -275,19 +292,6 @@ impl Drw {
         let mut utf8codepoint = 0;
         let mut charexists = false;
         let mut overflow = false;
-        let mut ellipsis_width = 0;
-
-        const NOMATCHES_LEN: usize = 64;
-
-        struct NoMatches {
-            codepoint: [usize; NOMATCHES_LEN],
-            idx: usize,
-        }
-
-        let mut nomatches = NoMatches {
-            codepoint: [0; NOMATCHES_LEN],
-            idx: 0,
-        };
 
         if (render && (self.scheme.is_null() || w == 0))
             || text.is_empty()
@@ -328,8 +332,8 @@ impl Drw {
             }
 
             let mut usedfont = self.fonts;
-            if ellipsis_width == 0 && render {
-                ellipsis_width = self.fontset_getwidth("...");
+            if ELLIPSIS_WIDTH == 0 && render {
+                ELLIPSIS_WIDTH = self.fontset_getwidth("...");
             }
 
             let mut tmpw: usize = 0;
@@ -360,7 +364,7 @@ impl Drw {
                                 &mut tmpw,
                                 std::ptr::null_mut::<usize>(),
                             );
-                            if ew + ellipsis_width <= w {
+                            if ew + ELLIPSIS_WIDTH <= w {
                                 // keep track where the ellipsis still fits
                                 ellipsis_x = x + ew as i32;
                                 ellipsis_w = w - ew;
@@ -437,7 +441,7 @@ impl Drw {
                     for i in 0..NOMATCHES_LEN {
                         // avoid calling XftFontMatch if we know we won't find a
                         // match
-                        if utf8codepoint == nomatches.codepoint[i] {
+                        if utf8codepoint == NOMATCHES.codepoint[i] {
                             usedfont = self.fonts;
                             continue 'outer;
                         }
@@ -498,9 +502,9 @@ impl Drw {
                             (*curfont).next = usedfont;
                         } else {
                             xfont_free(usedfont);
-                            nomatches.idx += 1;
-                            nomatches.codepoint
-                                [nomatches.idx % NOMATCHES_LEN] = utf8codepoint;
+                            NOMATCHES.idx += 1;
+                            NOMATCHES.codepoint
+                                [NOMATCHES.idx % NOMATCHES_LEN] = utf8codepoint;
                             usedfont = self.fonts;
                         }
                     }
