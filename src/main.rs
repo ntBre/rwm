@@ -20,7 +20,6 @@ use libc::{
     abs, c_uchar, c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP,
     SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
-use log::debug;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -1735,7 +1734,6 @@ pub fn quit(_dpy: &Display, _arg: Arg) {
 }
 
 fn grabkeys(dpy: &Display) {
-    debug!("grabbing keys");
     updatenumlockmask(dpy);
     unsafe {
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
@@ -1854,20 +1852,22 @@ fn drawbar(m: *mut Monitor) {
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let mut occ = 0;
         let mut urg = 0;
+        let mut x = 0;
+        let mut w;
         let mut tw = 0;
 
         if !(*m).showbar {
             return;
         }
 
+        let drw = DRW.as_mut().unwrap();
+
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
             // status is only drawn on selected monitor
-            DRW.as_mut()
-                .unwrap()
-                .setscheme(&mut SCHEME[Scheme::Norm as usize]);
-            tw = DRW.as_ref().unwrap().textw(&STEXT, LRPAD) - LRPAD + 2; // 2px right padding
-            DRW.as_ref().unwrap().text(
+            drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+            tw = drw.textw(&STEXT, LRPAD) - LRPAD + 2; // 2px right padding
+            drw.text(
                 ((*m).ww - tw as i16) as i32,
                 0,
                 tw,
@@ -1887,17 +1887,16 @@ fn drawbar(m: *mut Monitor) {
             c = (*c).next;
         }
 
-        let mut x = 0;
         for i in 0..TAGS.len() {
-            let w = DRW.as_ref().unwrap().textw(TAGS[i], LRPAD);
-            DRW.as_mut().unwrap().setscheme(
+            w = drw.textw(TAGS[i], LRPAD);
+            drw.setscheme(
                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
                     Scheme::Sel as usize
                 } else {
                     Scheme::Norm as usize
                 }],
             );
-            DRW.as_ref().unwrap().text(
+            drw.text(
                 x,
                 0,
                 w,
@@ -1908,7 +1907,7 @@ fn drawbar(m: *mut Monitor) {
             );
 
             if (occ & 1 << i) != 0 {
-                DRW.as_ref().unwrap().rect(
+                drw.rect(
                     x + boxs as i32,
                     boxs,
                     boxw,
@@ -1922,31 +1921,24 @@ fn drawbar(m: *mut Monitor) {
             x += w as i32;
         }
 
-        let w = DRW.as_ref().unwrap().textw(&(*m).ltsymbol, LRPAD);
+        let w = drw.textw(&(*m).ltsymbol, LRPAD);
         DRW.as_mut()
             .unwrap()
             .setscheme(&mut SCHEME[Scheme::Norm as usize]);
-        let x = DRW.as_ref().unwrap().text(
-            x,
-            0,
-            w,
-            BH as usize,
-            LRPAD / 2,
-            &(*m).ltsymbol,
-            false,
-        );
+        let x =
+            drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, false);
 
         let w = (*m).ww - tw as i16 - x as i16;
         if w > BH {
             if !(*m).sel.is_null() {
-                DRW.as_mut().unwrap().setscheme(
+                drw.setscheme(
                     &mut SCHEME[if m == SELMON {
                         Scheme::Sel
                     } else {
                         Scheme::Norm
                     } as usize],
                 );
-                DRW.as_ref().unwrap().text(
+                drw.text(
                     x as i32,
                     0,
                     w as usize,
@@ -1956,7 +1948,7 @@ fn drawbar(m: *mut Monitor) {
                     false,
                 );
                 if (*(*m).sel).isfloating {
-                    DRW.as_ref().unwrap().rect(
+                    drw.rect(
                         (x + boxs) as i32,
                         boxs,
                         boxw,
@@ -1969,17 +1961,10 @@ fn drawbar(m: *mut Monitor) {
                 DRW.as_mut()
                     .unwrap()
                     .setscheme(&mut SCHEME[Scheme::Norm as usize]);
-                DRW.as_ref().unwrap().rect(
-                    x as i32,
-                    0,
-                    w as usize,
-                    BH as usize,
-                    true,
-                    true,
-                );
+                drw.rect(x as i32, 0, w as usize, BH as usize, true, true);
             }
         }
-        DRW.as_ref().unwrap().map((*m).barwin, 0, 0, (*m).ww, BH);
+        drw.map((*m).barwin, 0, 0, (*m).ww, BH);
     }
 }
 
