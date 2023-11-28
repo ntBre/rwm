@@ -6,10 +6,9 @@ code. Once it's working in this state, I'll start moving toward a safe Rust
 version where possible. Linked lists are pretty cool, though.
 
 ## Screenshot
-As you can see, it starts up, but the bar is not drawing correctly, and
-none of the key bindings work. I made mouse clicks spawn a terminal
-earlier and confirmed that programs can be spawned, but I took that
-back out.
+As you can see, it starts up, but the bar is not drawing correctly. However, you
+can spawn windows with the default dwm keybindings. Try out Mod+Shift+Enter for
+st or Mod+p for dmenu_run!
 
 ![Screenshot](screenshot.png)
 
