@@ -342,9 +342,9 @@ impl Drw {
                 let mut utf8strlen = 0;
                 let utf8str = text;
                 let mut nextfont: *mut Fnt = std::ptr::null_mut();
-                while text_idx < text.len() {
-                    let utf8charlen =
-                        utf8decode(text, &mut utf8codepoint, UTF_SIZ);
+                for ch in text.chars() {
+                    let utf8charlen = ch.len_utf8();
+                    utf8codepoint = ch as usize;
                     let mut curfont = self.fonts;
                     while !curfont.is_null() {
                         charexists = charexists
