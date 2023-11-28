@@ -1739,7 +1739,6 @@ fn grabkeys(dpy: &Display) {
     updatenumlockmask(dpy);
     unsafe {
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-        debug!("modifiers = {:?}", modifiers);
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         XUngrabKey(dpy.inner, AnyKey, AnyModifier, ROOT);
         XDisplayKeycodes(dpy.inner, &mut start, &mut end);
@@ -1756,7 +1755,7 @@ fn grabkeys(dpy: &Display) {
             for i in 0..KEYS.len() {
                 // skip modifier codes, we do that ourselves
                 if KEYS[i].keysym
-                    == (*syms.offset((k - start * skip) as isize)) as u32
+                    == (*syms.offset(((k - start) * skip) as isize)) as u32
                 {
                     for j in 0..modifiers.len() {
                         let ret = XGrabKey(
