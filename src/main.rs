@@ -20,6 +20,7 @@ use libc::{
     abs, c_uchar, c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP,
     SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
+use log::debug;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -1922,9 +1923,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let w = drw.textw(&(*m).ltsymbol, LRPAD);
-        DRW.as_mut()
-            .unwrap()
-            .setscheme(&mut SCHEME[Scheme::Norm as usize]);
+        drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
         let x =
             drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, false);
 
@@ -1958,9 +1957,8 @@ fn drawbar(m: *mut Monitor) {
                     );
                 }
             } else {
-                DRW.as_mut()
-                    .unwrap()
-                    .setscheme(&mut SCHEME[Scheme::Norm as usize]);
+                debug!("w ({w}) <= BH ({BH})");
+                drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
                 drw.rect(x as i32, 0, w as usize, BH as usize, true, true);
             }
         }
