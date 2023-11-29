@@ -7,6 +7,7 @@ use fontconfig_sys::{
     FcPatternAddBool, FcPatternAddCharSet, FcPatternDestroy,
     FcPatternDuplicate,
 };
+use log::debug;
 use x11::{
     xft::{
         FcPattern, XftCharExists, XftColor, XftColorAllocName, XftDraw,
@@ -220,11 +221,25 @@ impl Drw {
         text: &str,
         invert: bool,
     ) -> usize {
+        let mut ty;
         let mut ellipsis_x = 0;
+        let mut tmpw: usize = 0;
+        let mut ew;
         let mut ellipsis_w = 0;
+        let mut ellipsis_len;
         let mut d: *mut XftDraw = std::ptr::null_mut();
+        let mut usedfont;
+        let mut curfont;
+        let mut nextfont;
+        let mut utf8strlen;
+        let mut utf8charlen;
         let render = x != 0 || y != 0 || w != 0 || h != 0;
         let mut utf8codepoint = 0;
+        let mut utf8str;
+        let mut fccharset;
+        let mut fcpattern;
+        let mut match_;
+        let mut result = MaybeUninit::uninit();
         let mut charexists = false;
         let mut overflow = false;
 
@@ -232,6 +247,7 @@ impl Drw {
             || text.is_empty()
             || self.fonts.is_null()
         {
+            debug!("text: early return");
             return 0;
         }
 
@@ -266,24 +282,23 @@ impl Drw {
                 w -= lpad;
             }
 
-            let mut usedfont = self.fonts;
+            usedfont = self.fonts;
             if ELLIPSIS_WIDTH == 0 && render {
                 ELLIPSIS_WIDTH = self.fontset_getwidth("...");
+                debug!("set ellipsis width to {ELLIPSIS_WIDTH}");
             }
 
-            let mut tmpw: usize = 0;
-            // using this as a pointer to text
             let mut text_idx = 0;
             'outer: loop {
-                let mut ew = 0;
-                let mut ellipsis_len = 0;
-                let mut utf8strlen = 0;
-                let utf8str = text;
-                let mut nextfont: *mut Fnt = std::ptr::null_mut();
+                ew = 0;
+                ellipsis_len = 0;
+                utf8strlen = 0;
+                utf8str = text;
+                nextfont = std::ptr::null_mut();
                 for ch in text.chars() {
-                    let utf8charlen = ch.len_utf8();
+                    utf8charlen = ch.len_utf8();
                     utf8codepoint = ch as usize;
-                    let mut curfont = self.fonts;
+                    curfont = self.fonts;
                     while !curfont.is_null() {
                         charexists = charexists
                             || XftCharExists(
@@ -297,7 +312,7 @@ impl Drw {
                                 text,
                                 utf8charlen,
                                 &mut tmpw,
-                                std::ptr::null_mut::<usize>(),
+                                std::ptr::null_mut(),
                             );
                             if ew + ELLIPSIS_WIDTH <= w {
                                 // keep track where the ellipsis still fits
@@ -336,10 +351,9 @@ impl Drw {
 
                 if utf8strlen != 0 {
                     if render {
-                        let ty = y as usize
+                        ty = y as usize
                             + (h - (*usedfont).h) / 2
                             + (*(*usedfont).xfont).ascent as usize;
-                        let s = CString::new(utf8str).unwrap();
                         XftDrawStringUtf8(
                             d,
                             self.scheme.offset(if invert {
@@ -351,7 +365,7 @@ impl Drw {
                             (*usedfont).xfont,
                             x,
                             ty as i32,
-                            s.as_ptr().cast(),
+                            utf8str.as_ptr(),
                             utf8strlen as i32,
                         );
                     }
@@ -377,12 +391,13 @@ impl Drw {
                         // avoid calling XftFontMatch if we know we won't find a
                         // match
                         if utf8codepoint == NOMATCHES.codepoint[i] {
+                            debug!("found no match {utf8codepoint}");
                             usedfont = self.fonts;
                             continue 'outer;
                         }
                     }
 
-                    let fccharset = FcCharSetCreate();
+                    fccharset = FcCharSetCreate();
                     FcCharSetAddChar(fccharset, utf8codepoint as u32);
 
                     if (*self.fonts).pattern.is_null() {
@@ -390,7 +405,7 @@ impl Drw {
                         panic!("the first font in the cache must be loaded from a font string");
                     }
 
-                    let fcpattern =
+                    fcpattern =
                         FcPatternDuplicate((*self.fonts).pattern.cast());
                     FcPatternAddCharSet(
                         fcpattern,
@@ -407,8 +422,7 @@ impl Drw {
                         FcMatchPattern,
                     );
                     FcDefaultSubstitute(fcpattern);
-                    let mut result = MaybeUninit::uninit();
-                    let match_ = XftFontMatch(
+                    match_ = XftFontMatch(
                         (*self.dpy).inner,
                         self.screen,
                         fcpattern.cast(),
@@ -449,7 +463,7 @@ impl Drw {
                 XftDrawDestroy(d);
             }
         }
-        x as usize + if render { w } else { 0 }
+        dbg!(x as usize + if render { w } else { 0 })
     }
 
     pub(crate) fn rect(
