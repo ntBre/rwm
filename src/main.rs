@@ -1867,7 +1867,7 @@ fn drawbar(m: *mut Monitor) {
         if m == SELMON {
             // status is only drawn on selected monitor
             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-            tw = drw.textw(&STEXT, LRPAD) - LRPAD + 2; // 2px right padding
+            tw = drw.textw(&STEXT) - LRPAD + 2; // 2px right padding
             drw.text(
                 ((*m).ww - tw as i16) as i32,
                 0,
@@ -1875,8 +1875,9 @@ fn drawbar(m: *mut Monitor) {
                 BH as usize,
                 0,
                 &STEXT,
-                false,
+                0,
             );
+            debug!("drawing status: {STEXT} with width = {tw}");
         }
 
         let mut c = (*m).clients;
@@ -1889,7 +1890,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         for i in 0..TAGS.len() {
-            w = drw.textw(TAGS[i], LRPAD);
+            w = drw.textw(TAGS[i]);
             drw.setscheme(
                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
                     Scheme::Sel as usize
@@ -1904,7 +1905,7 @@ fn drawbar(m: *mut Monitor) {
                 BH as usize,
                 LRPAD / 2,
                 TAGS[i],
-                (urg & 1 << i) != 0,
+                (urg as i32) & 1 << i,
             );
 
             if (occ & 1 << i) != 0 {
@@ -1922,13 +1923,12 @@ fn drawbar(m: *mut Monitor) {
             x += w as i32;
         }
 
-        let w = drw.textw(&(*m).ltsymbol, LRPAD);
+        w = drw.textw(&(*m).ltsymbol);
         drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-        let x =
-            drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, false);
+        x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
 
-        let w = (*m).ww - tw as i16 - x as i16;
-        if w > BH {
+        w = ((*m).ww - tw as i16 - x as i16) as usize;
+        if w > BH as usize {
             if !(*m).sel.is_null() {
                 drw.setscheme(
                     &mut SCHEME[if m == SELMON {
@@ -1937,18 +1937,10 @@ fn drawbar(m: *mut Monitor) {
                         Scheme::Norm
                     } as usize],
                 );
-                drw.text(
-                    x as i32,
-                    0,
-                    w as usize,
-                    BH as usize,
-                    LRPAD / 2,
-                    &(*(*m).sel).name,
-                    false,
-                );
+                drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
                 if (*(*m).sel).isfloating {
                     drw.rect(
-                        (x + boxs) as i32,
+                        x + boxs as i32,
                         boxs,
                         boxw,
                         boxw,
@@ -1958,7 +1950,7 @@ fn drawbar(m: *mut Monitor) {
                 }
             } else {
                 drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-                drw.rect(x as i32, 0, w as usize, BH as usize, true, true);
+                drw.rect(x, 0, w, BH as usize, true, true);
             }
         }
         drw.map((*m).barwin, 0, 0, (*m).ww, BH);
@@ -2875,21 +2867,19 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             let mut x = 0;
             let mut i = 0;
             // do while with ++i in condition
-            x += DRW.as_ref().unwrap().textw(TAGS[i], LRPAD);
+            x += DRW.as_ref().unwrap().textw(TAGS[i]);
             i += 1;
             let drw = &DRW.as_ref().unwrap();
             while ev.x >= x as i32 && i < TAGS.len() {
-                x += drw.textw(TAGS[i], LRPAD);
+                x += drw.textw(TAGS[i]);
                 i += 1;
             }
             if i < TAGS.len() {
                 click = Clk::TagBar;
                 arg = Arg::Uint(1 << i);
-            } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol, LRPAD)) as i32
-            {
+            } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol)) as i32 {
                 click = Clk::LtSymbol;
-            } else if ev.x
-                > ((*SELMON).ww as usize - drw.textw(&STEXT, LRPAD)) as i32
+            } else if ev.x > ((*SELMON).ww as usize - drw.textw(&STEXT)) as i32
             {
                 click = Clk::StatusText;
             } else {

@@ -1,4 +1,7 @@
-use std::{ffi::CString, mem::MaybeUninit};
+use std::{
+    ffi::{c_int, CString},
+    mem::MaybeUninit,
+};
 
 use fontconfig_sys::{
     constants::{FC_CHARSET, FC_SCALABLE},
@@ -22,7 +25,7 @@ use x11::{
     },
 };
 
-use crate::{Clr, Col, Cursor, Display};
+use crate::{Clr, Col, Cursor, Display, LRPAD};
 
 pub struct Fnt {
     dpy: *mut Display,
@@ -188,12 +191,15 @@ impl Drw {
         self.scheme = scm.as_mut_ptr();
     }
 
-    pub(crate) fn textw(&self, stext: &str, lrpad: usize) -> usize {
-        self.fontset_getwidth(stext) + lrpad
+    pub(crate) fn textw(&self, stext: &str) -> usize {
+        unsafe { self.fontset_getwidth(stext) + LRPAD }
     }
 
-    fn fontset_getwidth(&self, stext: &str) -> usize {
-        self.text(0, 0, 0, 0, 0, stext, false)
+    fn fontset_getwidth(&self, text: &str) -> usize {
+        if self.fonts.is_null() || text.is_empty() {
+            return 0;
+        }
+        self.text(0, 0, 0, 0, 0, text, 0)
     }
 }
 
@@ -218,7 +224,7 @@ impl Drw {
         h: usize,
         lpad: usize,
         text: &str,
-        invert: bool,
+        invert: c_int,
     ) -> usize {
         let mut ty;
         let mut ellipsis_x = 0;
@@ -251,14 +257,19 @@ impl Drw {
 
         unsafe {
             if !render {
-                w = if invert { 1 } else { 0 };
+                // TODO I'm fairly confident this will be an issue at some
+                // point, but not yet. invert should be a c_int and this should
+                // be invert ? invert : ~invert
+                w = if invert != 0 { invert } else { !invert } as usize;
             } else {
                 XSetForeground(
                     (*self.dpy).inner,
                     self.gc,
-                    (*self.scheme.offset(
-                        if invert { Col::Fg } else { Col::Bg } as isize,
-                    ))
+                    (*self.scheme.offset(if invert != 0 {
+                        Col::Fg
+                    } else {
+                        Col::Bg
+                    } as isize))
                     .pixel,
                 );
                 XFillRectangle(
@@ -353,7 +364,7 @@ impl Drw {
                             + (*(*usedfont).xfont).ascent as usize;
                         XftDrawStringUtf8(
                             d,
-                            self.scheme.offset(if invert {
+                            self.scheme.offset(if invert != 0 {
                                 Col::Bg
                             } else {
                                 Col::Fg
@@ -532,7 +543,7 @@ impl Drw {
         font: *mut Fnt,
         text: &str,
         len: usize,
-        w: &mut usize,
+        w: *mut usize,
         h: *mut usize,
     ) {
         if font.is_null() || text.is_empty() {
@@ -549,7 +560,7 @@ impl Drw {
                 ext.as_mut_ptr(),
             );
             let ext = ext.assume_init();
-            if *w != 0 {
+            if !w.is_null() {
                 *w = ext.xOff as usize;
             }
             if !h.is_null() {
