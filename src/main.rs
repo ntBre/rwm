@@ -20,6 +20,7 @@ use libc::{
     abs, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset, waitpid,
     SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
+use log::debug;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -539,8 +540,8 @@ fn setup(dpy: &mut Display) {
         updategeom(dpy);
 
         // init atoms - I really hope these CStrings live long enough.
-        let s = CString::new("UTF8_STRING").unwrap();
-        let utf8string = XInternAtom(dpy.inner, s.as_ptr(), False);
+        let utf8string =
+            XInternAtom(dpy.inner, "UTF8_STRING".as_ptr().cast(), False);
 
         for (k, s) in [
             (WM::Protocols, "WM_PROTOCOLS"),
@@ -548,7 +549,6 @@ fn setup(dpy: &mut Display) {
             (WM::State, "WM_STATE"),
             (WM::TakeFocus, "WM_TAKE_FOCUS"),
         ] {
-            let s = CString::new(s).unwrap();
             let v = XInternAtom(dpy.inner, s.as_ptr().cast(), False);
             if v == BadAlloc as u64 || v == BadValue as u64 {
                 panic!("XInternAtom failed with {v}");
@@ -567,8 +567,11 @@ fn setup(dpy: &mut Display) {
             (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG"),
             (Net::ClientList, "_NET_CLIENT_LIST"),
         ] {
-            let s = CString::new(s).unwrap();
-            NETATOM[k as usize] = XInternAtom(dpy.inner, s.as_ptr(), False);
+            let v = XInternAtom(dpy.inner, s.as_ptr().cast(), False);
+            if v == BadAlloc as u64 || v == BadValue as u64 {
+                panic!("XInternAtom failed with {v}");
+            }
+            NETATOM[k as usize] = v;
         }
 
         // init cursors
@@ -596,10 +599,9 @@ fn setup(dpy: &mut Display) {
             XA_WINDOW,
             32,
             PropModeReplace,
-            &mut (WMCHECKWIN as u8) as *mut _,
+            &mut (WMCHECKWIN as u8),
             1,
         );
-        let rwm = CString::new("rwm").unwrap();
         xchangeproperty(
             dpy,
             WMCHECKWIN,
@@ -607,7 +609,7 @@ fn setup(dpy: &mut Display) {
             utf8string,
             8,
             PropModeReplace,
-            rwm.as_ptr() as *mut _,
+            "rwm".as_ptr() as *mut _,
             3,
         );
         xchangeproperty(
@@ -1838,6 +1840,7 @@ fn updatestatus(dpy: &Display) {
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
         if !c {
+            debug!("got no text prop");
             STEXT = "rwm-0.0.1".to_owned();
         }
         drawbar(SELMON);
@@ -1968,6 +1971,7 @@ fn gettextprop(
     atom: Atom,
     text: &mut String,
 ) -> bool {
+    debug!("gettextprop: text = {text}");
     let _size = text.len();
     if text.is_empty() {
         return false;
@@ -2022,12 +2026,9 @@ fn updatebars(dpy: &Display) {
         colormap: 0,
         cursor: 0,
     };
-    let s = CString::new("rwm").unwrap();
-    // I think this is technically a memory leak, but who cares about "leaking"
-    // two 3 character strings
     let mut ch = XClassHint {
-        res_name: s.clone().into_raw(),
-        res_class: s.into_raw(),
+        res_name: "rwm".as_ptr() as *mut _,
+        res_class: "rwm".as_ptr() as *mut _,
     };
 
     unsafe {
@@ -2048,11 +2049,11 @@ fn updatebars(dpy: &Display) {
                 CopyFromParent as c_uint,
                 XDefaultVisual(dpy.inner, SCREEN),
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
-                &mut wa as *mut _,
+                &mut wa,
             );
             XDefineCursor(dpy.inner, (*m).barwin, CURSOR[Cur::Normal as usize]);
             XMapRaised(dpy.inner, (*m).barwin);
-            XSetClassHint(dpy.inner, (*m).barwin, &mut ch as *mut _);
+            XSetClassHint(dpy.inner, (*m).barwin, &mut ch);
             m = (*m).next;
         }
     }
@@ -2136,7 +2137,7 @@ fn updategeom(dpy: &Display) -> bool {
             }
 
             // removed monitors if n > nn
-            for _i in nn..n as i32 {
+            for _ in nn..n as i32 {
                 let mut m = MONS;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
@@ -2156,6 +2157,7 @@ fn updategeom(dpy: &Display) -> bool {
                 }
                 cleanupmon(m, dpy);
             }
+            libc::free(unique.cast());
         } else {
             // default monitor setup
             if MONS.is_null() {
@@ -2324,7 +2326,7 @@ fn attach(c: *mut Client) {
 fn detachstack(c: *mut Client) {
     unsafe {
         let mut tc: *mut *mut Client = &mut (*(*c).mon).stack;
-        while !tc.is_null() && *tc != c {
+        while !(*tc).is_null() && *tc != c {
             tc = &mut (*(*tc)).snext;
         }
         *tc = (*c).snext;

@@ -7,7 +7,6 @@ use fontconfig_sys::{
     FcPatternAddBool, FcPatternAddCharSet, FcPatternDestroy,
     FcPatternDuplicate,
 };
-use log::debug;
 use x11::{
     xft::{
         FcPattern, XftCharExists, XftColor, XftColorAllocName, XftDraw,
@@ -247,7 +246,6 @@ impl Drw {
             || text.is_empty()
             || self.fonts.is_null()
         {
-            debug!("text: early return");
             return 0;
         }
 
@@ -285,7 +283,6 @@ impl Drw {
             usedfont = self.fonts;
             if ELLIPSIS_WIDTH == 0 && render {
                 ELLIPSIS_WIDTH = self.fontset_getwidth("...");
-                debug!("set ellipsis width to {ELLIPSIS_WIDTH}");
             }
 
             let mut text_idx = 0;
@@ -391,7 +388,6 @@ impl Drw {
                         // avoid calling XftFontMatch if we know we won't find a
                         // match
                         if utf8codepoint == NOMATCHES.codepoint[i] {
-                            debug!("found no match {utf8codepoint}");
                             usedfont = self.fonts;
                             continue 'outer;
                         }
@@ -463,7 +459,7 @@ impl Drw {
                 XftDrawDestroy(d);
             }
         }
-        dbg!(x as usize + if render { w } else { 0 })
+        x as usize + if render { w } else { 0 }
     }
 
     pub(crate) fn rect(
