@@ -6,7 +6,7 @@
 use std::cmp::{max, min};
 use std::ffi::{c_int, c_ulong, CString};
 use std::fs::File;
-use std::mem::MaybeUninit;
+use std::mem::{size_of, MaybeUninit};
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::process::Command;
@@ -17,8 +17,8 @@ use config::{
 };
 use drw::Drw;
 use libc::{
-    abs, c_uchar, c_uint, sigaction, sigemptyset, waitpid, SA_NOCLDSTOP,
-    SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
+    abs, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset, waitpid,
+    SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
@@ -2064,8 +2064,7 @@ fn updategeom(dpy: &Display) -> bool {
         if XineramaIsActive(dpy.inner) != 0 {
             // I think this is the number of monitors
             let mut nn: i32 = 0;
-            let info = XineramaQueryScreens(dpy.inner, &mut nn as *mut _);
-            let mut unique = vec![MaybeUninit::uninit(); nn as usize];
+            let info = XineramaQueryScreens(dpy.inner, &mut nn);
 
             let mut n = 0;
             let mut m = MONS;
@@ -2074,20 +2073,26 @@ fn updategeom(dpy: &Display) -> bool {
                 n += 1;
             }
 
+            let unique: *mut XineramaScreenInfo =
+                calloc(nn as usize, size_of::<XineramaScreenInfo>()).cast();
+
+            if unique.is_null() {
+                panic!("calloc failed");
+            }
+
             let mut j = 0;
             for i in 0..nn {
-                if isuniquegeom(&unique, j, info.offset(i as isize)) {
-                    // this is a memcpy in C, is that what read does?
-                    unique[j as usize] =
-                        MaybeUninit::new(info.offset(i as isize).read());
+                if isuniquegeom(unique, j, info.offset(i as isize)) {
+                    memcpy(
+                        unique.offset(j).cast(),
+                        info.offset(i as isize).cast(),
+                        size_of::<XineramaScreenInfo>(),
+                    );
                     j += 1;
                 }
             }
-            XFree(info as *mut _);
+            XFree(info.cast());
             nn = j as i32;
-
-            let unique: Vec<_> =
-                unique.into_iter().map(|u| u.assume_init()).collect();
 
             // new monitors if nn > n
             for _ in n..nn as usize {
@@ -2103,25 +2108,26 @@ fn updategeom(dpy: &Display) -> bool {
                 }
             }
 
-            let mut i: usize = 0;
+            let mut i = 0;
             let mut m = MONS;
             while i < nn as usize && !m.is_null() {
+                let u = unique.add(i);
                 if i >= n
-                    || unique[i].x_org != (*m).mx
-                    || unique[i].y_org != (*m).my
-                    || unique[i].width != (*m).mw
-                    || unique[i].height != (*m).mh
+                    || (*u).x_org != (*m).mx
+                    || (*u).y_org != (*m).my
+                    || (*u).width != (*m).mw
+                    || (*u).height != (*m).mh
                 {
                     dirty = true;
                     (*m).num = i as i32;
-                    (*m).mx = unique[i].x_org;
-                    (*m).wx = unique[i].x_org;
-                    (*m).my = unique[i].y_org;
-                    (*m).wy = unique[i].y_org;
-                    (*m).mw = unique[i].width;
-                    (*m).ww = unique[i].width;
-                    (*m).mh = unique[i].height;
-                    (*m).wh = unique[i].height;
+                    (*m).mx = (*u).x_org;
+                    (*m).wx = (*u).x_org;
+                    (*m).my = (*u).y_org;
+                    (*m).wy = (*u).y_org;
+                    (*m).mw = (*u).width;
+                    (*m).ww = (*u).width;
+                    (*m).mh = (*u).height;
+                    (*m).wh = (*u).height;
                     updatebarpos(m);
                 }
 
@@ -2359,21 +2365,22 @@ fn updatebarpos(m: *mut Monitor) {
 }
 
 fn isuniquegeom(
-    unique: &[MaybeUninit<XineramaScreenInfo>],
-    n: isize,
+    unique: *mut XineramaScreenInfo,
+    mut n: isize,
     info: *const XineramaScreenInfo,
 ) -> bool {
-    for n in (0..n).rev() {
+    while n > 0 {
         unsafe {
-            let u = unique[n as usize].assume_init();
-            if u.x_org == (*info).x_org
-                && u.y_org == (*info).y_org
-                && u.width == (*info).width
-                && u.height == (*info).height
+            let u = unique.offset(n);
+            if (*u).x_org == (*info).x_org
+                && (*u).y_org == (*info).y_org
+                && (*u).width == (*info).width
+                && (*u).height == (*info).height
             {
                 return false;
             }
         }
+        n -= 1;
     }
     true
 }
