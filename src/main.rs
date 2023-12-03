@@ -20,7 +20,6 @@ use libc::{
     abs, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset, waitpid,
     SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
-use log::debug;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xinerama::{
@@ -1840,7 +1839,6 @@ fn updatestatus(dpy: &Display) {
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
         if !c {
-            debug!("got no text prop");
             STEXT = "rwm-0.0.1".to_owned();
         }
         drawbar(SELMON);
@@ -1877,7 +1875,6 @@ fn drawbar(m: *mut Monitor) {
                 &STEXT,
                 0,
             );
-            debug!("drawing status: {STEXT} with width = {tw}");
         }
 
         let mut c = (*m).clients;
@@ -1963,8 +1960,6 @@ fn gettextprop(
     atom: Atom,
     text: &mut String,
 ) -> bool {
-    debug!("gettextprop: text = {text}");
-    let _size = text.len();
     if text.is_empty() {
         return false;
     }
