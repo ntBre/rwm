@@ -162,8 +162,8 @@ static mut STEXT: String = String::new();
 
 /// bar height
 static mut BH: i16 = 0;
-static mut SW: i16 = 0;
-static mut SH: i16 = 0;
+static mut SW: c_int = 0;
+static mut SH: c_int = 0;
 
 static mut ROOT: Window = 0;
 static mut WMCHECKWIN: Window = 0;
@@ -500,41 +500,41 @@ pub enum Clk {
     Last,
 }
 
-// crash is in here
 fn setup(dpy: &mut Display) {
     let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
     let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
 
     unsafe {
         // do not transform children into zombies when they terminate
-        sigemptyset(&mut (*(sa.as_mut_ptr())).sa_mask as *mut _);
-        (*(sa.as_mut_ptr())).sa_flags =
-            SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
-        (*(sa.as_mut_ptr())).sa_sigaction = SIG_IGN;
+        {
+            let sa = sa.as_mut_ptr();
+            sigemptyset(&mut (*sa).sa_mask);
+            (*sa).sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
+            (*sa).sa_sigaction = SIG_IGN;
+        }
         let sa = sa.assume_init();
-        sigaction(SIGCHLD, &sa, std::ptr::null::<sigaction>() as *mut _);
+        sigaction(SIGCHLD, &sa, null_mut());
 
         // clean up any zombies (inherited from .xinitrc etc) immediately
-        while waitpid(-1, std::ptr::null::<c_int>() as *mut _, WNOHANG) > 0 {}
+        while waitpid(-1, null_mut(), WNOHANG) > 0 {}
 
         // init screen
         SCREEN = XDefaultScreen(dpy.inner);
-        let sw = XDisplayWidth(dpy.inner, SCREEN);
-        let sh = XDisplayHeight(dpy.inner, SCREEN);
+        SW = XDisplayWidth(dpy.inner, SCREEN) as c_int;
+        SH = XDisplayHeight(dpy.inner, SCREEN) as c_int;
         ROOT = XRootWindow(dpy.inner, SCREEN);
         DRW = Box::into_raw(Box::new(Drw::new(
             dpy,
             SCREEN,
             ROOT,
-            sw as usize,
-            sh as usize,
+            SW as usize,
+            SH as usize,
         )));
 
-        DRW.as_mut()
-            .unwrap()
-            .fontset_create(FONTS)
-            .expect("no fonts could be loaded");
-        let _lrpa = (*(*DRW).fonts).h;
+        let drw = DRW.as_mut().unwrap();
+
+        drw.fontset_create(FONTS).expect("no fonts could be loaded");
+        LRPAD = (*(*DRW).fonts).h;
         BH = ((*(*DRW).fonts).h + 2) as i16;
         updategeom(dpy);
 
@@ -572,16 +572,14 @@ fn setup(dpy: &mut Display) {
         }
 
         // init cursors
-        CURSOR[Cur::Normal as usize] =
-            DRW.as_ref().unwrap().cur_create(XC_LEFT_PTR);
-        CURSOR[Cur::Resize as usize] =
-            DRW.as_ref().unwrap().cur_create(XC_SIZING);
-        CURSOR[Cur::Move as usize] = DRW.as_ref().unwrap().cur_create(XC_FLEUR);
+        CURSOR[Cur::Normal as usize] = drw.cur_create(XC_LEFT_PTR);
+        CURSOR[Cur::Resize as usize] = drw.cur_create(XC_SIZING);
+        CURSOR[Cur::Move as usize] = drw.cur_create(XC_FLEUR);
 
         // init appearance
         SCHEME = Vec::with_capacity(COLORS.len());
         for i in 0..COLORS.len() {
-            SCHEME.push(DRW.as_ref().unwrap().scm_create(COLORS[i], 3));
+            SCHEME.push(drw.scm_create(COLORS[i], 3));
         }
 
         // init bars
@@ -1055,11 +1053,11 @@ fn applysizehints(
         *w = 1.max(*w);
         *h = 1.max(*h);
         if interact {
-            if *x > SW as i32 {
-                *x = SW as i32 - width(c);
+            if *x > SW {
+                *x = SW - width(c);
             }
-            if *y > SH as i32 {
-                *y = SH as i32 - height(c);
+            if *y > SH {
+                *y = SH - height(c);
             }
             if *x + *w + 2 * (*c).bw < 0 {
                 *x = 0;
@@ -2158,12 +2156,12 @@ fn updategeom(dpy: &Display) -> bool {
                 MONS = createmon();
             }
 
-            if (*MONS).mw != SW || (*MONS).mh != SH {
+            if (*MONS).mw as i32 != SW || (*MONS).mh as i32 != SH {
                 dirty = true;
-                (*MONS).mw = SW;
-                (*MONS).ww = SW;
-                (*MONS).mh = SH;
-                (*MONS).wh = SH;
+                (*MONS).mw = SW as i16;
+                (*MONS).ww = SW as i16;
+                (*MONS).mh = SH as i16;
+                (*MONS).wh = SH as i16;
                 updatebarpos(MONS);
             }
         }
@@ -2705,11 +2703,11 @@ fn configurenotify(dpy: &Display, e: *mut XEvent) {
         let ev = (*e).configure;
         // dwm TODO updategeom handling sucks, needs to be simplified
         if ev.window == ROOT {
-            let dirty = (SW != ev.width as i16) || (SH != ev.height as i16);
-            SW = ev.width as i16;
-            SH = ev.height as i16;
+            let dirty = (SW != ev.width) || (SH != ev.height);
+            SW = ev.width;
+            SH = ev.height;
             if updategeom(dpy) || dirty {
-                DRW.as_mut().unwrap().resize(SW, BH);
+                DRW.as_mut().unwrap().resize(SW as i16, BH);
                 updatebars(dpy);
                 let mut m = MONS;
                 while !m.is_null() {
@@ -3063,7 +3061,7 @@ fn manage(dpy: &Display, w: Window, wa: *mut XWindowAttributes) {
         XMoveResizeWindow(
             dpy.inner,
             (*c).win,
-            (*c).x + (2 * SW) as i32,
+            (*c).x + 2 * SW,
             (*c).y,
             (*c).w as u32,
             (*c).h as u32,
