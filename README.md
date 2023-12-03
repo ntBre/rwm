@@ -1,3 +1,7 @@
+[![check](https://github.com/ntBre/rwm/actions/workflows/check.yml/badge.svg)](https://github.com/ntBre/rwm/actions/workflows/check.yml)
+[![test](https://github.com/ntBre/rwm/actions/workflows/test.yml/badge.svg)](https://github.com/ntBre/rwm/actions/workflows/test.yml)
+
+# psqs
 # rwm
 rust window manager ported from [dwm](https://dwm.suckless.org/)
 
