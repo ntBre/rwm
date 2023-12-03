@@ -257,9 +257,6 @@ impl Drw {
 
         unsafe {
             if !render {
-                // TODO I'm fairly confident this will be an issue at some
-                // point, but not yet. invert should be a c_int and this should
-                // be invert ? invert : ~invert
                 w = if invert != 0 { invert } else { !invert } as usize;
             } else {
                 XSetForeground(
