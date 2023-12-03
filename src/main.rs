@@ -2862,9 +2862,9 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             let mut x = 0;
             let mut i = 0;
             // do while with ++i in condition
-            x += DRW.as_ref().unwrap().textw(TAGS[i]);
-            i += 1;
             let drw = &DRW.as_ref().unwrap();
+            x += drw.textw(TAGS[i]);
+            i += 1;
             while ev.x >= x as i32 && i < TAGS.len() {
                 x += drw.textw(TAGS[i]);
                 i += 1;
