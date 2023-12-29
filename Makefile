@@ -8,3 +8,6 @@ test:
 
 clippy:
 	cargo clippy
+
+doc:
+	cargo doc --open
