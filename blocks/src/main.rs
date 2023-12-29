@@ -51,21 +51,22 @@ struct Block {
 }
 
 impl Block {
-    fn getcmd(&self, output: &mut String) {
-        output.clear();
+    fn getcmd(&self) -> String {
+        let mut output = String::new();
         use std::fmt::Write;
         write!(output, "{}", self.icon).unwrap();
         let out = match Command::new(self.command).output() {
             Ok(output) => output,
             Err(e) => {
                 eprintln!("command `{}` failed with `{e}`", self.command);
-                return;
+                return String::new();
             }
         };
         write!(output, "{}", String::from_utf8(out.stdout).unwrap()).unwrap();
         if !DELIM.is_empty() {
             write!(output, "{}", DELIM).unwrap();
         }
+        output
     }
 }
 
@@ -85,7 +86,7 @@ fn getcmds(time: c_int) {
             || time == -1
         {
             unsafe {
-                current.getcmd(&mut STATUSBAR[i]);
+                STATUSBAR[i] = current.getcmd();
             }
         }
     }
@@ -95,7 +96,7 @@ fn getsigcmds(signal: c_int) {
     for (i, current) in BLOCKS.iter().enumerate() {
         if current.signal == signal {
             unsafe {
-                current.getcmd(&mut STATUSBAR[i]);
+                STATUSBAR[i] = current.getcmd();
             }
         }
     }
