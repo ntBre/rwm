@@ -1,5 +1,5 @@
 use std::{
-    ffi::c_int,
+    ffi::{c_int, CString},
     process::Command,
     ptr::{null, null_mut},
     thread::sleep,
@@ -124,9 +124,9 @@ fn writestatus() {
         }
         SCREEN = XDefaultScreen(DPY);
         ROOT = XRootWindow(DPY, SCREEN);
-        let s = &STATUSSTR[0];
-        eprintln!("updating status to `{s}`");
-        let ret = XStoreName(DPY, ROOT, s.as_ptr().cast());
+        let s = CString::new(STATUSSTR[0].clone()).unwrap();
+        eprintln!("updating status to `{s:?}`");
+        let ret = XStoreName(DPY, ROOT, s.as_ptr());
         #[allow(non_upper_case_globals)]
         if matches!(ret as u8, BadAlloc | BadWindow) {
             eprintln!("storing name failed");
