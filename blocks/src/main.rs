@@ -16,10 +16,75 @@ use crate::config::DELIM;
 
 mod config;
 
-static mut STATUS_CONTINUE: bool = true;
-static mut STATUSBAR: [String; BLOCKS.len()] =
-    [String::new(), String::new(), String::new()];
-static mut STATUSSTR: [String; 2] = [String::new(), String::new()];
+struct Globals<const N: usize> {
+    statusbar: [String; N],
+    statusstr: [String; 2],
+    status_continue: bool,
+}
+
+impl<const N: usize> Globals<N> {
+    const fn new() -> Self {
+        const S: String = String::new();
+        Self {
+            statusbar: [S; N],
+            statusstr: [S; 2],
+            status_continue: true,
+        }
+    }
+
+    fn getcmds(&mut self, time: c_int) {
+        for (i, current) in BLOCKS.iter().enumerate() {
+            if current.interval != 0 && time % current.interval as i32 == 0
+                || time == -1
+            {
+                self.statusbar[i] = current.getcmd();
+            }
+        }
+    }
+
+    fn getsigcmds(&mut self, signal: c_int) {
+        for (i, current) in BLOCKS.iter().enumerate() {
+            if current.signal == signal {
+                self.statusbar[i] = current.getcmd();
+            }
+        }
+    }
+
+    fn getstatus(&mut self) -> bool {
+        self.statusstr[1] = std::mem::take(&mut self.statusstr[0]);
+        self.statusstr[0] = self.statusbar.join("").replace('\n', "");
+        self.statusstr[0] != self.statusstr[1]
+    }
+
+    /// NOTE: inlined from setroot, can also be pstdout with -p flag, presumably
+    /// for debugging
+    fn writestatus(&mut self) {
+        // only set root if text has changed
+        if !self.getstatus() {
+            return;
+        }
+        unsafe {
+            let dpy = XOpenDisplay(null());
+            let screen = XDefaultScreen(dpy);
+            let root = XRootWindow(dpy, screen);
+            let s = CString::new(self.statusstr[0].clone()).unwrap();
+            XStoreName(dpy, root, s.as_ptr());
+            XCloseDisplay(dpy);
+        }
+    }
+
+    fn statusloop(&mut self) {
+        setupsignals();
+        let mut i = 0;
+        self.getcmds(-1);
+        while self.status_continue {
+            self.getcmds(i);
+            self.writestatus();
+            sleep(Duration::from_secs(1));
+            i += 1;
+        }
+    }
+}
 
 /// adapted from
 /// https://users.rust-lang.org/t/how-to-use-libcs-signal-function/3067
@@ -29,14 +94,16 @@ fn get_handler(handler: extern "C" fn(c_int)) -> sighandler_t {
 
 extern "C" fn termhandler(_: c_int) {
     unsafe {
-        STATUS_CONTINUE = false;
+        GLOB.status_continue = false;
     }
     std::process::exit(0);
 }
 
 extern "C" fn sighandler(signum: c_int) {
-    getsigcmds(signum - SIGRTMIN());
-    writestatus();
+    unsafe {
+        GLOB.getsigcmds(signum - SIGRTMIN());
+        GLOB.writestatus();
+    }
 }
 
 struct Block {
@@ -76,70 +143,14 @@ fn setupsignals() {
     }
 }
 
-fn getcmds(time: c_int) {
-    for (i, current) in BLOCKS.iter().enumerate() {
-        if current.interval != 0 && time % current.interval as i32 == 0
-            || time == -1
-        {
-            unsafe {
-                STATUSBAR[i] = current.getcmd();
-            }
-        }
-    }
-}
-
-fn getsigcmds(signal: c_int) {
-    for (i, current) in BLOCKS.iter().enumerate() {
-        if current.signal == signal {
-            unsafe {
-                STATUSBAR[i] = current.getcmd();
-            }
-        }
-    }
-}
-
-fn getstatus(s: &mut String, last: &mut String) -> bool {
-    *last = std::mem::take(s);
-    unsafe {
-        *s = STATUSBAR.join("").replace('\n', "");
-    }
-    s != last
-}
-
-/// NOTE: inlined from setroot, can also be pstdout with -p flag, presumably for
-/// debugging
-fn writestatus() {
-    unsafe {
-        // only set root if text has changed
-        if !getstatus(&mut STATUSSTR[0], &mut STATUSSTR[1]) {
-            return;
-        }
-        let dpy = XOpenDisplay(null());
-        let screen = XDefaultScreen(dpy);
-        let root = XRootWindow(dpy, screen);
-        let s = CString::new(STATUSSTR[0].clone()).unwrap();
-        XStoreName(dpy, root, s.as_ptr());
-        XCloseDisplay(dpy);
-    }
-}
-
-fn statusloop() {
-    setupsignals();
-    let mut i = 0;
-    getcmds(-1);
-    while unsafe { STATUS_CONTINUE } {
-        getcmds(i);
-        writestatus();
-        sleep(Duration::from_secs(1));
-        i += 1;
-    }
-}
+const N: usize = BLOCKS.len();
+static mut GLOB: Globals<N> = Globals::new();
 
 fn main() {
     // TODO argument parsing
     unsafe {
         signal(SIGTERM, get_handler(termhandler));
         signal(SIGINT, get_handler(termhandler));
+        GLOB.statusloop();
     }
-    statusloop();
 }
