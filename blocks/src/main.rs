@@ -9,8 +9,8 @@ use std::{
 use config::BLOCKS;
 use libc::{c_uint, c_void, sighandler_t, signal, SIGINT, SIGRTMIN, SIGTERM};
 use x11::xlib::{
-    BadAlloc, BadWindow, Display, Window, XCloseDisplay, XDefaultScreen,
-    XOpenDisplay, XRootWindow, XStoreName,
+    Display, Window, XCloseDisplay, XDefaultScreen, XOpenDisplay, XRootWindow,
+    XStoreName,
 };
 
 use crate::config::DELIM;
@@ -125,12 +125,7 @@ fn writestatus() {
         SCREEN = XDefaultScreen(DPY);
         ROOT = XRootWindow(DPY, SCREEN);
         let s = CString::new(STATUSSTR[0].clone()).unwrap();
-        eprintln!("updating status to `{s:?}`");
-        let ret = XStoreName(DPY, ROOT, s.as_ptr());
-        #[allow(non_upper_case_globals)]
-        if matches!(ret as u8, BadAlloc | BadWindow) {
-            eprintln!("storing name failed");
-        }
+        XStoreName(DPY, ROOT, s.as_ptr());
         XCloseDisplay(DPY);
     }
 }
