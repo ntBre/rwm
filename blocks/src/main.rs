@@ -1,7 +1,7 @@
 use std::{
     ffi::{c_int, CString},
     process::Command,
-    ptr::{null, null_mut},
+    ptr::null,
     thread::sleep,
     time::Duration,
 };
@@ -9,8 +9,7 @@ use std::{
 use config::BLOCKS;
 use libc::{c_uint, c_void, sighandler_t, signal, SIGINT, SIGRTMIN, SIGTERM};
 use x11::xlib::{
-    Display, Window, XCloseDisplay, XDefaultScreen, XOpenDisplay, XRootWindow,
-    XStoreName,
+    XCloseDisplay, XDefaultScreen, XOpenDisplay, XRootWindow, XStoreName,
 };
 
 use crate::config::DELIM;
@@ -21,9 +20,6 @@ static mut STATUS_CONTINUE: bool = true;
 static mut STATUSBAR: [String; BLOCKS.len()] =
     [String::new(), String::new(), String::new()];
 static mut STATUSSTR: [String; 2] = [String::new(), String::new()];
-static mut DPY: *mut Display = null_mut();
-static mut SCREEN: c_int = 0;
-static mut ROOT: Window = 0;
 
 /// adapted from
 /// https://users.rust-lang.org/t/how-to-use-libcs-signal-function/3067
@@ -118,15 +114,12 @@ fn writestatus() {
         if !getstatus(&mut STATUSSTR[0], &mut STATUSSTR[1]) {
             return;
         }
-        let d = XOpenDisplay(null());
-        if !d.is_null() {
-            DPY = d;
-        }
-        SCREEN = XDefaultScreen(DPY);
-        ROOT = XRootWindow(DPY, SCREEN);
+        let dpy = XOpenDisplay(null());
+        let screen = XDefaultScreen(dpy);
+        let root = XRootWindow(dpy, screen);
         let s = CString::new(STATUSSTR[0].clone()).unwrap();
-        XStoreName(DPY, ROOT, s.as_ptr());
-        XCloseDisplay(DPY);
+        XStoreName(dpy, root, s.as_ptr());
+        XCloseDisplay(dpy);
     }
 }
 
