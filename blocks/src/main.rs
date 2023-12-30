@@ -19,7 +19,6 @@ mod config;
 struct Globals<const N: usize> {
     statusbar: [String; N],
     statusstr: [String; 2],
-    status_continue: bool,
 }
 
 impl<const N: usize> Globals<N> {
@@ -28,7 +27,6 @@ impl<const N: usize> Globals<N> {
         Self {
             statusbar: [S; N],
             statusstr: [S; 2],
-            status_continue: true,
         }
     }
 
@@ -75,13 +73,11 @@ impl<const N: usize> Globals<N> {
 
     fn statusloop(&mut self) {
         setupsignals();
-        let mut i = 0;
         self.getcmds(-1);
-        while self.status_continue {
+        for i in 0.. {
             self.getcmds(i);
             self.writestatus();
             sleep(Duration::from_secs(1));
-            i += 1;
         }
     }
 }
@@ -93,9 +89,6 @@ fn get_handler(handler: extern "C" fn(c_int)) -> sighandler_t {
 }
 
 extern "C" fn termhandler(_: c_int) {
-    unsafe {
-        GLOB.status_continue = false;
-    }
     std::process::exit(0);
 }
 
