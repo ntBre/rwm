@@ -316,7 +316,7 @@ impl Drw {
                                 utf8codepoint as u32,
                             ) != 0;
                         if charexists {
-                            let text = String::from((*text).clone());
+                            let text = (*text).clone();
                             self.font_getexts(
                                 curfont,
                                 &text,
