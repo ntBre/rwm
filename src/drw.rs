@@ -191,13 +191,15 @@ impl Drw {
         self.scheme = scm.as_mut_ptr();
     }
 
-    pub(crate) fn textw(&self, stext: &str) -> usize {
+    pub(crate) fn textw(&self, stext: *const String) -> usize {
         unsafe { self.fontset_getwidth(stext) + LRPAD }
     }
 
-    fn fontset_getwidth(&self, text: &str) -> usize {
-        if self.fonts.is_null() || text.is_empty() {
-            return 0;
+    fn fontset_getwidth(&self, text: *const String) -> usize {
+        unsafe {
+            if self.fonts.is_null() || (*text).is_empty() {
+                return 0;
+            }
         }
         self.text(0, 0, 0, 0, 0, text, 0)
     }
@@ -223,7 +225,7 @@ impl Drw {
         mut w: usize,
         h: usize,
         lpad: usize,
-        text: &str,
+        text: *const String,
         invert: c_int,
     ) -> usize {
         let mut ty;
@@ -248,14 +250,16 @@ impl Drw {
         let mut charexists = false;
         let mut overflow = false;
 
-        if (render && (self.scheme.is_null() || w == 0))
-            || text.is_empty()
-            || self.fonts.is_null()
-        {
-            return 0;
-        }
+        let ellipsis = String::from("...");
 
         unsafe {
+            if (render && (self.scheme.is_null() || w == 0))
+                || (*text).is_empty()
+                || self.fonts.is_null()
+            {
+                return 0;
+            }
+
             if !render {
                 w = if invert != 0 { invert } else { !invert } as usize;
             } else {
@@ -290,7 +294,7 @@ impl Drw {
 
             usedfont = self.fonts;
             if ELLIPSIS_WIDTH == 0 && render {
-                ELLIPSIS_WIDTH = self.fontset_getwidth("...");
+                ELLIPSIS_WIDTH = self.fontset_getwidth(&ellipsis);
             }
 
             let mut text_idx = 0;
@@ -300,7 +304,7 @@ impl Drw {
                 utf8strlen = 0;
                 utf8str = text;
                 nextfont = std::ptr::null_mut();
-                for ch in text.chars() {
+                for ch in (*text).chars() {
                     utf8charlen = ch.len_utf8();
                     utf8codepoint = ch as usize;
                     curfont = self.fonts;
@@ -312,9 +316,10 @@ impl Drw {
                                 utf8codepoint as u32,
                             ) != 0;
                         if charexists {
+                            let text = String::from((*text).clone());
                             self.font_getexts(
                                 curfont,
-                                text,
+                                &text,
                                 utf8charlen,
                                 &mut tmpw,
                                 std::ptr::null_mut(),
@@ -359,7 +364,7 @@ impl Drw {
                         ty = y as usize
                             + (h - (*usedfont).h) / 2
                             + (*(*usedfont).xfont).ascent as usize;
-                        let s = CString::new(utf8str).unwrap();
+                        let s = CString::new((*utf8str).clone()).unwrap();
                         XftDrawStringUtf8(
                             d,
                             self.scheme.offset(if invert != 0 {
@@ -380,10 +385,12 @@ impl Drw {
                 }
 
                 if render && overflow {
-                    self.text(ellipsis_x, y, ellipsis_w, h, 0, "...", invert);
+                    self.text(
+                        ellipsis_x, y, ellipsis_w, h, 0, &ellipsis, invert,
+                    );
                 }
 
-                if text_idx >= text.len() || overflow {
+                if text_idx >= (*text).len() || overflow {
                     break;
                 } else if !nextfont.is_null() {
                     charexists = false;

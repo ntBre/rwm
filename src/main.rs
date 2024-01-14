@@ -10,7 +10,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::os::fd::AsRawFd;
 use std::path::Path;
 use std::process::Command;
-use std::ptr::null_mut;
+use std::ptr::{addr_of, addr_of_mut, null_mut};
 
 use config::{
     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
@@ -1259,7 +1259,7 @@ pub fn spawn(_dpy: &Display, arg: Arg) {
             let r: &'static str = format!("{}", (*SELMON).num).leak();
             let r: Box<&'static str> = Box::new(r);
             let mut r: &'static &'static str = Box::leak(r);
-            std::mem::swap(&mut DMENUMON, &mut r);
+            std::ptr::swap(addr_of_mut!(DMENUMON), &mut r);
         }
         Command::new(s[0])
             .args(&s[1..])
@@ -1840,7 +1840,7 @@ fn unfocus(dpy: &Display, c: *mut Client, setfocus: bool) {
 
 fn updatestatus(dpy: &Display) {
     unsafe {
-        let c = gettextprop(dpy, ROOT, XA_WM_NAME, &mut STEXT);
+        let c = gettextprop(dpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
         if !c {
             STEXT = "rwm-0.0.1".to_owned();
         }
@@ -1868,14 +1868,14 @@ fn drawbar(m: *mut Monitor) {
         if m == SELMON {
             // status is only drawn on selected monitor
             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-            tw = drw.textw(&STEXT) - LRPAD + 2; // 2px right padding
+            tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
             drw.text(
                 ((*m).ww - tw as i16) as i32,
                 0,
                 tw,
                 BH as usize,
                 0,
-                &STEXT,
+                addr_of!(STEXT),
                 0,
             );
         }
@@ -1890,7 +1890,8 @@ fn drawbar(m: *mut Monitor) {
         }
 
         for i in 0..TAGS.len() {
-            w = drw.textw(TAGS[i]);
+            let text = TAGS[i].to_owned();
+            w = drw.textw(&text);
             drw.setscheme(
                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
                     Scheme::Sel as usize
@@ -1904,7 +1905,7 @@ fn drawbar(m: *mut Monitor) {
                 w,
                 BH as usize,
                 LRPAD / 2,
-                TAGS[i],
+                &text,
                 (urg as i32) & 1 << i,
             );
 
@@ -1961,12 +1962,12 @@ fn gettextprop(
     dpy: &Display,
     w: Window,
     atom: Atom,
-    text: &mut String,
+    text: *mut String,
 ) -> bool {
-    if text.is_empty() {
-        return false;
-    }
     unsafe {
+        if (*text).is_empty() {
+            return false;
+        }
         let mut name = MaybeUninit::uninit();
         let c = XGetTextProperty(dpy.inner, w, name.as_mut_ptr(), atom);
         let name = name.assume_init();
@@ -2867,10 +2868,12 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
             let mut i = 0;
             // do while with ++i in condition
             let drw = &DRW.as_ref().unwrap();
-            x += drw.textw(TAGS[i]);
+            let text = TAGS[i].to_owned();
+            x += drw.textw(&text);
             i += 1;
             while ev.x >= x as i32 && i < TAGS.len() {
-                x += drw.textw(TAGS[i]);
+                let text = TAGS[i].to_owned();
+                x += drw.textw(&text);
                 i += 1;
             }
             if i < TAGS.len() {
@@ -2878,7 +2881,8 @@ fn buttonpress(dpy: &Display, e: *mut XEvent) {
                 arg = Arg::Uint(1 << i);
             } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol)) as i32 {
                 click = Clk::LtSymbol;
-            } else if ev.x > ((*SELMON).ww as usize - drw.textw(&STEXT)) as i32
+            } else if ev.x
+                > ((*SELMON).ww as usize - drw.textw(addr_of!(STEXT))) as i32
             {
                 click = Clk::StatusText;
             } else {
