@@ -539,8 +539,8 @@ fn setup(dpy: &mut Display) {
         updategeom(dpy);
 
         // init atoms - I really hope these CStrings live long enough.
-        let utf8string =
-            XInternAtom(dpy.inner, "UTF8_STRING".as_ptr().cast(), False);
+        let utf8_string: CString = CString::new("UTF8_STRING").unwrap();
+        let utf8string = XInternAtom(dpy.inner, utf8_string.as_ptr(), False);
 
         for (k, s) in [
             (WM::Protocols, "WM_PROTOCOLS"),
@@ -548,7 +548,8 @@ fn setup(dpy: &mut Display) {
             (WM::State, "WM_STATE"),
             (WM::TakeFocus, "WM_TAKE_FOCUS"),
         ] {
-            let v = XInternAtom(dpy.inner, s.as_ptr().cast(), False);
+            let s = CString::new(s).unwrap();
+            let v = XInternAtom(dpy.inner, s.as_ptr(), False);
             if v == BadAlloc as u64 || v == BadValue as u64 {
                 panic!("XInternAtom failed with {v}");
             }
@@ -566,7 +567,8 @@ fn setup(dpy: &mut Display) {
             (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG"),
             (Net::ClientList, "_NET_CLIENT_LIST"),
         ] {
-            let v = XInternAtom(dpy.inner, s.as_ptr().cast(), False);
+            let s = CString::new(s).unwrap();
+            let v = XInternAtom(dpy.inner, s.as_ptr(), False);
             if v == BadAlloc as u64 || v == BadValue as u64 {
                 panic!("XInternAtom failed with {v}");
             }
@@ -601,6 +603,7 @@ fn setup(dpy: &mut Display) {
             &mut (WMCHECKWIN as u8),
             1,
         );
+        let rwm = CString::new("rwm").unwrap();
         xchangeproperty(
             dpy,
             WMCHECKWIN,
@@ -608,7 +611,7 @@ fn setup(dpy: &mut Display) {
             utf8string,
             8,
             PropModeReplace,
-            "rwm".as_ptr() as *mut _,
+            rwm.as_ptr().cast_mut().cast(),
             3,
         );
         xchangeproperty(
@@ -2013,9 +2016,10 @@ fn updatebars(dpy: &Display) {
         colormap: 0,
         cursor: 0,
     };
+    let rwm = CString::new("rwm").unwrap();
     let mut ch = XClassHint {
-        res_name: "rwm".as_ptr() as *mut _,
-        res_class: "rwm".as_ptr() as *mut _,
+        res_name: rwm.as_ptr().cast_mut(),
+        res_class: rwm.as_ptr().cast_mut(),
     };
 
     unsafe {

@@ -359,6 +359,7 @@ impl Drw {
                         ty = y as usize
                             + (h - (*usedfont).h) / 2
                             + (*(*usedfont).xfont).ascent as usize;
+                        let s = CString::new(utf8str).unwrap();
                         XftDrawStringUtf8(
                             d,
                             self.scheme.offset(if invert != 0 {
@@ -370,7 +371,7 @@ impl Drw {
                             (*usedfont).xfont,
                             x,
                             ty as i32,
-                            utf8str.as_ptr(),
+                            s.as_ptr().cast(),
                             utf8strlen as i32,
                         );
                     }
