@@ -11,3 +11,11 @@ clippy:
 
 doc:
 	cargo doc --open
+
+include config.mk
+
+SRC = $(addprefix dwm/,drw.c dwm.c util.c)
+
+dwm/libdwm.so: $(SRC)
+	cd dwm ; \
+	clang -fPIC -shared -o $(notdir $@ $^) $(CPPFLAGS) $(LDFLAGS)  $(INCS)
