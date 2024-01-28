@@ -1,7 +1,6 @@
 //! tiling window manager based on dwm
 
 #![allow(unused)]
-
 #![feature(vec_into_raw_parts, lazy_cell)]
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
@@ -3339,32 +3338,50 @@ mod config;
 mod drw;
 mod layouts;
 
-fn main() {
-    env_logger::init();
-    let home = &std::env::var("HOME").unwrap();
-    let home = Path::new(home);
-    let outfile =
-        File::create(home.join("rwm.out")).expect("failed to create outfile");
-    let logfile =
-        File::create(home.join("rwm.err")).expect("failed to create log file");
-    let out_fd = outfile.as_raw_fd();
-    let log_fd = logfile.as_raw_fd();
-    unsafe {
-        libc::dup2(out_fd, 1);
-        libc::dup2(log_fd, 2);
-    }
+// fn main() {
+//     env_logger::init();
+//     let home = &std::env::var("HOME").unwrap();
+//     let home = Path::new(home);
+//     let outfile =
+//         File::create(home.join("rwm.out")).expect("failed to create outfile");
+//     let logfile =
+//         File::create(home.join("rwm.err")).expect("failed to create log file");
+//     let out_fd = outfile.as_raw_fd();
+//     let log_fd = logfile.as_raw_fd();
+//     unsafe {
+//         libc::dup2(out_fd, 1);
+//         libc::dup2(log_fd, 2);
+//     }
 
-    let mut mdpy = Display::open();
-    checkotherwm(&mdpy);
-    setup(&mut mdpy);
-    scan(&mdpy);
-    //unsafe {
-     //   bindgen::dpy = mdpy.inner.cast();
-      //  bindgen::run();
-    //}
-    mrun(&mdpy);
-    cleanup(&mdpy);
+//     let mut mdpy = Display::open();
+//     checkotherwm(&mdpy);
+//     setup(&mut mdpy);
+//     scan(&mdpy);
+//     //unsafe {
+//      //   bindgen::dpy = mdpy.inner.cast();
+//       //  bindgen::run();
+//     //}
+//     mrun(&mdpy);
+//     cleanup(&mdpy);
+//     unsafe {
+//         XCloseDisplay(mdpy.inner);
+//     }
+// }
+
+fn main() {
     unsafe {
-        XCloseDisplay(mdpy.inner);
+        bindgen::dpy = bindgen::XOpenDisplay(std::ptr::null_mut());
+        bindgen::checkotherwm();
+        eprintln!("checked other wm");
+        bindgen::setup();
+        eprintln!("ran setup");
+        bindgen::scan();
+        eprintln!("ran scan");
+        bindgen::run();
+        eprintln!("running");
+        bindgen::cleanup();
+        eprintln!("cleaned up");
+        bindgen::XCloseDisplay(bindgen::dpy);
+        eprintln!("closed the display");
     }
 }
