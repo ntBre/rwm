@@ -75,6 +75,7 @@ use x11::xlib::{
 use x11::xlib::{BadAlloc, BadValue, Display as XDisplay};
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
+use crate::bindgen::dpy;
 use crate::config::{
     BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
 };
@@ -3338,39 +3339,17 @@ mod config;
 mod drw;
 mod layouts;
 
-// fn main() {
-//     env_logger::init();
-//     let home = &std::env::var("HOME").unwrap();
-//     let home = Path::new(home);
-//     let outfile =
-//         File::create(home.join("rwm.out")).expect("failed to create outfile");
-//     let logfile =
-//         File::create(home.join("rwm.err")).expect("failed to create log file");
-//     let out_fd = outfile.as_raw_fd();
-//     let log_fd = logfile.as_raw_fd();
-//     unsafe {
-//         libc::dup2(out_fd, 1);
-//         libc::dup2(log_fd, 2);
-//     }
-
-//     let mut mdpy = Display::open();
-//     checkotherwm(&mdpy);
-//     setup(&mut mdpy);
-//     scan(&mdpy);
-//     //unsafe {
-//      //   bindgen::dpy = mdpy.inner.cast();
-//       //  bindgen::run();
-//     //}
-//     mrun(&mdpy);
-//     cleanup(&mdpy);
-//     unsafe {
-//         XCloseDisplay(mdpy.inner);
-//     }
-// }
+fn die(msg: &str) {
+    eprintln!("{}", msg);
+    std::process::exit(1);
+}
 
 fn main() {
     unsafe {
-        bindgen::dpy = bindgen::XOpenDisplay(std::ptr::null_mut());
+        dpy = bindgen::XOpenDisplay(std::ptr::null_mut());
+        if dpy.is_null() {
+            die("rwm: cannot open display");
+        }
         bindgen::checkotherwm();
         eprintln!("checked other wm");
         bindgen::setup();
@@ -3381,7 +3360,7 @@ fn main() {
         eprintln!("running");
         bindgen::cleanup();
         eprintln!("cleaned up");
-        bindgen::XCloseDisplay(bindgen::dpy);
+        bindgen::XCloseDisplay(dpy);
         eprintln!("closed the display");
     }
 }
