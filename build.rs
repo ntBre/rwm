@@ -3,7 +3,7 @@ use std::{env, path::PathBuf};
 fn main() {
     println!("cargo:rustc-link-arg=-Ldwm");
     println!("cargo:rustc-link-arg=-ldwm");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,$ORIGIN/../dwm");
+    println!("cargo:rustc-link-arg=-Wl,-rpath,/home/brent/packages/rwm/dwm");
 
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
