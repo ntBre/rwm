@@ -8,7 +8,7 @@ members = ["blocks"]
 
 [dependencies]
 x11 = { version = "2.21.0", features = ["xlib", "xft", "xinerama"] }
-libc = "0.2.152"
+libc = "0.2.153"
 yeslogic-fontconfig-sys = "5.0.0"
 env_logger = "0.11.0"
 log = "0.4.19"
