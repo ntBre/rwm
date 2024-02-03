@@ -22,10 +22,10 @@ use std::path::Path;
 use std::process::Command;
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 
-use config::{
-    COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
-};
-use drw::Drw;
+// use config::{
+//     COLORS, DMENUMON, FONTS, KEYS, LAYOUTS, MFACT, NMASTER, SHOWBAR, TOPBAR,
+// };
+// use drw::Drw;
 use libc::{
     abs, c_long, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset,
     waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
@@ -76,9 +76,9 @@ use x11::xlib::{BadAlloc, BadValue, Display as XDisplay};
 use x11::xlib::{XErrorEvent, XOpenDisplay, XSetErrorHandler};
 
 use crate::bindgen::dpy;
-use crate::config::{
-    BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
-};
+// use crate::config::{
+//     BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
+// };
 
 pub struct Display {
     inner: *mut XDisplay,
@@ -164,7 +164,7 @@ static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
 static mut MONS: *mut Monitor = std::ptr::null_mut();
 
-static mut DRW: *mut Drw = std::ptr::null_mut();
+// static mut DRW: *mut Drw = std::ptr::null_mut();
 
 static mut SCREEN: i32 = 0;
 
@@ -195,7 +195,7 @@ static mut LRPAD: usize = 0;
 static mut NUMLOCKMASK: u32 = 0;
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
-const TAGMASK: usize = (1 << TAGS.len()) - 1;
+// const TAGMASK: usize = (1 << TAGS.len()) - 1;
 const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 #[derive(Clone)]
@@ -376,34 +376,34 @@ pub struct Monitor {
 }
 
 impl Monitor {
-    fn new() -> Self {
-        Self {
-            ltsymbol: LAYOUTS[0].symbol.to_owned(),
-            mfact: MFACT,
-            nmaster: NMASTER,
-            num: 0,
-            by: 0,
-            mx: 0,
-            my: 0,
-            mw: 0,
-            mh: 0,
-            wx: 0,
-            wy: 0,
-            ww: 0,
-            wh: 0,
-            seltags: 0,
-            sellt: 0,
-            tagset: [1, 1],
-            showbar: SHOWBAR,
-            topbar: TOPBAR,
-            clients: std::ptr::null_mut(),
-            sel: std::ptr::null_mut(),
-            stack: std::ptr::null_mut(),
-            next: std::ptr::null_mut(),
-            barwin: 0,
-            lt: [&LAYOUTS[0], &LAYOUTS[1 % LAYOUTS.len()]],
-        }
-    }
+    // fn new() -> Self {
+    //     Self {
+    //         ltsymbol: LAYOUTS[0].symbol.to_owned(),
+    //         mfact: MFACT,
+    //         nmaster: NMASTER,
+    //         num: 0,
+    //         by: 0,
+    //         mx: 0,
+    //         my: 0,
+    //         mw: 0,
+    //         mh: 0,
+    //         wx: 0,
+    //         wy: 0,
+    //         ww: 0,
+    //         wh: 0,
+    //         seltags: 0,
+    //         sellt: 0,
+    //         tagset: [1, 1],
+    //         showbar: SHOWBAR,
+    //         topbar: TOPBAR,
+    //         clients: std::ptr::null_mut(),
+    //         sel: std::ptr::null_mut(),
+    //         stack: std::ptr::null_mut(),
+    //         next: std::ptr::null_mut(),
+    //         barwin: 0,
+    //         lt: [&LAYOUTS[0], &LAYOUTS[1 % LAYOUTS.len()]],
+    //     }
+    // }
 }
 
 pub struct Rule {
@@ -435,10 +435,10 @@ impl Rule {
     }
 }
 
-fn createmon() -> *mut Monitor {
-    let mon = Monitor::new();
-    Box::into_raw(Box::new(mon))
-}
+// fn createmon() -> *mut Monitor {
+//     let mon = Monitor::new();
+//     Box::into_raw(Box::new(mon))
+// }
 
 fn checkotherwm() {
     unsafe {
@@ -696,55 +696,55 @@ fn xchangewindowattributes(
     }
 }
 
-fn focus(mdpy: &Display, c: *mut Client) {
-    unsafe {
-        if c.is_null() || !is_visible(c) {
-            let mut c = (*SELMON).stack;
-            while !c.is_null() && !is_visible(c) {
-                c = (*c).snext;
-            }
-        }
-        if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-            unfocus(mdpy, (*SELMON).sel, false);
-        }
-        if !c.is_null() {
-            if (*c).mon != SELMON {
-                SELMON = (*c).mon;
-            }
-            if (*c).isurgent {
-                seturgent(mdpy, c, false);
-            }
-            detachstack(c);
-            attachstack(c);
-            grabbuttons(mdpy, c, true);
-            XSetWindowBorder(
-                mdpy.inner,
-                (*c).win,
-                SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
-            );
-            setfocus(mdpy, c);
-        } else {
-            XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-            XDeleteProperty(
-                mdpy.inner,
-                ROOT,
-                NETATOM[Net::ActiveWindow as usize],
-            );
-        }
-        (*SELMON).sel = c;
-        drawbars();
-    }
-}
+// fn focus(mdpy: &Display, c: *mut Client) {
+//     unsafe {
+//         if c.is_null() || !is_visible(c) {
+//             let mut c = (*SELMON).stack;
+//             while !c.is_null() && !is_visible(c) {
+//                 c = (*c).snext;
+//             }
+//         }
+//         if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
+//             unfocus(mdpy, (*SELMON).sel, false);
+//         }
+//         if !c.is_null() {
+//             if (*c).mon != SELMON {
+//                 SELMON = (*c).mon;
+//             }
+//             if (*c).isurgent {
+//                 seturgent(mdpy, c, false);
+//             }
+//             detachstack(c);
+//             attachstack(c);
+//             grabbuttons(mdpy, c, true);
+//             XSetWindowBorder(
+//                 mdpy.inner,
+//                 (*c).win,
+//                 SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
+//             );
+//             setfocus(mdpy, c);
+//         } else {
+//             XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+//             XDeleteProperty(
+//                 mdpy.inner,
+//                 ROOT,
+//                 NETATOM[Net::ActiveWindow as usize],
+//             );
+//         }
+//         (*SELMON).sel = c;
+//         drawbars();
+//     }
+// }
 
-fn drawbars() {
-    unsafe {
-        let mut m = MONS;
-        while !m.is_null() {
-            drawbar(m);
-            m = (*m).next;
-        }
-    }
-}
+// fn drawbars() {
+//     unsafe {
+//         let mut m = MONS;
+//         while !m.is_null() {
+//             drawbar(m);
+//             m = (*m).next;
+//         }
+//     }
+// }
 
 #[allow(non_upper_case_globals)]
 fn xchangeproperty(
@@ -825,89 +825,89 @@ fn sendevent(mdpy: &Display, c: *mut Client, proto: Atom) -> bool {
     }
 }
 
-fn grabbuttons(mdpy: &Display, c: *mut Client, focused: bool) {
-    updatenumlockmask(mdpy);
-    unsafe {
-        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-        XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-        if !focused {
-            XGrabButton(
-                mdpy.inner,
-                AnyButton as u32,
-                AnyModifier,
-                (*c).win,
-                False,
-                BUTTONMASK as u32,
-                GrabModeSync,
-                GrabModeSync,
-                0,
-                0,
-            );
-        }
-        for i in 0..BUTTONS.len() {
-            if BUTTONS[i].click == Clk::ClientWin {
-                for j in 0..modifiers.len() {
-                    XGrabButton(
-                        mdpy.inner,
-                        BUTTONS[i].button,
-                        BUTTONS[i].mask | modifiers[j],
-                        (*c).win,
-                        False,
-                        BUTTONMASK as u32,
-                        GrabModeAsync,
-                        GrabModeSync,
-                        0,
-                        0,
-                    );
-                }
-            }
-        }
-    }
-}
+// fn grabbuttons(mdpy: &Display, c: *mut Client, focused: bool) {
+//     updatenumlockmask(mdpy);
+//     unsafe {
+//         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+//         XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
+//         if !focused {
+//             XGrabButton(
+//                 mdpy.inner,
+//                 AnyButton as u32,
+//                 AnyModifier,
+//                 (*c).win,
+//                 False,
+//                 BUTTONMASK as u32,
+//                 GrabModeSync,
+//                 GrabModeSync,
+//                 0,
+//                 0,
+//             );
+//         }
+//         for i in 0..BUTTONS.len() {
+//             if BUTTONS[i].click == Clk::ClientWin {
+//                 for j in 0..modifiers.len() {
+//                     XGrabButton(
+//                         mdpy.inner,
+//                         BUTTONS[i].button,
+//                         BUTTONS[i].mask | modifiers[j],
+//                         (*c).win,
+//                         False,
+//                         BUTTONMASK as u32,
+//                         GrabModeAsync,
+//                         GrabModeSync,
+//                         0,
+//                         0,
+//                     );
+//                 }
+//             }
+//         }
+//     }
+// }
 
-pub fn setlayout(mdpy: &Display, arg: Arg) {
-    unsafe {
-        if let Arg::Layout(lt) = arg {
-            if lt as *const _ != (*SELMON).lt[(*SELMON).sellt] {
-                (*SELMON).sellt ^= 1;
-            }
-            (*SELMON).lt[(*SELMON).sellt] = lt;
-        } else {
-            // same as inner if above but not sure how to chain them otherwise
-            (*SELMON).sellt ^= 1;
-        }
-        (*SELMON).ltsymbol = (*(*SELMON).lt[(*SELMON).sellt]).symbol.to_owned();
-        if !(*SELMON).sel.is_null() {
-            arrange(mdpy, SELMON);
-        } else {
-            drawbar(SELMON);
-        }
-    }
-}
+// pub fn setlayout(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         if let Arg::Layout(lt) = arg {
+//             if lt as *const _ != (*SELMON).lt[(*SELMON).sellt] {
+//                 (*SELMON).sellt ^= 1;
+//             }
+//             (*SELMON).lt[(*SELMON).sellt] = lt;
+//         } else {
+//             // same as inner if above but not sure how to chain them otherwise
+//             (*SELMON).sellt ^= 1;
+//         }
+//         (*SELMON).ltsymbol = (*(*SELMON).lt[(*SELMON).sellt]).symbol.to_owned();
+//         if !(*SELMON).sel.is_null() {
+//             arrange(mdpy, SELMON);
+//         } else {
+//             drawbar(SELMON);
+//         }
+//     }
+// }
 
-fn arrange(mdpy: &Display, mut m: *mut Monitor) {
-    unsafe {
-        if !m.is_null() {
-            showhide(mdpy, (*m).stack);
-        } else {
-            m = MONS;
-            while !m.is_null() {
-                showhide(mdpy, (*m).stack);
-                m = (*m).next;
-            }
-        }
+// fn arrange(mdpy: &Display, mut m: *mut Monitor) {
+//     unsafe {
+//         if !m.is_null() {
+//             showhide(mdpy, (*m).stack);
+//         } else {
+//             m = MONS;
+//             while !m.is_null() {
+//                 showhide(mdpy, (*m).stack);
+//                 m = (*m).next;
+//             }
+//         }
 
-        if !m.is_null() {
-            arrangemon(mdpy, m);
-            restack(mdpy, m);
-        } else {
-            m = MONS;
-            while !m.is_null() {
-                arrangemon(mdpy, m);
-            }
-        }
-    }
-}
+//         if !m.is_null() {
+//             arrangemon(mdpy, m);
+//             restack(mdpy, m);
+//         } else {
+//             m = MONS;
+//             while !m.is_null() {
+//                 arrangemon(mdpy, m);
+//             }
+//         }
+//     }
+// }
 
 fn arrangemon(mdpy: &Display, m: *mut Monitor) {
     unsafe {
@@ -919,80 +919,80 @@ fn arrangemon(mdpy: &Display, m: *mut Monitor) {
     }
 }
 
-fn restack(mdpy: &Display, m: *mut Monitor) {
-    drawbar(m);
-    unsafe {
-        if (*m).sel.is_null() {
-            return;
-        }
-        if (*(*m).sel).isfloating {
-            // supposed to be or arrange is null, but we only have empty arrange
-            // instead
-            XRaiseWindow(mdpy.inner, (*(*m).sel).win);
-        }
-        let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-        {
-            let wc = wc.as_mut_ptr();
-            (*wc).stack_mode = Below;
-            (*wc).sibling = (*m).barwin;
-        }
-        let mut wc = wc.assume_init();
-        let mut c = (*m).stack;
-        while !c.is_null() {
-            if !(*c).isfloating && is_visible(c) {
-                XConfigureWindow(
-                    mdpy.inner,
-                    (*c).win,
-                    (CWSibling | CWStackMode) as u32,
-                    &mut wc as *mut _,
-                );
-                wc.sibling = (*c).win;
-            }
-            c = (*c).snext;
-        }
-        XSync(mdpy.inner, False);
-        let mut ev: XEvent = MaybeUninit::uninit().assume_init();
-        while XCheckMaskEvent(mdpy.inner, EnterWindowMask, &mut ev as *mut _)
-            != 0
-        {}
-    }
-}
+// fn restack(mdpy: &Display, m: *mut Monitor) {
+//     drawbar(m);
+//     unsafe {
+//         if (*m).sel.is_null() {
+//             return;
+//         }
+//         if (*(*m).sel).isfloating {
+//             // supposed to be or arrange is null, but we only have empty arrange
+//             // instead
+//             XRaiseWindow(mdpy.inner, (*(*m).sel).win);
+//         }
+//         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+//         {
+//             let wc = wc.as_mut_ptr();
+//             (*wc).stack_mode = Below;
+//             (*wc).sibling = (*m).barwin;
+//         }
+//         let mut wc = wc.assume_init();
+//         let mut c = (*m).stack;
+//         while !c.is_null() {
+//             if !(*c).isfloating && is_visible(c) {
+//                 XConfigureWindow(
+//                     mdpy.inner,
+//                     (*c).win,
+//                     (CWSibling | CWStackMode) as u32,
+//                     &mut wc as *mut _,
+//                 );
+//                 wc.sibling = (*c).win;
+//             }
+//             c = (*c).snext;
+//         }
+//         XSync(mdpy.inner, False);
+//         let mut ev: XEvent = MaybeUninit::uninit().assume_init();
+//         while XCheckMaskEvent(mdpy.inner, EnterWindowMask, &mut ev as *mut _)
+//             != 0
+//         {}
+//     }
+// }
 
-fn showhide(mdpy: &Display, c: *mut Client) {
-    if c.is_null() {
-        return;
-    }
-    if is_visible(c) {
-        // show clients top down
-        unsafe {
-            XMoveWindow(mdpy.inner, (*c).win, (*c).x, (*c).y);
-            if (*c).isfloating && !(*c).isfullscreen {
-                resize(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
-            }
-            showhide(mdpy, (*c).snext);
-        }
-    } else {
-        // hide clients bottom up
-        unsafe {
-            showhide(mdpy, (*c).snext);
-            XMoveWindow(mdpy.inner, (*c).win, width(c) * -2, (*c).y);
-        }
-    }
-}
+// fn showhide(mdpy: &Display, c: *mut Client) {
+//     if c.is_null() {
+//         return;
+//     }
+//     if is_visible(c) {
+//         // show clients top down
+//         unsafe {
+//             XMoveWindow(mdpy.inner, (*c).win, (*c).x, (*c).y);
+//             if (*c).isfloating && !(*c).isfullscreen {
+//                 resize(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
+//             }
+//             showhide(mdpy, (*c).snext);
+//         }
+//     } else {
+//         // hide clients bottom up
+//         unsafe {
+//             showhide(mdpy, (*c).snext);
+//             XMoveWindow(mdpy.inner, (*c).win, width(c) * -2, (*c).y);
+//         }
+//     }
+// }
 
-fn resize(
-    mdpy: &Display,
-    c: *mut Client,
-    mut x: i32,
-    mut y: i32,
-    mut w: i32,
-    mut h: i32,
-    interact: bool,
-) {
-    if applysizehints(mdpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
-        resizeclient(mdpy, c, x, y, w, h);
-    }
-}
+// fn resize(
+//     mdpy: &Display,
+//     c: *mut Client,
+//     mut x: i32,
+//     mut y: i32,
+//     mut w: i32,
+//     mut h: i32,
+//     interact: bool,
+// ) {
+//     if applysizehints(mdpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
+//         resizeclient(mdpy, c, x, y, w, h);
+//     }
+// }
 
 fn resizeclient(
     mdpy: &Display,
@@ -1061,97 +1061,97 @@ fn configure(mdpy: &Display, c: *mut Client) {
     }
 }
 
-fn applysizehints(
-    mdpy: &Display,
-    c: *mut Client,
-    x: &mut i32,
-    y: &mut i32,
-    w: &mut i32,
-    h: &mut i32,
-    interact: bool,
-) -> bool {
-    unsafe {
-        let m = (*c).mon;
-        // set minimum possible
-        *w = 1.max(*w);
-        *h = 1.max(*h);
-        if interact {
-            if *x > SW {
-                *x = SW - width(c);
-            }
-            if *y > SH {
-                *y = SH - height(c);
-            }
-            if *x + *w + 2 * (*c).bw < 0 {
-                *x = 0;
-            }
-            if *y + *h + 2 * (*c).bw < 0 {
-                *y = 0;
-            }
-        } else {
-            if *x >= ((*m).wx + (*m).ww) as i32 {
-                *x = ((*m).wx + (*m).ww - width(c) as i16) as i32;
-            }
-            if *y >= ((*m).wy + (*m).wh) as i32 {
-                *y = ((*m).wy + (*m).wh - height(c) as i16) as i32;
-            }
-            if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
-                *x = (*m).wx as i32;
-            }
-            if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
-                *y = (*m).wy as i32;
-            }
-        }
-        if *h < BH as i32 {
-            *h = BH as i32;
-        }
-        if *w < BH as i32 {
-            *w = BH as i32;
-        }
-        if RESIZEHINTS || (*c).isfloating {
-            if !(*c).hintsvalid {
-                updatesizehints(mdpy, c);
-            }
-            /* see last two sentences in ICCCM 4.1.2.3 */
-            let baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
-            if !baseismin {
-                /* temporarily remove base dimensions */
-                *w -= (*c).basew;
-                *h -= (*c).baseh;
-            }
-            /* adjust for aspect limits */
-            if (*c).mina > 0.0 && (*c).maxa > 0.0 {
-                if (*c).maxa < *w as f64 / *h as f64 {
-                    *w = (*h as f64 * (*c).maxa + 0.5) as i32;
-                } else if (*c).mina < *h as f64 / *w as f64 {
-                    *h = (*w as f64 * (*c).mina + 0.5) as i32;
-                }
-            }
-            if baseismin {
-                /* increment calculation requires this */
-                *w -= (*c).basew;
-                *h -= (*c).baseh;
-            }
-            /* adjust for increment value */
-            if (*c).incw != 0 {
-                *w -= *w % (*c).incw;
-            }
-            if (*c).inch != 0 {
-                *h -= *h % (*c).inch;
-            }
-            /* restore base dimensions */
-            *w = max(*w + (*c).basew, (*c).minw);
-            *h = max(*h + (*c).baseh, (*c).minh);
-            if (*c).maxw != 0 {
-                *w = min(*w, (*c).maxw);
-            }
-            if (*c).maxh != 0 {
-                *h = min(*h, (*c).maxh);
-            }
-        }
-        *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
-    }
-}
+// fn applysizehints(
+//     mdpy: &Display,
+//     c: *mut Client,
+//     x: &mut i32,
+//     y: &mut i32,
+//     w: &mut i32,
+//     h: &mut i32,
+//     interact: bool,
+// ) -> bool {
+//     unsafe {
+//         let m = (*c).mon;
+//         // set minimum possible
+//         *w = 1.max(*w);
+//         *h = 1.max(*h);
+//         if interact {
+//             if *x > SW {
+//                 *x = SW - width(c);
+//             }
+//             if *y > SH {
+//                 *y = SH - height(c);
+//             }
+//             if *x + *w + 2 * (*c).bw < 0 {
+//                 *x = 0;
+//             }
+//             if *y + *h + 2 * (*c).bw < 0 {
+//                 *y = 0;
+//             }
+//         } else {
+//             if *x >= ((*m).wx + (*m).ww) as i32 {
+//                 *x = ((*m).wx + (*m).ww - width(c) as i16) as i32;
+//             }
+//             if *y >= ((*m).wy + (*m).wh) as i32 {
+//                 *y = ((*m).wy + (*m).wh - height(c) as i16) as i32;
+//             }
+//             if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
+//                 *x = (*m).wx as i32;
+//             }
+//             if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
+//                 *y = (*m).wy as i32;
+//             }
+//         }
+//         if *h < BH as i32 {
+//             *h = BH as i32;
+//         }
+//         if *w < BH as i32 {
+//             *w = BH as i32;
+//         }
+//         if RESIZEHINTS || (*c).isfloating {
+//             if !(*c).hintsvalid {
+//                 updatesizehints(mdpy, c);
+//             }
+//             /* see last two sentences in ICCCM 4.1.2.3 */
+//             let baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
+//             if !baseismin {
+//                 /* temporarily remove base dimensions */
+//                 *w -= (*c).basew;
+//                 *h -= (*c).baseh;
+//             }
+//             /* adjust for aspect limits */
+//             if (*c).mina > 0.0 && (*c).maxa > 0.0 {
+//                 if (*c).maxa < *w as f64 / *h as f64 {
+//                     *w = (*h as f64 * (*c).maxa + 0.5) as i32;
+//                 } else if (*c).mina < *h as f64 / *w as f64 {
+//                     *h = (*w as f64 * (*c).mina + 0.5) as i32;
+//                 }
+//             }
+//             if baseismin {
+//                 /* increment calculation requires this */
+//                 *w -= (*c).basew;
+//                 *h -= (*c).baseh;
+//             }
+//             /* adjust for increment value */
+//             if (*c).incw != 0 {
+//                 *w -= *w % (*c).incw;
+//             }
+//             if (*c).inch != 0 {
+//                 *h -= *h % (*c).inch;
+//             }
+//             /* restore base dimensions */
+//             *w = max(*w + (*c).basew, (*c).minw);
+//             *h = max(*h + (*c).baseh, (*c).minh);
+//             if (*c).maxw != 0 {
+//                 *w = min(*w, (*c).maxw);
+//             }
+//             if (*c).maxh != 0 {
+//                 *h = min(*h, (*c).maxh);
+//             }
+//         }
+//         *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
+//     }
+// }
 
 fn updatesizehints(mdpy: &Display, c: *mut Client) {
     let mut msize: i64 = 0;
@@ -1222,30 +1222,30 @@ fn updatesizehints(mdpy: &Display, c: *mut Client) {
     }
 }
 
-pub fn zoom(mdpy: &Display, _arg: Arg) {
-    unsafe {
-        let c = (*SELMON).sel;
-        if c.is_null() || (*c).isfloating {
-            return;
-        }
-        if c == nexttiled((*SELMON).clients) {
-            let c = nexttiled((*c).next);
-            if c.is_null() {
-                return;
-            }
-        }
-        pop(mdpy, c);
-    }
-}
+// pub fn zoom(mdpy: &Display, _arg: Arg) {
+//     unsafe {
+//         let c = (*SELMON).sel;
+//         if c.is_null() || (*c).isfloating {
+//             return;
+//         }
+//         if c == nexttiled((*SELMON).clients) {
+//             let c = nexttiled((*c).next);
+//             if c.is_null() {
+//                 return;
+//             }
+//         }
+//         pop(mdpy, c);
+//     }
+// }
 
-fn pop(mdpy: &Display, c: *mut Client) {
-    detach(c);
-    attach(c);
-    focus(mdpy, c);
-    unsafe {
-        arrange(mdpy, (*c).mon);
-    }
-}
+// fn pop(mdpy: &Display, c: *mut Client) {
+//     detach(c);
+//     attach(c);
+//     focus(mdpy, c);
+//     unsafe {
+//         arrange(mdpy, (*c).mon);
+//     }
+// }
 
 fn detach(c: *mut Client) {
     unsafe {
@@ -1266,407 +1266,407 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
     c
 }
 
-pub fn spawn(_dpy: &Display, arg: Arg) {
-    unsafe {
-        let Arg::Str(s) = arg else {
-            return;
-        };
+// pub fn spawn(_dpy: &Display, arg: Arg) {
+//     unsafe {
+//         let Arg::Str(s) = arg else {
+//             return;
+//         };
 
-        if s == DMENUCMD {
-            // this looks like a memory leak, not sure how to fix it. at least
-            // we're only leaking a single-character &str at a time
-            let r: &'static str = format!("{}", (*SELMON).num).leak();
-            let r: Box<&'static str> = Box::new(r);
-            let mut r: &'static &'static str = Box::leak(r);
-            std::ptr::swap(addr_of_mut!(DMENUMON), &mut r);
-        }
-        Command::new(s[0])
-            .args(&s[1..])
-            .spawn()
-            .expect("spawn failed");
-    }
-}
+//         if s == DMENUCMD {
+//             // this looks like a memory leak, not sure how to fix it. at least
+//             // we're only leaking a single-character &str at a time
+//             let r: &'static str = format!("{}", (*SELMON).num).leak();
+//             let r: Box<&'static str> = Box::new(r);
+//             let mut r: &'static &'static str = Box::leak(r);
+//             std::ptr::swap(addr_of_mut!(DMENUMON), &mut r);
+//         }
+//         Command::new(s[0])
+//             .args(&s[1..])
+//             .spawn()
+//             .expect("spawn failed");
+//     }
+// }
 
-pub fn movemouse(mdpy: &Display, _arg: Arg) {
-    unsafe {
-        let c = (*SELMON).sel;
-        if c.is_null() {
-            return;
-        }
-        // no support moving fullscreen windows by mouse
-        if (*c).isfullscreen {
-            return;
-        }
-        restack(mdpy, SELMON);
-        let ocx = (*c).x;
-        let ocy = (*c).y;
-        let mut lasttime = 0;
-        let mut x = 0;
-        let mut y = 0;
-        if XGrabPointer(
-            mdpy.inner,
-            ROOT,
-            False,
-            MOUSEMASK as u32,
-            GrabModeAsync,
-            GrabModeAsync,
-            0,
-            CURSOR[Cur::Move as usize],
-            CurrentTime,
-        ) != GrabSuccess
-        {
-            return;
-        }
-        if !getrootptr(mdpy, &mut x, &mut y) {
-            return;
-        }
-        let mut first = true;
-        let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
-        // emulating do while
-        while first || (*ev.as_mut_ptr()).type_ != BUTTON_RELEASE {
-            XMaskEvent(
-                mdpy.inner,
-                MOUSEMASK | ExposureMask | SubstructureRedirectMask,
-                ev.as_mut_ptr(),
-            );
-            #[allow(non_upper_case_globals)]
-            match (*ev.as_mut_ptr()).type_ {
-                ConfigureRequest | Expose | MapRequest => {
-                    handler(mdpy, ev.as_mut_ptr())
-                }
-                MotionNotify => {
-                    let ev = ev.as_mut_ptr();
-                    if ((*ev).motion.time - lasttime) <= (1000 / 60) {
-                        continue;
-                    }
-                    lasttime = (*ev).motion.time;
+// pub fn movemouse(mdpy: &Display, _arg: Arg) {
+//     unsafe {
+//         let c = (*SELMON).sel;
+//         if c.is_null() {
+//             return;
+//         }
+//         // no support moving fullscreen windows by mouse
+//         if (*c).isfullscreen {
+//             return;
+//         }
+//         restack(mdpy, SELMON);
+//         let ocx = (*c).x;
+//         let ocy = (*c).y;
+//         let mut lasttime = 0;
+//         let mut x = 0;
+//         let mut y = 0;
+//         if XGrabPointer(
+//             mdpy.inner,
+//             ROOT,
+//             False,
+//             MOUSEMASK as u32,
+//             GrabModeAsync,
+//             GrabModeAsync,
+//             0,
+//             CURSOR[Cur::Move as usize],
+//             CurrentTime,
+//         ) != GrabSuccess
+//         {
+//             return;
+//         }
+//         if !getrootptr(mdpy, &mut x, &mut y) {
+//             return;
+//         }
+//         let mut first = true;
+//         let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
+//         // emulating do while
+//         while first || (*ev.as_mut_ptr()).type_ != BUTTON_RELEASE {
+//             XMaskEvent(
+//                 mdpy.inner,
+//                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
+//                 ev.as_mut_ptr(),
+//             );
+//             #[allow(non_upper_case_globals)]
+//             match (*ev.as_mut_ptr()).type_ {
+//                 ConfigureRequest | Expose | MapRequest => {
+//                     handler(mdpy, ev.as_mut_ptr())
+//                 }
+//                 MotionNotify => {
+//                     let ev = ev.as_mut_ptr();
+//                     if ((*ev).motion.time - lasttime) <= (1000 / 60) {
+//                         continue;
+//                     }
+//                     lasttime = (*ev).motion.time;
 
-                    let mut nx = ocx + (*ev).motion.x - x;
-                    let mut ny = ocy + (*ev).motion.y - y;
-                    let snap = SNAP as i16;
-                    if ((*SELMON).wx - nx as i16).abs() < snap {
-                        nx = (*SELMON).wx as i32;
-                    } else if (((*SELMON).wx + (*SELMON).ww)
-                        - (nx + width(c)) as i16)
-                        .abs()
-                        < snap
-                    {
-                        nx = ((*SELMON).wx + (*SELMON).ww) as i32 - width(c);
-                    }
+//                     let mut nx = ocx + (*ev).motion.x - x;
+//                     let mut ny = ocy + (*ev).motion.y - y;
+//                     let snap = SNAP as i16;
+//                     if ((*SELMON).wx - nx as i16).abs() < snap {
+//                         nx = (*SELMON).wx as i32;
+//                     } else if (((*SELMON).wx + (*SELMON).ww)
+//                         - (nx + width(c)) as i16)
+//                         .abs()
+//                         < snap
+//                     {
+//                         nx = ((*SELMON).wx + (*SELMON).ww) as i32 - width(c);
+//                     }
 
-                    if ((*SELMON).wy - ny as i16).abs() < snap {
-                        ny = (*SELMON).wy as i32;
-                    } else if (((*SELMON).wy + (*SELMON).wh)
-                        - (ny + height(c)) as i16)
-                        .abs()
-                        < snap
-                    {
-                        ny = ((*SELMON).wy + (*SELMON).wh) as i32 - height(c);
-                    }
+//                     if ((*SELMON).wy - ny as i16).abs() < snap {
+//                         ny = (*SELMON).wy as i32;
+//                     } else if (((*SELMON).wy + (*SELMON).wh)
+//                         - (ny + height(c)) as i16)
+//                         .abs()
+//                         < snap
+//                     {
+//                         ny = ((*SELMON).wy + (*SELMON).wh) as i32 - height(c);
+//                     }
 
-                    if !(*c).isfloating
-                        && (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_some()
-                        && ((nx - (*c).x).abs() > SNAP
-                            || (ny - (*c).y).abs() > SNAP)
-                    {
-                        togglefloating(mdpy, Arg::None);
-                    }
-                    if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
-                        || (*c).isfloating
-                    {
-                        resize(mdpy, c, nx, ny, (*c).w, (*c).h, true);
-                    }
-                }
-                _ => {}
-            }
-            first = false;
-        }
-        XUngrabPointer(mdpy.inner, CurrentTime);
-        let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
-        if m != SELMON {
-            sendmon(mdpy, c, m);
-            SELMON = m;
-            focus(mdpy, null_mut());
-        }
-    }
-}
+//                     if !(*c).isfloating
+//                         && (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_some()
+//                         && ((nx - (*c).x).abs() > SNAP
+//                             || (ny - (*c).y).abs() > SNAP)
+//                     {
+//                         togglefloating(mdpy, Arg::None);
+//                     }
+//                     if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+//                         || (*c).isfloating
+//                     {
+//                         resize(mdpy, c, nx, ny, (*c).w, (*c).h, true);
+//                     }
+//                 }
+//                 _ => {}
+//             }
+//             first = false;
+//         }
+//         XUngrabPointer(mdpy.inner, CurrentTime);
+//         let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
+//         if m != SELMON {
+//             sendmon(mdpy, c, m);
+//             SELMON = m;
+//             focus(mdpy, null_mut());
+//         }
+//     }
+// }
 
-pub fn togglefloating(mdpy: &Display, _arg: Arg) {
-    unsafe {
-        if (*SELMON).sel.is_null() {
-            return;
-        }
-        if (*(*SELMON).sel).isfullscreen {
-            // no support for fullscreen windows
-            return;
-        }
-        // either toggle or use fixed value
-        (*(*SELMON).sel).isfloating =
-            !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed;
+// pub fn togglefloating(mdpy: &Display, _arg: Arg) {
+//     unsafe {
+//         if (*SELMON).sel.is_null() {
+//             return;
+//         }
+//         if (*(*SELMON).sel).isfullscreen {
+//             // no support for fullscreen windows
+//             return;
+//         }
+//         // either toggle or use fixed value
+//         (*(*SELMON).sel).isfloating =
+//             !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed;
 
-        if (*(*SELMON).sel).isfloating {
-            resize(
-                mdpy,
-                (*SELMON).sel,
-                (*(*SELMON).sel).x,
-                (*(*SELMON).sel).y,
-                (*(*SELMON).sel).w,
-                (*(*SELMON).sel).h,
-                false,
-            );
-        }
-        arrange(mdpy, SELMON);
-    }
-}
+//         if (*(*SELMON).sel).isfloating {
+//             resize(
+//                 mdpy,
+//                 (*SELMON).sel,
+//                 (*(*SELMON).sel).x,
+//                 (*(*SELMON).sel).y,
+//                 (*(*SELMON).sel).w,
+//                 (*(*SELMON).sel).h,
+//                 false,
+//             );
+//         }
+//         arrange(mdpy, SELMON);
+//     }
+// }
 
-pub fn resizemouse(mdpy: &Display, _arg: Arg) {
-    unsafe {
-        let c = (*SELMON).sel;
-        if c.is_null() {
-            return;
-        }
-        // no support for resizing fullscreen windows by mouse
-        if (*c).isfullscreen {
-            return;
-        }
-        restack(mdpy, SELMON);
-        let ocx = (*c).x;
-        let ocy = (*c).y;
-        let mut lasttime = 0;
-        if XGrabPointer(
-            mdpy.inner,
-            ROOT,
-            False,
-            MOUSEMASK as u32,
-            GrabModeAsync,
-            GrabModeAsync,
-            0,
-            CURSOR[Cur::Resize as usize],
-            CurrentTime,
-        ) != GrabSuccess
-        {
-            return;
-        }
-        XWarpPointer(
-            mdpy.inner,
-            0,
-            (*c).win,
-            0,
-            0,
-            0,
-            0,
-            (*c).w + (*c).bw - 1,
-            (*c).h + (*c).bw - 1,
-        );
-        let mut first = true;
-        // is this allowed? no warning from the compiler. probably I should use
-        // an Option since this gets initialized in the first iteration of the
-        // loop
-        let ev: *mut XEvent = MaybeUninit::uninit().as_mut_ptr();
-        while first || (*ev).type_ != BUTTON_RELEASE {
-            XMaskEvent(
-                mdpy.inner,
-                MOUSEMASK | ExposureMask | SubstructureRedirectMask,
-                ev,
-            );
-            #[allow(non_upper_case_globals)]
-            match (*ev).type_ {
-                ConfigureRequest | Expose | MapRequest => handler(mdpy, ev),
-                MotionNotify => {
-                    if ((*ev).motion.time - lasttime) <= (1000 / 60) {
-                        continue;
-                    }
-                    lasttime = (*ev).motion.time;
+// pub fn resizemouse(mdpy: &Display, _arg: Arg) {
+//     unsafe {
+//         let c = (*SELMON).sel;
+//         if c.is_null() {
+//             return;
+//         }
+//         // no support for resizing fullscreen windows by mouse
+//         if (*c).isfullscreen {
+//             return;
+//         }
+//         restack(mdpy, SELMON);
+//         let ocx = (*c).x;
+//         let ocy = (*c).y;
+//         let mut lasttime = 0;
+//         if XGrabPointer(
+//             mdpy.inner,
+//             ROOT,
+//             False,
+//             MOUSEMASK as u32,
+//             GrabModeAsync,
+//             GrabModeAsync,
+//             0,
+//             CURSOR[Cur::Resize as usize],
+//             CurrentTime,
+//         ) != GrabSuccess
+//         {
+//             return;
+//         }
+//         XWarpPointer(
+//             mdpy.inner,
+//             0,
+//             (*c).win,
+//             0,
+//             0,
+//             0,
+//             0,
+//             (*c).w + (*c).bw - 1,
+//             (*c).h + (*c).bw - 1,
+//         );
+//         let mut first = true;
+//         // is this allowed? no warning from the compiler. probably I should use
+//         // an Option since this gets initialized in the first iteration of the
+//         // loop
+//         let ev: *mut XEvent = MaybeUninit::uninit().as_mut_ptr();
+//         while first || (*ev).type_ != BUTTON_RELEASE {
+//             XMaskEvent(
+//                 mdpy.inner,
+//                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
+//                 ev,
+//             );
+//             #[allow(non_upper_case_globals)]
+//             match (*ev).type_ {
+//                 ConfigureRequest | Expose | MapRequest => handler(mdpy, ev),
+//                 MotionNotify => {
+//                     if ((*ev).motion.time - lasttime) <= (1000 / 60) {
+//                         continue;
+//                     }
+//                     lasttime = (*ev).motion.time;
 
-                    let nw = max((*ev).motion.x - ocx - 2 * (*c).bw + 1, 1);
-                    let nh = max((*ev).motion.y - ocy - 2 * (*c).bw + 1, 1);
-                    if ((*(*c).mon).wx + nw as i16 >= (*SELMON).wx
-                        && (*(*c).mon).wx + nw as i16
-                            <= (*SELMON).wx + (*SELMON).ww
-                        && (*(*c).mon).wy + nh as i16 >= (*SELMON).wy
-                        && (*(*c).mon).wy + nh as i16
-                            <= (*SELMON).wy + (*SELMON).wh)
-                        && (!(*c).isfloating
-                            && (*(*SELMON).lt[(*SELMON).sellt])
-                                .arrange
-                                .is_some()
-                            && (abs(nw - (*c).w) > SNAP
-                                || abs(nh - (*c).h) > SNAP))
-                    {
-                        togglefloating(mdpy, Arg::None);
-                    }
-                    if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
-                        || (*c).isfloating
-                    {
-                        resize(mdpy, c, (*c).x, (*c).y, nw, nh, true);
-                    }
-                }
-                _ => {}
-            }
-            first = false;
-        }
-        XWarpPointer(
-            mdpy.inner,
-            0,
-            (*c).win,
-            0,
-            0,
-            0,
-            0,
-            (*c).w + (*c).bw - 1,
-            (*c).h + (*c).bw - 1,
-        );
-        XUngrabPointer(mdpy.inner, CurrentTime);
-        while XCheckMaskEvent(mdpy.inner, EnterWindowMask, ev) != 0 {}
-        let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
-        if m != SELMON {
-            sendmon(mdpy, c, m);
-            SELMON = m;
-            focus(mdpy, null_mut());
-        }
-    }
-}
+//                     let nw = max((*ev).motion.x - ocx - 2 * (*c).bw + 1, 1);
+//                     let nh = max((*ev).motion.y - ocy - 2 * (*c).bw + 1, 1);
+//                     if ((*(*c).mon).wx + nw as i16 >= (*SELMON).wx
+//                         && (*(*c).mon).wx + nw as i16
+//                             <= (*SELMON).wx + (*SELMON).ww
+//                         && (*(*c).mon).wy + nh as i16 >= (*SELMON).wy
+//                         && (*(*c).mon).wy + nh as i16
+//                             <= (*SELMON).wy + (*SELMON).wh)
+//                         && (!(*c).isfloating
+//                             && (*(*SELMON).lt[(*SELMON).sellt])
+//                                 .arrange
+//                                 .is_some()
+//                             && (abs(nw - (*c).w) > SNAP
+//                                 || abs(nh - (*c).h) > SNAP))
+//                     {
+//                         togglefloating(mdpy, Arg::None);
+//                     }
+//                     if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+//                         || (*c).isfloating
+//                     {
+//                         resize(mdpy, c, (*c).x, (*c).y, nw, nh, true);
+//                     }
+//                 }
+//                 _ => {}
+//             }
+//             first = false;
+//         }
+//         XWarpPointer(
+//             mdpy.inner,
+//             0,
+//             (*c).win,
+//             0,
+//             0,
+//             0,
+//             0,
+//             (*c).w + (*c).bw - 1,
+//             (*c).h + (*c).bw - 1,
+//         );
+//         XUngrabPointer(mdpy.inner, CurrentTime);
+//         while XCheckMaskEvent(mdpy.inner, EnterWindowMask, ev) != 0 {}
+//         let m = recttomon((*c).x, (*c).y, (*c).w, (*c).h);
+//         if m != SELMON {
+//             sendmon(mdpy, c, m);
+//             SELMON = m;
+//             focus(mdpy, null_mut());
+//         }
+//     }
+// }
 
-pub fn view(mdpy: &Display, arg: Arg) {
-    unsafe {
-        let Arg::Uint(ui) = arg else { return };
-        if (ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags] {
-            return;
-        }
-        (*SELMON).seltags ^= 1; /* toggle sel tagset */
-        if (ui & TAGMASK) != 0 {
-            (*SELMON).tagset[(*SELMON).seltags] = ui & TAGMASK;
-        }
-        focus(mdpy, null_mut());
-        arrange(mdpy, SELMON);
-    }
-}
+// pub fn view(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         let Arg::Uint(ui) = arg else { return };
+//         if (ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags] {
+//             return;
+//         }
+//         (*SELMON).seltags ^= 1; /* toggle sel tagset */
+//         if (ui & TAGMASK) != 0 {
+//             (*SELMON).tagset[(*SELMON).seltags] = ui & TAGMASK;
+//         }
+//         focus(mdpy, null_mut());
+//         arrange(mdpy, SELMON);
+//     }
+// }
 
-pub fn toggleview(mdpy: &Display, arg: Arg) {
-    unsafe {
-        let Arg::Uint(ui) = arg else { return };
-        let newtagset = (*SELMON).tagset[(*SELMON).seltags] ^ (ui & TAGMASK);
-        if newtagset != 0 {
-            (*SELMON).tagset[(*SELMON).seltags] = newtagset;
-            focus(mdpy, null_mut());
-            arrange(mdpy, SELMON);
-        }
-    }
-}
+// pub fn toggleview(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         let Arg::Uint(ui) = arg else { return };
+//         let newtagset = (*SELMON).tagset[(*SELMON).seltags] ^ (ui & TAGMASK);
+//         if newtagset != 0 {
+//             (*SELMON).tagset[(*SELMON).seltags] = newtagset;
+//             focus(mdpy, null_mut());
+//             arrange(mdpy, SELMON);
+//         }
+//     }
+// }
 
-pub fn tag(mdpy: &Display, arg: Arg) {
-    let Arg::Uint(ui) = arg else { return };
-    unsafe {
-        if !(*SELMON).sel.is_null() && ui & TAGMASK != 0 {
-            (*(*SELMON).sel).tags = ui & TAGMASK;
-            focus(mdpy, null_mut());
-            arrange(mdpy, SELMON);
-        }
-    }
-}
+// pub fn tag(mdpy: &Display, arg: Arg) {
+//     let Arg::Uint(ui) = arg else { return };
+//     unsafe {
+//         if !(*SELMON).sel.is_null() && ui & TAGMASK != 0 {
+//             (*(*SELMON).sel).tags = ui & TAGMASK;
+//             focus(mdpy, null_mut());
+//             arrange(mdpy, SELMON);
+//         }
+//     }
+// }
 
-pub fn toggletag(mdpy: &Display, arg: Arg) {
-    unsafe {
-        if (*SELMON).sel.is_null() {
-            return;
-        }
-        let Arg::Uint(ui) = arg else { return };
-        let newtags = (*(*SELMON).sel).tags ^ (ui & TAGMASK);
-        if newtags != 0 {
-            (*(*SELMON).sel).tags = newtags;
-            focus(mdpy, null_mut());
-            arrange(mdpy, SELMON);
-        }
-    }
-}
+// pub fn toggletag(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         if (*SELMON).sel.is_null() {
+//             return;
+//         }
+//         let Arg::Uint(ui) = arg else { return };
+//         let newtags = (*(*SELMON).sel).tags ^ (ui & TAGMASK);
+//         if newtags != 0 {
+//             (*(*SELMON).sel).tags = newtags;
+//             focus(mdpy, null_mut());
+//             arrange(mdpy, SELMON);
+//         }
+//     }
+// }
 
-pub fn togglebar(mdpy: &Display, _arg: Arg) {
-    unsafe {
-        (*SELMON).showbar = !(*SELMON).showbar;
-        updatebarpos(SELMON);
-        XMoveResizeWindow(
-            mdpy.inner,
-            (*SELMON).barwin,
-            (*SELMON).wx as i32,
-            (*SELMON).by as i32,
-            (*SELMON).ww as u32,
-            BH as u32,
-        );
-        arrange(mdpy, SELMON);
-    }
-}
+// pub fn togglebar(mdpy: &Display, _arg: Arg) {
+//     unsafe {
+//         (*SELMON).showbar = !(*SELMON).showbar;
+//         updatebarpos(SELMON);
+//         XMoveResizeWindow(
+//             mdpy.inner,
+//             (*SELMON).barwin,
+//             (*SELMON).wx as i32,
+//             (*SELMON).by as i32,
+//             (*SELMON).ww as u32,
+//             BH as u32,
+//         );
+//         arrange(mdpy, SELMON);
+//     }
+// }
 
-pub fn focusstack(mdpy: &Display, arg: Arg) {
-    let Arg::Int(ai) = arg else { return };
-    let mut c = null_mut();
-    unsafe {
-        if (*SELMON).sel.is_null()
-            || ((*(*SELMON).sel).isfullscreen && LOCKFULLSCREEN)
-        {
-            return;
-        }
+// pub fn focusstack(mdpy: &Display, arg: Arg) {
+//     let Arg::Int(ai) = arg else { return };
+//     let mut c = null_mut();
+//     unsafe {
+//         if (*SELMON).sel.is_null()
+//             || ((*(*SELMON).sel).isfullscreen && LOCKFULLSCREEN)
+//         {
+//             return;
+//         }
 
-        if ai > 0 {
-            c = (*(*SELMON).sel).next;
-            while !c.is_null() && !is_visible(c) {
-                c = (*c).next;
-            }
-            if c.is_null() {
-                c = (*SELMON).clients;
-                while !c.is_null() && !is_visible(c) {
-                    c = (*c).next;
-                }
-            }
-        } else {
-            let mut i = (*SELMON).clients;
-            while i != (*SELMON).sel {
-                if is_visible(i) {
-                    c = i;
-                }
-                i = (*i).next
-            }
-            if c.is_null() {
-                while !i.is_null() {
-                    if is_visible(i) {
-                        c = i;
-                    }
-                    i = (*i).next;
-                }
-            }
-        }
-        if !c.is_null() {
-            focus(mdpy, c);
-            restack(mdpy, SELMON);
-        }
-    }
-}
+//         if ai > 0 {
+//             c = (*(*SELMON).sel).next;
+//             while !c.is_null() && !is_visible(c) {
+//                 c = (*c).next;
+//             }
+//             if c.is_null() {
+//                 c = (*SELMON).clients;
+//                 while !c.is_null() && !is_visible(c) {
+//                     c = (*c).next;
+//                 }
+//             }
+//         } else {
+//             let mut i = (*SELMON).clients;
+//             while i != (*SELMON).sel {
+//                 if is_visible(i) {
+//                     c = i;
+//                 }
+//                 i = (*i).next
+//             }
+//             if c.is_null() {
+//                 while !i.is_null() {
+//                     if is_visible(i) {
+//                         c = i;
+//                     }
+//                     i = (*i).next;
+//                 }
+//             }
+//         }
+//         if !c.is_null() {
+//             focus(mdpy, c);
+//             restack(mdpy, SELMON);
+//         }
+//     }
+// }
 
-pub fn incnmaster(mdpy: &Display, arg: Arg) {
-    unsafe {
-        let Arg::Int(ai) = arg else { return };
-        (*SELMON).nmaster = max((*SELMON).nmaster + ai as i32, 0);
-        arrange(mdpy, SELMON);
-    }
-}
+// pub fn incnmaster(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         let Arg::Int(ai) = arg else { return };
+//         (*SELMON).nmaster = max((*SELMON).nmaster + ai as i32, 0);
+//         arrange(mdpy, SELMON);
+//     }
+// }
 
-pub fn setmfact(mdpy: &Display, arg: Arg) {
-    let Arg::Float(mut f) = arg else { return };
-    unsafe {
-        if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none() {
-            return;
-        }
-        f = if f < 1.0 {
-            f + (*SELMON).mfact
-        } else {
-            f - 1.0
-        };
-        if !(0.05..=0.95).contains(&f) {
-            return;
-        }
-        (*SELMON).mfact = f;
-        arrange(mdpy, SELMON);
-    }
-}
+// pub fn setmfact(mdpy: &Display, arg: Arg) {
+//     let Arg::Float(mut f) = arg else { return };
+//     unsafe {
+//         if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none() {
+//             return;
+//         }
+//         f = if f < 1.0 {
+//             f + (*SELMON).mfact
+//         } else {
+//             f - 1.0
+//         };
+//         if !(0.05..=0.95).contains(&f) {
+//             return;
+//         }
+//         (*SELMON).mfact = f;
+//         arrange(mdpy, SELMON);
+//     }
+// }
 
 pub fn killclient(mdpy: &Display, _arg: Arg) {
     unsafe {
@@ -1685,21 +1685,21 @@ pub fn killclient(mdpy: &Display, _arg: Arg) {
     }
 }
 
-pub fn focusmon(mdpy: &Display, arg: Arg) {
-    unsafe {
-        let Arg::Int(ai) = arg else { return };
-        if (*MONS).next.is_null() {
-            return;
-        }
-        let m = dirtomon(ai);
-        if m == SELMON {
-            return;
-        }
-        unfocus(mdpy, (*SELMON).sel, false);
-        SELMON = m;
-        focus(mdpy, null_mut());
-    }
-}
+// pub fn focusmon(mdpy: &Display, arg: Arg) {
+//     unsafe {
+//         let Arg::Int(ai) = arg else { return };
+//         if (*MONS).next.is_null() {
+//             return;
+//         }
+//         let m = dirtomon(ai);
+//         if m == SELMON {
+//             return;
+//         }
+//         unfocus(mdpy, (*SELMON).sel, false);
+//         SELMON = m;
+//         focus(mdpy, null_mut());
+//     }
+// }
 
 fn dirtomon(dir: isize) -> *mut Monitor {
     let mut m = null_mut();
@@ -1723,81 +1723,81 @@ fn dirtomon(dir: isize) -> *mut Monitor {
     m
 }
 
-pub fn tagmon(mdpy: &Display, arg: Arg) {
-    let Arg::Int(ai) = arg else { return };
-    unsafe {
-        if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
-            return;
-        }
-        sendmon(mdpy, (*SELMON).sel, dirtomon(ai));
-    }
-}
+// pub fn tagmon(mdpy: &Display, arg: Arg) {
+//     let Arg::Int(ai) = arg else { return };
+//     unsafe {
+//         if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
+//             return;
+//         }
+//         sendmon(mdpy, (*SELMON).sel, dirtomon(ai));
+//     }
+// }
 
-fn sendmon(mdpy: &Display, c: *mut Client, m: *mut Monitor) {
-    unsafe {
-        if (*c).mon == m {
-            return;
-        }
-        unfocus(mdpy, c, true);
-        detach(c);
-        detachstack(c);
-        (*c).mon = m;
-        (*c).tags = (*m).tagset[(*m).seltags]; // assign tags of target monitor
-        attach(c);
-        attachstack(c);
-        focus(mdpy, null_mut());
-        arrange(mdpy, null_mut());
-    }
-}
+// fn sendmon(mdpy: &Display, c: *mut Client, m: *mut Monitor) {
+//     unsafe {
+//         if (*c).mon == m {
+//             return;
+//         }
+//         unfocus(mdpy, c, true);
+//         detach(c);
+//         detachstack(c);
+//         (*c).mon = m;
+//         (*c).tags = (*m).tagset[(*m).seltags]; // assign tags of target monitor
+//         attach(c);
+//         attachstack(c);
+//         focus(mdpy, null_mut());
+//         arrange(mdpy, null_mut());
+//     }
+// }
 
-pub fn quit(_dpy: &Display, _arg: Arg) {
-    unsafe { RUNNING = false }
-}
+// pub fn quit(_dpy: &Display, _arg: Arg) {
+//     unsafe { RUNNING = false }
+// }
 
-fn grabkeys(mdpy: &Display) {
-    updatenumlockmask(mdpy);
-    unsafe {
-        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-        let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
-        XDisplayKeycodes(mdpy.inner, &mut start, &mut end);
-        let syms = XGetKeyboardMapping(
-            mdpy.inner,
-            start as u8,
-            end - start + 1,
-            &mut skip,
-        );
-        if syms.is_null() {
-            return;
-        }
-        for k in start..=end {
-            for i in 0..KEYS.len() {
-                // skip modifier codes, we do that ourselves
-                if KEYS[i].keysym
-                    == (*syms.offset(((k - start) * skip) as isize)) as u32
-                {
-                    for j in 0..modifiers.len() {
-                        let ret = XGrabKey(
-                            mdpy.inner,
-                            k,
-                            KEYS[i].modkey | modifiers[j],
-                            ROOT,
-                            True,
-                            GrabModeAsync,
-                            GrabModeAsync,
-                        );
-                        if [BadAccess, BadValue, BadWindow]
-                            .contains(&(ret as u8))
-                        {
-                            panic!("XGrabKey error on {k}: {ret}");
-                        }
-                    }
-                }
-            }
-        }
-        XFree(syms.cast());
-    }
-}
+// fn grabkeys(mdpy: &Display) {
+//     updatenumlockmask(mdpy);
+//     unsafe {
+//         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+//         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
+//         XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
+//         XDisplayKeycodes(mdpy.inner, &mut start, &mut end);
+//         let syms = XGetKeyboardMapping(
+//             mdpy.inner,
+//             start as u8,
+//             end - start + 1,
+//             &mut skip,
+//         );
+//         if syms.is_null() {
+//             return;
+//         }
+//         for k in start..=end {
+//             for i in 0..KEYS.len() {
+//                 // skip modifier codes, we do that ourselves
+//                 if KEYS[i].keysym
+//                     == (*syms.offset(((k - start) * skip) as isize)) as u32
+//                 {
+//                     for j in 0..modifiers.len() {
+//                         let ret = XGrabKey(
+//                             mdpy.inner,
+//                             k,
+//                             KEYS[i].modkey | modifiers[j],
+//                             ROOT,
+//                             True,
+//                             GrabModeAsync,
+//                             GrabModeAsync,
+//                         );
+//                         if [BadAccess, BadValue, BadWindow]
+//                             .contains(&(ret as u8))
+//                         {
+//                             panic!("XGrabKey error on {k}: {ret}");
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         XFree(syms.cast());
+//     }
+// }
 
 fn updatenumlockmask(mdpy: &Display) {
     unsafe {
@@ -1835,147 +1835,147 @@ fn seturgent(mdpy: &Display, c: *mut Client, urg: bool) {
     }
 }
 
-fn unfocus(mdpy: &Display, c: *mut Client, setfocus: bool) {
-    if c.is_null() {
-        return;
-    }
-    grabbuttons(mdpy, c, false);
-    unsafe {
-        XSetWindowBorder(
-            mdpy.inner,
-            (*c).win,
-            SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
-        );
-        if setfocus {
-            XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-            XDeleteProperty(
-                mdpy.inner,
-                ROOT,
-                NETATOM[Net::ActiveWindow as usize],
-            );
-        }
-    }
-}
+// fn unfocus(mdpy: &Display, c: *mut Client, setfocus: bool) {
+//     if c.is_null() {
+//         return;
+//     }
+//     grabbuttons(mdpy, c, false);
+//     unsafe {
+//         XSetWindowBorder(
+//             mdpy.inner,
+//             (*c).win,
+//             SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
+//         );
+//         if setfocus {
+//             XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+//             XDeleteProperty(
+//                 mdpy.inner,
+//                 ROOT,
+//                 NETATOM[Net::ActiveWindow as usize],
+//             );
+//         }
+//     }
+// }
 
-fn updatestatus(mdpy: &Display) {
-    unsafe {
-        let c = gettextprop(mdpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
-        if !c {
-            STEXT = "rwm-0.0.1".to_owned();
-        }
-        drawbar(SELMON);
-    }
-}
+// fn updatestatus(mdpy: &Display) {
+//     unsafe {
+//         let c = gettextprop(mdpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
+//         if !c {
+//             STEXT = "rwm-0.0.1".to_owned();
+//         }
+//         drawbar(SELMON);
+//     }
+// }
 
-fn drawbar(m: *mut Monitor) {
-    unsafe {
-        let boxs = (*(*DRW).fonts).h / 9;
-        let boxw = (*(*DRW).fonts).h / 6 + 2;
-        let mut occ = 0;
-        let mut urg = 0;
-        let mut x = 0;
-        let mut w;
-        let mut tw = 0;
+// fn drawbar(m: *mut Monitor) {
+//     unsafe {
+//         let boxs = (*(*DRW).fonts).h / 9;
+//         let boxw = (*(*DRW).fonts).h / 6 + 2;
+//         let mut occ = 0;
+//         let mut urg = 0;
+//         let mut x = 0;
+//         let mut w;
+//         let mut tw = 0;
 
-        if !(*m).showbar {
-            return;
-        }
+//         if !(*m).showbar {
+//             return;
+//         }
 
-        let drw = DRW.as_mut().unwrap();
+//         let drw = DRW.as_mut().unwrap();
 
-        // draw status first so it can be overdrawn by tags later
-        if m == SELMON {
-            // status is only drawn on selected monitor
-            drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-            tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
-            drw.text(
-                ((*m).ww - tw as i16) as i32,
-                0,
-                tw,
-                BH as usize,
-                0,
-                addr_of!(STEXT),
-                0,
-            );
-        }
+//         // draw status first so it can be overdrawn by tags later
+//         if m == SELMON {
+//             // status is only drawn on selected monitor
+//             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+//             tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
+//             drw.text(
+//                 ((*m).ww - tw as i16) as i32,
+//                 0,
+//                 tw,
+//                 BH as usize,
+//                 0,
+//                 addr_of!(STEXT),
+//                 0,
+//             );
+//         }
 
-        let mut c = (*m).clients;
-        while !c.is_null() {
-            occ |= (*c).tags;
-            if (*c).isurgent {
-                urg |= (*c).tags;
-            }
-            c = (*c).next;
-        }
+//         let mut c = (*m).clients;
+//         while !c.is_null() {
+//             occ |= (*c).tags;
+//             if (*c).isurgent {
+//                 urg |= (*c).tags;
+//             }
+//             c = (*c).next;
+//         }
 
-        for i in 0..TAGS.len() {
-            let text = TAGS[i].to_owned();
-            w = drw.textw(&text);
-            drw.setscheme(
-                &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
-                    Scheme::Sel as usize
-                } else {
-                    Scheme::Norm as usize
-                }],
-            );
-            drw.text(
-                x,
-                0,
-                w,
-                BH as usize,
-                LRPAD / 2,
-                &text,
-                (urg as i32) & 1 << i,
-            );
+//         for i in 0..TAGS.len() {
+//             let text = TAGS[i].to_owned();
+//             w = drw.textw(&text);
+//             drw.setscheme(
+//                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
+//                     Scheme::Sel as usize
+//                 } else {
+//                     Scheme::Norm as usize
+//                 }],
+//             );
+//             drw.text(
+//                 x,
+//                 0,
+//                 w,
+//                 BH as usize,
+//                 LRPAD / 2,
+//                 &text,
+//                 (urg as i32) & 1 << i,
+//             );
 
-            if (occ & 1 << i) != 0 {
-                drw.rect(
-                    x + boxs as i32,
-                    boxs,
-                    boxw,
-                    boxw,
-                    m == SELMON
-                        && !(*SELMON).sel.is_null()
-                        && ((*(*SELMON).sel).tags & 1 << i) != 0,
-                    (urg & 1 << i) != 0,
-                );
-            }
-            x += w as i32;
-        }
+//             if (occ & 1 << i) != 0 {
+//                 drw.rect(
+//                     x + boxs as i32,
+//                     boxs,
+//                     boxw,
+//                     boxw,
+//                     m == SELMON
+//                         && !(*SELMON).sel.is_null()
+//                         && ((*(*SELMON).sel).tags & 1 << i) != 0,
+//                     (urg & 1 << i) != 0,
+//                 );
+//             }
+//             x += w as i32;
+//         }
 
-        w = drw.textw(&(*m).ltsymbol);
-        drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-        x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
+//         w = drw.textw(&(*m).ltsymbol);
+//         drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+//         x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
 
-        w = ((*m).ww - tw as i16 - x as i16) as usize;
-        if w > BH as usize {
-            if !(*m).sel.is_null() {
-                drw.setscheme(
-                    &mut SCHEME[if m == SELMON {
-                        Scheme::Sel
-                    } else {
-                        Scheme::Norm
-                    } as usize],
-                );
-                drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
-                if (*(*m).sel).isfloating {
-                    drw.rect(
-                        x + boxs as i32,
-                        boxs,
-                        boxw,
-                        boxw,
-                        (*(*m).sel).isfixed,
-                        false,
-                    );
-                }
-            } else {
-                drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-                drw.rect(x, 0, w, BH as usize, true, true);
-            }
-        }
-        drw.map((*m).barwin, 0, 0, (*m).ww, BH);
-    }
-}
+//         w = ((*m).ww - tw as i16 - x as i16) as usize;
+//         if w > BH as usize {
+//             if !(*m).sel.is_null() {
+//                 drw.setscheme(
+//                     &mut SCHEME[if m == SELMON {
+//                         Scheme::Sel
+//                     } else {
+//                         Scheme::Norm
+//                     } as usize],
+//                 );
+//                 drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
+//                 if (*(*m).sel).isfloating {
+//                     drw.rect(
+//                         x + boxs as i32,
+//                         boxs,
+//                         boxw,
+//                         boxw,
+//                         (*(*m).sel).isfixed,
+//                         false,
+//                     );
+//                 }
+//             } else {
+//                 drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+//                 drw.rect(x, 0, w, BH as usize, true, true);
+//             }
+//         }
+//         drw.map((*m).barwin, 0, 0, (*m).ww, BH);
+//     }
+// }
 
 fn gettextprop(
     mdpy: &Display,
@@ -2074,127 +2074,127 @@ fn updatebars(mdpy: &Display) {
     }
 }
 
-fn updategeom(mdpy: &Display) -> bool {
-    let mut dirty = false;
-    unsafe {
-        if XineramaIsActive(mdpy.inner) != 0 {
-            // I think this is the number of monitors
-            let mut nn: i32 = 0;
-            let info = XineramaQueryScreens(mdpy.inner, &mut nn);
+// fn updategeom(mdpy: &Display) -> bool {
+//     let mut dirty = false;
+//     unsafe {
+//         if XineramaIsActive(mdpy.inner) != 0 {
+//             // I think this is the number of monitors
+//             let mut nn: i32 = 0;
+//             let info = XineramaQueryScreens(mdpy.inner, &mut nn);
 
-            let mut n = 0;
-            let mut m = MONS;
-            while !m.is_null() {
-                m = (*m).next;
-                n += 1;
-            }
+//             let mut n = 0;
+//             let mut m = MONS;
+//             while !m.is_null() {
+//                 m = (*m).next;
+//                 n += 1;
+//             }
 
-            let unique: *mut XineramaScreenInfo =
-                calloc(nn as usize, size_of::<XineramaScreenInfo>()).cast();
+//             let unique: *mut XineramaScreenInfo =
+//                 calloc(nn as usize, size_of::<XineramaScreenInfo>()).cast();
 
-            if unique.is_null() {
-                panic!("calloc failed");
-            }
+//             if unique.is_null() {
+//                 panic!("calloc failed");
+//             }
 
-            let mut j = 0;
-            for i in 0..nn {
-                if isuniquegeom(unique, j, info.offset(i as isize)) {
-                    memcpy(
-                        unique.offset(j).cast(),
-                        info.offset(i as isize).cast(),
-                        size_of::<XineramaScreenInfo>(),
-                    );
-                    j += 1;
-                }
-            }
-            XFree(info.cast());
-            nn = j as i32;
+//             let mut j = 0;
+//             for i in 0..nn {
+//                 if isuniquegeom(unique, j, info.offset(i as isize)) {
+//                     memcpy(
+//                         unique.offset(j).cast(),
+//                         info.offset(i as isize).cast(),
+//                         size_of::<XineramaScreenInfo>(),
+//                     );
+//                     j += 1;
+//                 }
+//             }
+//             XFree(info.cast());
+//             nn = j as i32;
 
-            // new monitors if nn > n
-            for _ in n..nn as usize {
-                let mut m = MONS;
-                while !m.is_null() && !(*m).next.is_null() {
-                    m = (*m).next;
-                }
+//             // new monitors if nn > n
+//             for _ in n..nn as usize {
+//                 let mut m = MONS;
+//                 while !m.is_null() && !(*m).next.is_null() {
+//                     m = (*m).next;
+//                 }
 
-                if !m.is_null() {
-                    (*m).next = createmon();
-                } else {
-                    MONS = createmon();
-                }
-            }
+//                 if !m.is_null() {
+//                     (*m).next = createmon();
+//                 } else {
+//                     MONS = createmon();
+//                 }
+//             }
 
-            let mut i = 0;
-            let mut m = MONS;
-            while i < nn as usize && !m.is_null() {
-                let u = unique.add(i);
-                if i >= n
-                    || (*u).x_org != (*m).mx
-                    || (*u).y_org != (*m).my
-                    || (*u).width != (*m).mw
-                    || (*u).height != (*m).mh
-                {
-                    dirty = true;
-                    (*m).num = i as i32;
-                    (*m).mx = (*u).x_org;
-                    (*m).wx = (*u).x_org;
-                    (*m).my = (*u).y_org;
-                    (*m).wy = (*u).y_org;
-                    (*m).mw = (*u).width;
-                    (*m).ww = (*u).width;
-                    (*m).mh = (*u).height;
-                    (*m).wh = (*u).height;
-                    updatebarpos(m);
-                }
+//             let mut i = 0;
+//             let mut m = MONS;
+//             while i < nn as usize && !m.is_null() {
+//                 let u = unique.add(i);
+//                 if i >= n
+//                     || (*u).x_org != (*m).mx
+//                     || (*u).y_org != (*m).my
+//                     || (*u).width != (*m).mw
+//                     || (*u).height != (*m).mh
+//                 {
+//                     dirty = true;
+//                     (*m).num = i as i32;
+//                     (*m).mx = (*u).x_org;
+//                     (*m).wx = (*u).x_org;
+//                     (*m).my = (*u).y_org;
+//                     (*m).wy = (*u).y_org;
+//                     (*m).mw = (*u).width;
+//                     (*m).ww = (*u).width;
+//                     (*m).mh = (*u).height;
+//                     (*m).wh = (*u).height;
+//                     updatebarpos(m);
+//                 }
 
-                m = (*m).next;
-                i += 1;
-            }
+//                 m = (*m).next;
+//                 i += 1;
+//             }
 
-            // removed monitors if n > nn
-            for _ in nn..n as i32 {
-                let mut m = MONS;
-                while !m.is_null() && !(*m).next.is_null() {
-                    m = (*m).next;
-                }
+//             // removed monitors if n > nn
+//             for _ in nn..n as i32 {
+//                 let mut m = MONS;
+//                 while !m.is_null() && !(*m).next.is_null() {
+//                     m = (*m).next;
+//                 }
 
-                let c = (*m).clients;
-                while !c.is_null() {
-                    dirty = true;
-                    (*m).clients = (*c).next;
-                    detachstack(c);
-                    (*c).mon = MONS;
-                    attach(c);
-                    attachstack(c);
-                }
-                if m == SELMON {
-                    SELMON = MONS;
-                }
-                cleanupmon(m, mdpy);
-            }
-            libc::free(unique.cast());
-        } else {
-            // default monitor setup
-            if MONS.is_null() {
-                MONS = createmon();
-            }
+//                 let c = (*m).clients;
+//                 while !c.is_null() {
+//                     dirty = true;
+//                     (*m).clients = (*c).next;
+//                     detachstack(c);
+//                     (*c).mon = MONS;
+//                     attach(c);
+//                     attachstack(c);
+//                 }
+//                 if m == SELMON {
+//                     SELMON = MONS;
+//                 }
+//                 cleanupmon(m, mdpy);
+//             }
+//             libc::free(unique.cast());
+//         } else {
+//             // default monitor setup
+//             if MONS.is_null() {
+//                 MONS = createmon();
+//             }
 
-            if (*MONS).mw as i32 != SW || (*MONS).mh as i32 != SH {
-                dirty = true;
-                (*MONS).mw = SW as i16;
-                (*MONS).ww = SW as i16;
-                (*MONS).mh = SH as i16;
-                (*MONS).wh = SH as i16;
-                updatebarpos(MONS);
-            }
-        }
-        if dirty {
-            SELMON = MONS;
-            SELMON = wintomon(mdpy, ROOT);
-        }
-    }
-    dirty
-}
+//             if (*MONS).mw as i32 != SW || (*MONS).mh as i32 != SH {
+//                 dirty = true;
+//                 (*MONS).mw = SW as i16;
+//                 (*MONS).ww = SW as i16;
+//                 (*MONS).mh = SH as i16;
+//                 (*MONS).wh = SH as i16;
+//                 updatebarpos(MONS);
+//             }
+//         }
+//         if dirty {
+//             SELMON = MONS;
+//             SELMON = wintomon(mdpy, ROOT);
+//         }
+//     }
+//     dirty
+// }
 
 fn wintomon(mdpy: &Display, w: Window) -> *mut Monitor {
     unsafe {
@@ -2444,36 +2444,36 @@ fn cleanup() {
     // }
 }
 
-fn unmanage(mdpy: &Display, c: *mut Client, destroyed: bool) {
-    unsafe {
-        let m = (*c).mon;
-        let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-        detach(c);
-        detachstack(c);
-        if !destroyed {
-            (*wc.as_mut_ptr()).border_width = (*c).oldbw;
-            XGrabServer(mdpy.inner); // avoid race conditions
-            XSetErrorHandler(Some(xerrordummy));
-            XSelectInput(mdpy.inner, (*c).win, NoEventMask);
-            // restore border
-            XConfigureWindow(
-                mdpy.inner,
-                (*c).win,
-                CWBorderWidth as u32,
-                wc.as_mut_ptr(),
-            );
-            XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-            setclientstate(mdpy, c, WITHDRAWN_STATE);
-            XSync(mdpy.inner, False);
-            XSetErrorHandler(Some(xerror));
-            XUngrabServer(mdpy.inner);
-        }
-        drop(Box::from_raw(c));
-        focus(mdpy, std::ptr::null_mut());
-        updateclientlist(mdpy);
-        arrange(mdpy, m);
-    }
-}
+// fn unmanage(mdpy: &Display, c: *mut Client, destroyed: bool) {
+//     unsafe {
+//         let m = (*c).mon;
+//         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+//         detach(c);
+//         detachstack(c);
+//         if !destroyed {
+//             (*wc.as_mut_ptr()).border_width = (*c).oldbw;
+//             XGrabServer(mdpy.inner); // avoid race conditions
+//             XSetErrorHandler(Some(xerrordummy));
+//             XSelectInput(mdpy.inner, (*c).win, NoEventMask);
+//             // restore border
+//             XConfigureWindow(
+//                 mdpy.inner,
+//                 (*c).win,
+//                 CWBorderWidth as u32,
+//                 wc.as_mut_ptr(),
+//             );
+//             XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
+//             setclientstate(mdpy, c, WITHDRAWN_STATE);
+//             XSync(mdpy.inner, False);
+//             XSetErrorHandler(Some(xerror));
+//             XUngrabServer(mdpy.inner);
+//         }
+//         drop(Box::from_raw(c));
+//         focus(mdpy, std::ptr::null_mut());
+//         updateclientlist(mdpy);
+//         arrange(mdpy, m);
+//     }
+// }
 
 fn updateclientlist(mdpy: &Display) {
     unsafe {
@@ -2529,147 +2529,147 @@ fn run() {
 
 // not sure how this is my problem...
 #[allow(non_upper_case_globals, non_snake_case)]
-fn handler(mdpy: &Display, ev: *mut XEvent) {
-    unsafe {
-        match (*ev).type_ {
-            ButtonPress => buttonpress(mdpy, ev),
-            ClientMessage => clientmessage(mdpy, ev),
-            ConfigureRequest => configurerequest(mdpy, ev),
-            ConfigureNotify => configurenotify(mdpy, ev),
-            DestroyNotify => destroynotify(mdpy, ev),
-            EnterNotify => enternotify(mdpy, ev),
-            Expose => expose(mdpy, ev),
-            FocusIn => focusin(mdpy, ev),
-            KeyPress => keypress(mdpy, ev),
-            MappingNotify => mappingnotify(mdpy, ev),
-            MapRequest => maprequest(mdpy, ev),
-            MotionNotify => motionnotify(mdpy, ev),
-            PropertyNotify => propertynotify(mdpy, ev),
-            UnmapNotify => unmapnotify(mdpy, ev),
-            NoExpose | LeaveNotify | MapNotify => (),
-            _ => (),
-        }
-    }
-}
+// fn handler(mdpy: &Display, ev: *mut XEvent) {
+//     unsafe {
+//         match (*ev).type_ {
+//             ButtonPress => buttonpress(mdpy, ev),
+//             ClientMessage => clientmessage(mdpy, ev),
+//             ConfigureRequest => configurerequest(mdpy, ev),
+//             ConfigureNotify => configurenotify(mdpy, ev),
+//             DestroyNotify => destroynotify(mdpy, ev),
+//             EnterNotify => enternotify(mdpy, ev),
+//             Expose => expose(mdpy, ev),
+//             FocusIn => focusin(mdpy, ev),
+//             KeyPress => keypress(mdpy, ev),
+//             MappingNotify => mappingnotify(mdpy, ev),
+//             MapRequest => maprequest(mdpy, ev),
+//             MotionNotify => motionnotify(mdpy, ev),
+//             PropertyNotify => propertynotify(mdpy, ev),
+//             UnmapNotify => unmapnotify(mdpy, ev),
+//             NoExpose | LeaveNotify | MapNotify => (),
+//             _ => (),
+//         }
+//     }
+// }
 
-fn unmapnotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = &(*e).unmap;
-        let c = wintoclient(ev.window);
-        if !c.is_null() {
-            if ev.send_event != 0 {
-                setclientstate(mdpy, c, WITHDRAWN_STATE);
-            } else {
-                unmanage(mdpy, c, false);
-            }
-        }
-    }
-}
+// fn unmapnotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = &(*e).unmap;
+//         let c = wintoclient(ev.window);
+//         if !c.is_null() {
+//             if ev.send_event != 0 {
+//                 setclientstate(mdpy, c, WITHDRAWN_STATE);
+//             } else {
+//                 unmanage(mdpy, c, false);
+//             }
+//         }
+//     }
+// }
 
-fn propertynotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let mut trans: Window = 0;
-        let ev = (*e).property;
-        if ev.window == ROOT && ev.atom == XA_WM_NAME {
-            updatestatus(mdpy);
-        } else if ev.state == PropertyDelete {
-            return;
-        } else {
-            let c = wintoclient(ev.window);
-            if !c.is_null() {
-                match ev.atom {
-                    XA_WM_TRANSIENT_FOR => {
-                        if !(*c).isfloating
-                            && xgettransientforhint(mdpy, (*c).win, &mut trans)
-                        {
-                            (*c).isfloating = !wintoclient(trans).is_null();
-                            if (*c).isfloating {
-                                arrange(mdpy, (*c).mon);
-                            }
-                        }
-                    }
-                    XA_WM_NORMAL_HINTS => {
-                        (*c).hintsvalid = false;
-                    }
-                    XA_WM_HINTS => {
-                        updatewmhints(mdpy, c);
-                        drawbars();
-                    }
-                    _ => (),
-                }
-                if ev.atom == XA_WM_NAME
-                    || ev.atom == NETATOM[Net::WMName as usize]
-                {
-                    updatetitle(mdpy, c);
-                    if c == (*(*c).mon).sel {
-                        drawbar((*c).mon);
-                    }
-                }
-                if ev.atom == NETATOM[Net::WMWindowType as usize] {
-                    updatewindowtype(mdpy, c);
-                }
-            }
-        }
-    }
-}
+// fn propertynotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let mut trans: Window = 0;
+//         let ev = (*e).property;
+//         if ev.window == ROOT && ev.atom == XA_WM_NAME {
+//             updatestatus(mdpy);
+//         } else if ev.state == PropertyDelete {
+//             return;
+//         } else {
+//             let c = wintoclient(ev.window);
+//             if !c.is_null() {
+//                 match ev.atom {
+//                     XA_WM_TRANSIENT_FOR => {
+//                         if !(*c).isfloating
+//                             && xgettransientforhint(mdpy, (*c).win, &mut trans)
+//                         {
+//                             (*c).isfloating = !wintoclient(trans).is_null();
+//                             if (*c).isfloating {
+//                                 arrange(mdpy, (*c).mon);
+//                             }
+//                         }
+//                     }
+//                     XA_WM_NORMAL_HINTS => {
+//                         (*c).hintsvalid = false;
+//                     }
+//                     XA_WM_HINTS => {
+//                         updatewmhints(mdpy, c);
+//                         drawbars();
+//                     }
+//                     _ => (),
+//                 }
+//                 if ev.atom == XA_WM_NAME
+//                     || ev.atom == NETATOM[Net::WMName as usize]
+//                 {
+//                     updatetitle(mdpy, c);
+//                     if c == (*(*c).mon).sel {
+//                         drawbar((*c).mon);
+//                     }
+//                 }
+//                 if ev.atom == NETATOM[Net::WMWindowType as usize] {
+//                     updatewindowtype(mdpy, c);
+//                 }
+//             }
+//         }
+//     }
+// }
 
 /// declared static inside motionnotify, which apparently means it persists
 /// between function calls
 static mut MOTIONNOTIFY_MON: *mut Monitor = null_mut();
-fn motionnotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = &(*e).motion;
-        if ev.window != ROOT {
-            return;
-        }
-        let m = recttomon(ev.x_root, ev.y_root, 1, 1);
-        if m != MOTIONNOTIFY_MON && !MOTIONNOTIFY_MON.is_null() {
-            unfocus(mdpy, (*SELMON).sel, true);
-            SELMON = m;
-            focus(mdpy, null_mut());
-        }
-        MOTIONNOTIFY_MON = m;
-    }
-}
+// fn motionnotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = &(*e).motion;
+//         if ev.window != ROOT {
+//             return;
+//         }
+//         let m = recttomon(ev.x_root, ev.y_root, 1, 1);
+//         if m != MOTIONNOTIFY_MON && !MOTIONNOTIFY_MON.is_null() {
+//             unfocus(mdpy, (*SELMON).sel, true);
+//             SELMON = m;
+//             focus(mdpy, null_mut());
+//         }
+//         MOTIONNOTIFY_MON = m;
+//     }
+// }
 
-fn maprequest(mdpy: &Display, e: *mut XEvent) {
-    let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
-    unsafe {
-        let ev = &(*e).map_request;
-        if XGetWindowAttributes(mdpy.inner, ev.window, wa.as_mut_ptr()) == 0
-            || (*wa.as_mut_ptr()).override_redirect != 0
-        {
-            return;
-        }
-        if wintoclient(ev.window).is_null() {
-            manage(mdpy, ev.window, wa.as_mut_ptr());
-        }
-    }
-}
+// fn maprequest(mdpy: &Display, e: *mut XEvent) {
+//     let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
+//     unsafe {
+//         let ev = &(*e).map_request;
+//         if XGetWindowAttributes(mdpy.inner, ev.window, wa.as_mut_ptr()) == 0
+//             || (*wa.as_mut_ptr()).override_redirect != 0
+//         {
+//             return;
+//         }
+//         if wintoclient(ev.window).is_null() {
+//             manage(mdpy, ev.window, wa.as_mut_ptr());
+//         }
+//     }
+// }
 
-fn mappingnotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let mut ev = (*e).mapping;
-        XRefreshKeyboardMapping(&mut ev);
-        if ev.request == MappingKeyboard {
-            grabkeys(mdpy);
-        }
-    }
-}
+// fn mappingnotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let mut ev = (*e).mapping;
+//         XRefreshKeyboardMapping(&mut ev);
+//         if ev.request == MappingKeyboard {
+//             grabkeys(mdpy);
+//         }
+//     }
+// }
 
-fn keypress(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).key;
-        let keysym: KeySym = XKeycodeToKeysym(mdpy.inner, ev.keycode as u8, 0);
-        for i in 0..KEYS.len() {
-            if keysym == KEYS[i].keysym as u64
-                && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
-            {
-                (KEYS[i].func)(mdpy, KEYS[i].arg.clone());
-            }
-        }
-    }
-}
+// fn keypress(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).key;
+//         let keysym: KeySym = XKeycodeToKeysym(mdpy.inner, ev.keycode as u8, 0);
+//         for i in 0..KEYS.len() {
+//             if keysym == KEYS[i].keysym as u64
+//                 && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
+//             {
+//                 (KEYS[i].func)(mdpy, KEYS[i].arg.clone());
+//             }
+//         }
+//     }
+// }
 
 fn focusin(mdpy: &Display, e: *mut XEvent) {
     unsafe {
@@ -2680,95 +2680,95 @@ fn focusin(mdpy: &Display, e: *mut XEvent) {
     }
 }
 
-fn expose(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).expose;
-        if ev.count == 0 {
-            let m = wintomon(mdpy, ev.window);
-            if !m.is_null() {
-                drawbar(m);
-            }
-        }
-    }
-}
+// fn expose(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).expose;
+//         if ev.count == 0 {
+//             let m = wintomon(mdpy, ev.window);
+//             if !m.is_null() {
+//                 drawbar(m);
+//             }
+//         }
+//     }
+// }
 
-fn enternotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).crossing;
-        if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
-            && ev.window != ROOT
-        {
-            return;
-        }
-        let c = wintoclient(ev.window);
-        let m = if !c.is_null() {
-            (*c).mon
-        } else {
-            wintomon(mdpy, ev.window)
-        };
-        if m != SELMON {
-            unfocus(mdpy, (*SELMON).sel, true);
-            SELMON = m;
-        } else if c.is_null() || c == (*SELMON).sel {
-            return;
-        }
-        focus(mdpy, c);
-    }
-}
+// fn enternotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).crossing;
+//         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
+//             && ev.window != ROOT
+//         {
+//             return;
+//         }
+//         let c = wintoclient(ev.window);
+//         let m = if !c.is_null() {
+//             (*c).mon
+//         } else {
+//             wintomon(mdpy, ev.window)
+//         };
+//         if m != SELMON {
+//             unfocus(mdpy, (*SELMON).sel, true);
+//             SELMON = m;
+//         } else if c.is_null() || c == (*SELMON).sel {
+//             return;
+//         }
+//         focus(mdpy, c);
+//     }
+// }
 
-fn destroynotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).destroy_window;
-        let c = wintoclient(ev.window);
-        if !c.is_null() {
-            unmanage(mdpy, c, true);
-        }
-    }
-}
+// fn destroynotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).destroy_window;
+//         let c = wintoclient(ev.window);
+//         if !c.is_null() {
+//             unmanage(mdpy, c, true);
+//         }
+//     }
+// }
 
-fn configurenotify(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).configure;
-        // dwm TODO updategeom handling sucks, needs to be simplified
-        if ev.window == ROOT {
-            let dirty = (SW != ev.width) || (SH != ev.height);
-            SW = ev.width;
-            SH = ev.height;
-            if updategeom(mdpy) || dirty {
-                DRW.as_mut().unwrap().resize(SW as i16, BH);
-                updatebars(mdpy);
-                let mut m = MONS;
-                while !m.is_null() {
-                    let mut c = (*m).clients;
-                    while !c.is_null() {
-                        if (*c).isfullscreen {
-                            resizeclient(
-                                mdpy,
-                                c,
-                                (*m).mx as i32,
-                                (*m).my as i32,
-                                (*m).mw as i32,
-                                (*m).mh as i32,
-                            );
-                        }
-                        c = (*c).next;
-                    }
-                    XMoveResizeWindow(
-                        mdpy.inner,
-                        (*m).barwin,
-                        (*m).wx as i32,
-                        (*m).by as i32,
-                        (*m).ww as u32,
-                        BH as u32,
-                    );
-                    m = (*m).next;
-                }
-                focus(mdpy, null_mut());
-                arrange(mdpy, null_mut());
-            }
-        }
-    }
-}
+// fn configurenotify(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).configure;
+//         // dwm TODO updategeom handling sucks, needs to be simplified
+//         if ev.window == ROOT {
+//             let dirty = (SW != ev.width) || (SH != ev.height);
+//             SW = ev.width;
+//             SH = ev.height;
+//             if updategeom(mdpy) || dirty {
+//                 DRW.as_mut().unwrap().resize(SW as i16, BH);
+//                 updatebars(mdpy);
+//                 let mut m = MONS;
+//                 while !m.is_null() {
+//                     let mut c = (*m).clients;
+//                     while !c.is_null() {
+//                         if (*c).isfullscreen {
+//                             resizeclient(
+//                                 mdpy,
+//                                 c,
+//                                 (*m).mx as i32,
+//                                 (*m).my as i32,
+//                                 (*m).mw as i32,
+//                                 (*m).mh as i32,
+//                             );
+//                         }
+//                         c = (*c).next;
+//                     }
+//                     XMoveResizeWindow(
+//                         mdpy.inner,
+//                         (*m).barwin,
+//                         (*m).wx as i32,
+//                         (*m).by as i32,
+//                         (*m).ww as u32,
+//                         BH as u32,
+//                     );
+//                     m = (*m).next;
+//                 }
+//                 focus(mdpy, null_mut());
+//                 arrange(mdpy, null_mut());
+//             }
+//         }
+//     }
+// }
 
 fn configurerequest(mdpy: &Display, e: *mut XEvent) {
     unsafe {
@@ -2849,99 +2849,99 @@ fn configurerequest(mdpy: &Display, e: *mut XEvent) {
     }
 }
 
-fn clientmessage(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let cme = (*e).client_message;
-        let c = wintoclient(cme.window);
-        if c.is_null() {
-            return;
-        }
-        if cme.message_type == NETATOM[Net::WMState as usize] {
-            if cme.data.get_long(1)
-                == NETATOM[Net::WMFullscreen as usize] as i64
-                || cme.data.get_long(2)
-                    == NETATOM[Net::WMFullscreen as usize] as i64
-            {
-                setfullscreen(
-                    mdpy,
-                    c,
-                    cme.data.get_long(0) == 1
-                        || (cme.data.get_long(0) == 2 && !(*c).isfullscreen),
-                );
-            }
-        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
-            && c != (*SELMON).sel
-            && !(*c).isurgent
-        {
-            seturgent(mdpy, c, true);
-        }
-    }
-}
+// fn clientmessage(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let cme = (*e).client_message;
+//         let c = wintoclient(cme.window);
+//         if c.is_null() {
+//             return;
+//         }
+//         if cme.message_type == NETATOM[Net::WMState as usize] {
+//             if cme.data.get_long(1)
+//                 == NETATOM[Net::WMFullscreen as usize] as i64
+//                 || cme.data.get_long(2)
+//                     == NETATOM[Net::WMFullscreen as usize] as i64
+//             {
+//                 setfullscreen(
+//                     mdpy,
+//                     c,
+//                     cme.data.get_long(0) == 1
+//                         || (cme.data.get_long(0) == 2 && !(*c).isfullscreen),
+//                 );
+//             }
+//         } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
+//             && c != (*SELMON).sel
+//             && !(*c).isurgent
+//         {
+//             seturgent(mdpy, c, true);
+//         }
+//     }
+// }
 
-fn buttonpress(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).button;
-        let mut click = Clk::RootWin;
-        let mut arg = Arg::Uint(0);
-        // focus monitor if necessary
-        let m = wintomon(mdpy, ev.window);
-        if m != SELMON {
-            unfocus(mdpy, (*SELMON).sel, true);
-            SELMON = m;
-            focus(mdpy, null_mut());
-        }
-        if ev.window == (*SELMON).barwin {
-            let mut x = 0;
-            let mut i = 0;
-            // do while with ++i in condition
-            let drw = &DRW.as_ref().unwrap();
-            let text = TAGS[i].to_owned();
-            x += drw.textw(&text);
-            i += 1;
-            while ev.x >= x as i32 && i < TAGS.len() {
-                let text = TAGS[i].to_owned();
-                x += drw.textw(&text);
-                i += 1;
-            }
-            if i < TAGS.len() {
-                click = Clk::TagBar;
-                arg = Arg::Uint(1 << i);
-            } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol)) as i32 {
-                click = Clk::LtSymbol;
-            } else if ev.x
-                > ((*SELMON).ww as usize - drw.textw(addr_of!(STEXT))) as i32
-            {
-                click = Clk::StatusText;
-            } else {
-                click = Clk::WinTitle;
-            }
-        } else {
-            let c = wintoclient(ev.window);
-            if !c.is_null() {
-                focus(mdpy, c);
-                restack(mdpy, SELMON);
-                XAllowEvents(mdpy.inner, ReplayPointer, CurrentTime);
-                click = Clk::ClientWin;
-            }
-        }
-        for i in 0..BUTTONS.len() {
-            let b = &BUTTONS[i];
-            if click == b.click
-                && b.button == ev.button
-                && cleanmask(b.mask) == cleanmask(ev.state)
-            {
-                let arg = if click == Clk::TagBar
-                    && matches!(b.arg, Arg::Int(i) if i == 0)
-                {
-                    arg.clone()
-                } else {
-                    b.arg.clone()
-                };
-                (b.func)(mdpy, arg);
-            }
-        }
-    }
-}
+// fn buttonpress(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).button;
+//         let mut click = Clk::RootWin;
+//         let mut arg = Arg::Uint(0);
+//         // focus monitor if necessary
+//         let m = wintomon(mdpy, ev.window);
+//         if m != SELMON {
+//             unfocus(mdpy, (*SELMON).sel, true);
+//             SELMON = m;
+//             focus(mdpy, null_mut());
+//         }
+//         if ev.window == (*SELMON).barwin {
+//             let mut x = 0;
+//             let mut i = 0;
+//             // do while with ++i in condition
+//             let drw = &DRW.as_ref().unwrap();
+//             let text = TAGS[i].to_owned();
+//             x += drw.textw(&text);
+//             i += 1;
+//             while ev.x >= x as i32 && i < TAGS.len() {
+//                 let text = TAGS[i].to_owned();
+//                 x += drw.textw(&text);
+//                 i += 1;
+//             }
+//             if i < TAGS.len() {
+//                 click = Clk::TagBar;
+//                 arg = Arg::Uint(1 << i);
+//             } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol)) as i32 {
+//                 click = Clk::LtSymbol;
+//             } else if ev.x
+//                 > ((*SELMON).ww as usize - drw.textw(addr_of!(STEXT))) as i32
+//             {
+//                 click = Clk::StatusText;
+//             } else {
+//                 click = Clk::WinTitle;
+//             }
+//         } else {
+//             let c = wintoclient(ev.window);
+//             if !c.is_null() {
+//                 focus(mdpy, c);
+//                 restack(mdpy, SELMON);
+//                 XAllowEvents(mdpy.inner, ReplayPointer, CurrentTime);
+//                 click = Clk::ClientWin;
+//             }
+//         }
+//         for i in 0..BUTTONS.len() {
+//             let b = &BUTTONS[i];
+//             if click == b.click
+//                 && b.button == ev.button
+//                 && cleanmask(b.mask) == cleanmask(ev.state)
+//             {
+//                 let arg = if click == Clk::TagBar
+//                     && matches!(b.arg, Arg::Int(i) if i == 0)
+//                 {
+//                     arg.clone()
+//                 } else {
+//                     b.arg.clone()
+//                 };
+//                 (b.func)(mdpy, arg);
+//             }
+//         }
+//     }
+// }
 
 fn scan() {
     let mut num = 0;
@@ -2977,7 +2977,7 @@ fn scan() {
                 if (*wa.as_mut_ptr()).map_state == IsViewable
                     || getstate(*wins.offset(i as isize)) == ICONIC_STATE as i64
                 {
-                    bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(*wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             for i in 0..num {
@@ -2999,7 +2999,7 @@ fn scan() {
                         || getstate(*wins.offset(i as isize))
                             == ICONIC_STATE as i64)
                 {
-                    bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(*wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             if !wins.is_null() {
@@ -3009,113 +3009,114 @@ fn scan() {
     }
 }
 
-fn manage(mdpy: &Display, w: Window, wa: *mut XWindowAttributes) {
-    let mut trans = 0;
-    unsafe {
-        let wa = *wa;
-        let c = Box::into_raw(Box::new(Client {
-            x: wa.x,
-            y: wa.y,
-            w: wa.width,
-            h: wa.height,
-            oldx: wa.x,
-            oldy: wa.y,
-            oldw: wa.width,
-            oldh: wa.height,
-            oldbw: wa.border_width,
-            win: w,
-            ..Default::default()
-        }));
-        updatetitle(mdpy, c);
-        if xgettransientforhint(mdpy, w, &mut trans) {
-            let t = wintoclient(trans);
-            if !t.is_null() {
-                (*c).mon = (*t).mon;
-                (*c).tags = (*t).tags;
-            } else {
-                (*c).mon = SELMON;
-                applyrules(mdpy, c);
-            }
-        } else {
-            // copied else case from above because the condition is supposed
-            // to be xgettransientforhint && (t = wintoclient)
-            (*c).mon = SELMON;
-            applyrules(mdpy, c);
-        }
-        if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
-            (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
-        }
-        if (*c).y + height(c) > ((*(*c).mon).wy + (*(*c).mon).wh) as i32 {
-            (*c).y = ((*(*c).mon).wy + (*(*c).mon).wh) as i32 - height(c);
-        }
-        (*c).x = max((*c).x, (*(*c).mon).wx as i32);
-        (*c).y = max((*c).y, (*(*c).mon).wy as i32);
-        (*c).bw = BORDERPX;
-        let mut wc = XWindowChanges {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-            border_width: (*c).bw,
-            sibling: 0,
-            stack_mode: 0,
-        };
-        XConfigureWindow(mdpy.inner, w, CWBorderWidth as u32, &mut wc);
-        XSetWindowBorder(
-            mdpy.inner,
-            w,
-            SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
-        );
-        configure(mdpy, c); // propagates border width, if size doesn't change
-        updatewindowtype(mdpy, c);
-        updatesizehints(mdpy, c);
-        updatewmhints(mdpy, c);
-        XSelectInput(
-            mdpy.inner,
-            w,
-            EnterWindowMask
-                | FocusChangeMask
-                | PropertyChangeMask
-                | StructureNotifyMask,
-        );
-        grabbuttons(mdpy, c, false);
-        if !(*c).isfloating {
-            (*c).oldstate = trans != 0 || (*c).isfixed;
-            (*c).isfloating = (*c).oldstate;
-        }
-        if (*c).isfloating {
-            XRaiseWindow(mdpy.inner, (*c).win);
-        }
-        attach(c);
-        attachstack(c);
-        xchangeproperty(
-            mdpy,
-            ROOT,
-            NETATOM[Net::ClientList as usize],
-            XA_WINDOW,
-            32,
-            PropModeAppend,
-            &mut ((*c).win as c_uchar),
-            1,
-        );
-        // some windows require this
-        XMoveResizeWindow(
-            mdpy.inner,
-            (*c).win,
-            (*c).x + 2 * SW,
-            (*c).y,
-            (*c).w as u32,
-            (*c).h as u32,
-        );
-        setclientstate(mdpy, c, NORMAL_STATE);
-        if (*c).mon == SELMON {
-            unfocus(mdpy, (*SELMON).sel, false);
-        }
-        (*(*c).mon).sel = c;
-        arrange(mdpy, (*c).mon);
-        XMapWindow(mdpy.inner, (*c).win);
-        focus(mdpy, std::ptr::null_mut());
-    }
+fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
+    unsafe { bindgen::manage(w, wa) }
+    // let mut trans = 0;
+    // unsafe {
+    //     let wa = *wa;
+    //     let c = Box::into_raw(Box::new(Client {
+    //         x: wa.x,
+    //         y: wa.y,
+    //         w: wa.width,
+    //         h: wa.height,
+    //         oldx: wa.x,
+    //         oldy: wa.y,
+    //         oldw: wa.width,
+    //         oldh: wa.height,
+    //         oldbw: wa.border_width,
+    //         win: w,
+    //         ..Default::default()
+    //     }));
+    //     updatetitle(mdpy, c);
+    //     if xgettransientforhint(mdpy, w, &mut trans) {
+    //         let t = wintoclient(trans);
+    //         if !t.is_null() {
+    //             (*c).mon = (*t).mon;
+    //             (*c).tags = (*t).tags;
+    //         } else {
+    //             (*c).mon = SELMON;
+    //             applyrules(mdpy, c);
+    //         }
+    //     } else {
+    //         // copied else case from above because the condition is supposed
+    //         // to be xgettransientforhint && (t = wintoclient)
+    //         (*c).mon = SELMON;
+    //         applyrules(mdpy, c);
+    //     }
+    //     if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
+    //         (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
+    //     }
+    //     if (*c).y + height(c) > ((*(*c).mon).wy + (*(*c).mon).wh) as i32 {
+    //         (*c).y = ((*(*c).mon).wy + (*(*c).mon).wh) as i32 - height(c);
+    //     }
+    //     (*c).x = max((*c).x, (*(*c).mon).wx as i32);
+    //     (*c).y = max((*c).y, (*(*c).mon).wy as i32);
+    //     (*c).bw = BORDERPX;
+    //     let mut wc = XWindowChanges {
+    //         x: 0,
+    //         y: 0,
+    //         width: 0,
+    //         height: 0,
+    //         border_width: (*c).bw,
+    //         sibling: 0,
+    //         stack_mode: 0,
+    //     };
+    //     XConfigureWindow(mdpy.inner, w, CWBorderWidth as u32, &mut wc);
+    //     XSetWindowBorder(
+    //         mdpy.inner,
+    //         w,
+    //         SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
+    //     );
+    //     configure(mdpy, c); // propagates border width, if size doesn't change
+    //     updatewindowtype(mdpy, c);
+    //     updatesizehints(mdpy, c);
+    //     updatewmhints(mdpy, c);
+    //     XSelectInput(
+    //         mdpy.inner,
+    //         w,
+    //         EnterWindowMask
+    //             | FocusChangeMask
+    //             | PropertyChangeMask
+    //             | StructureNotifyMask,
+    //     );
+    //     grabbuttons(mdpy, c, false);
+    //     if !(*c).isfloating {
+    //         (*c).oldstate = trans != 0 || (*c).isfixed;
+    //         (*c).isfloating = (*c).oldstate;
+    //     }
+    //     if (*c).isfloating {
+    //         XRaiseWindow(mdpy.inner, (*c).win);
+    //     }
+    //     attach(c);
+    //     attachstack(c);
+    //     xchangeproperty(
+    //         mdpy,
+    //         ROOT,
+    //         NETATOM[Net::ClientList as usize],
+    //         XA_WINDOW,
+    //         32,
+    //         PropModeAppend,
+    //         &mut ((*c).win as c_uchar),
+    //         1,
+    //     );
+    //     // some windows require this
+    //     XMoveResizeWindow(
+    //         mdpy.inner,
+    //         (*c).win,
+    //         (*c).x + 2 * SW,
+    //         (*c).y,
+    //         (*c).w as u32,
+    //         (*c).h as u32,
+    //     );
+    //     setclientstate(mdpy, c, NORMAL_STATE);
+    //     if (*c).mon == SELMON {
+    //         unfocus(mdpy, (*SELMON).sel, false);
+    //     }
+    //     (*(*c).mon).sel = c;
+    //     arrange(mdpy, (*c).mon);
+    //     XMapWindow(mdpy.inner, (*c).win);
+    //     focus(mdpy, std::ptr::null_mut());
+    // }
 }
 
 fn updatewmhints(mdpy: &Display, c: *mut Client) {
@@ -3138,69 +3139,69 @@ fn updatewmhints(mdpy: &Display, c: *mut Client) {
     }
 }
 
-fn updatewindowtype(mdpy: &Display, c: *mut Client) {
-    unsafe {
-        let state = getatomprop(mdpy, c, NETATOM[Net::WMState as usize]);
-        let wtype = getatomprop(mdpy, c, NETATOM[Net::WMWindowType as usize]);
-        if state == NETATOM[Net::WMFullscreen as usize] {
-            setfullscreen(mdpy, c, true);
-        }
-        if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
-            (*c).isfloating = true;
-        }
-    }
-}
+// fn updatewindowtype(mdpy: &Display, c: *mut Client) {
+//     unsafe {
+//         let state = getatomprop(mdpy, c, NETATOM[Net::WMState as usize]);
+//         let wtype = getatomprop(mdpy, c, NETATOM[Net::WMWindowType as usize]);
+//         if state == NETATOM[Net::WMFullscreen as usize] {
+//             setfullscreen(mdpy, c, true);
+//         }
+//         if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
+//             (*c).isfloating = true;
+//         }
+//     }
+// }
 
-fn setfullscreen(mdpy: &Display, c: *mut Client, fullscreen: bool) {
-    unsafe {
-        if fullscreen && !(*c).isfullscreen {
-            xchangeproperty(
-                mdpy,
-                (*c).win,
-                NETATOM[Net::WMState as usize],
-                XA_ATOM,
-                32,
-                PropModeReplace,
-                &mut (NETATOM[Net::WMFullscreen as usize] as u8) as *mut _,
-                1,
-            );
-            (*c).isfullscreen = true;
-            (*c).oldstate = (*c).isfloating;
-            (*c).oldbw = (*c).bw;
-            (*c).bw = 0;
-            (*c).isfloating = true;
-            resizeclient(
-                mdpy,
-                c,
-                (*(*c).mon).mx as i32,
-                (*(*c).mon).my as i32,
-                (*(*c).mon).mw as i32,
-                (*(*c).mon).mh as i32,
-            );
-            XRaiseWindow(mdpy.inner, (*c).win);
-        } else if !fullscreen && (*c).isfullscreen {
-            xchangeproperty(
-                mdpy,
-                (*c).win,
-                NETATOM[Net::WMState as usize],
-                XA_ATOM,
-                32,
-                PropModeReplace,
-                &mut 0_u8 as *mut _,
-                0,
-            );
-            (*c).isfullscreen = false;
-            (*c).isfloating = (*c).oldstate;
-            (*c).bw = (*c).oldbw;
-            (*c).x = (*c).oldx;
-            (*c).y = (*c).oldy;
-            (*c).w = (*c).oldw;
-            (*c).h = (*c).oldh;
-            resizeclient(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h);
-            arrange(mdpy, (*c).mon);
-        }
-    }
-}
+// fn setfullscreen(mdpy: &Display, c: *mut Client, fullscreen: bool) {
+//     unsafe {
+//         if fullscreen && !(*c).isfullscreen {
+//             xchangeproperty(
+//                 mdpy,
+//                 (*c).win,
+//                 NETATOM[Net::WMState as usize],
+//                 XA_ATOM,
+//                 32,
+//                 PropModeReplace,
+//                 &mut (NETATOM[Net::WMFullscreen as usize] as u8) as *mut _,
+//                 1,
+//             );
+//             (*c).isfullscreen = true;
+//             (*c).oldstate = (*c).isfloating;
+//             (*c).oldbw = (*c).bw;
+//             (*c).bw = 0;
+//             (*c).isfloating = true;
+//             resizeclient(
+//                 mdpy,
+//                 c,
+//                 (*(*c).mon).mx as i32,
+//                 (*(*c).mon).my as i32,
+//                 (*(*c).mon).mw as i32,
+//                 (*(*c).mon).mh as i32,
+//             );
+//             XRaiseWindow(mdpy.inner, (*c).win);
+//         } else if !fullscreen && (*c).isfullscreen {
+//             xchangeproperty(
+//                 mdpy,
+//                 (*c).win,
+//                 NETATOM[Net::WMState as usize],
+//                 XA_ATOM,
+//                 32,
+//                 PropModeReplace,
+//                 &mut 0_u8 as *mut _,
+//                 0,
+//             );
+//             (*c).isfullscreen = false;
+//             (*c).isfloating = (*c).oldstate;
+//             (*c).bw = (*c).oldbw;
+//             (*c).x = (*c).oldx;
+//             (*c).y = (*c).oldy;
+//             (*c).w = (*c).oldw;
+//             (*c).h = (*c).oldh;
+//             resizeclient(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h);
+//             arrange(mdpy, (*c).mon);
+//         }
+//     }
+// }
 
 fn getatomprop(mdpy: &Display, c: *mut Client, prop: Atom) -> Atom {
     let mut di = 0;
@@ -3232,54 +3233,54 @@ fn getatomprop(mdpy: &Display, c: *mut Client, prop: Atom) -> Atom {
     atom
 }
 
-fn applyrules(mdpy: &Display, c: *mut Client) {
-    unsafe {
-        let mut ch = XClassHint {
-            res_name: std::ptr::null_mut(),
-            res_class: std::ptr::null_mut(),
-        };
-        // rule matching
-        (*c).isfloating = false;
-        (*c).tags = 0;
-        XGetClassHint(mdpy.inner, (*c).win, &mut ch);
-        let class = if !ch.res_class.is_null() {
-            CString::from_raw(ch.res_class).into_string().unwrap()
-        } else {
-            BROKEN.to_owned()
-        };
-        let instance = if !ch.res_name.is_null() {
-            CString::from_raw(ch.res_name).into_string().unwrap()
-        } else {
-            BROKEN.to_owned()
-        };
+// fn applyrules(mdpy: &Display, c: *mut Client) {
+//     unsafe {
+//         let mut ch = XClassHint {
+//             res_name: std::ptr::null_mut(),
+//             res_class: std::ptr::null_mut(),
+//         };
+//         // rule matching
+//         (*c).isfloating = false;
+//         (*c).tags = 0;
+//         XGetClassHint(mdpy.inner, (*c).win, &mut ch);
+//         let class = if !ch.res_class.is_null() {
+//             CString::from_raw(ch.res_class).into_string().unwrap()
+//         } else {
+//             BROKEN.to_owned()
+//         };
+//         let instance = if !ch.res_name.is_null() {
+//             CString::from_raw(ch.res_name).into_string().unwrap()
+//         } else {
+//             BROKEN.to_owned()
+//         };
 
-        for i in 0..RULES.len() {
-            let r = &RULES[i];
-            if (r.title.is_none()
-                || r.title.is_some_and(|t| (*c).name.contains(t)))
-                && (r.class.is_none()
-                    || r.class.is_some_and(|t| class.contains(t)))
-                && (r.instance.is_none()
-                    || r.instance.is_some_and(|t| instance.contains(t)))
-            {
-                (*c).isfloating = r.isfloating;
-                (*c).tags |= r.tags;
-                let mut m = MONS;
-                while !m.is_null() && (*m).num != r.monitor as i32 {
-                    m = (*m).next;
-                }
-                if !m.is_null() {
-                    (*c).mon = m;
-                }
-            }
-        }
-        (*c).tags = if (*c).tags & TAGMASK != 0 {
-            (*c).tags & TAGMASK
-        } else {
-            (*(*c).mon).tagset[(*(*c).mon).seltags]
-        };
-    }
-}
+//         for i in 0..RULES.len() {
+//             let r = &RULES[i];
+//             if (r.title.is_none()
+//                 || r.title.is_some_and(|t| (*c).name.contains(t)))
+//                 && (r.class.is_none()
+//                     || r.class.is_some_and(|t| class.contains(t)))
+//                 && (r.instance.is_none()
+//                     || r.instance.is_some_and(|t| instance.contains(t)))
+//             {
+//                 (*c).isfloating = r.isfloating;
+//                 (*c).tags |= r.tags;
+//                 let mut m = MONS;
+//                 while !m.is_null() && (*m).num != r.monitor as i32 {
+//                     m = (*m).next;
+//                 }
+//                 if !m.is_null() {
+//                     (*c).mon = m;
+//                 }
+//             }
+//         }
+//         (*c).tags = if (*c).tags & TAGMASK != 0 {
+//             (*c).tags & TAGMASK
+//         } else {
+//             (*(*c).mon).tagset[(*(*c).mon).seltags]
+//         };
+//     }
+// }
 
 fn updatetitle(mdpy: &Display, c: *mut Client) {
     unsafe {
@@ -3350,9 +3351,9 @@ fn not_xgetwindowattributes(
     }
 }
 
-mod config;
-mod drw;
-mod layouts;
+// mod config;
+// mod drw;
+// mod layouts;
 
 fn die(msg: &str) {
     eprintln!("{}", msg);
