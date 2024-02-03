@@ -7,3 +7,4 @@ void scan(void);
 void cleanup(void);
 
 Display *dpy;
+int running = 1;

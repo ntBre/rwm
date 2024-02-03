@@ -243,7 +243,6 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[UnmapNotify] = unmapnotify
 };
 static Atom wmatom[WMLast], netatom[NetLast];
-static int running = 1;
 static Cur *cursor[CurLast];
 static Clr **scheme;
 static Drw *drw;
