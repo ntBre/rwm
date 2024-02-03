@@ -511,165 +511,166 @@ pub enum Clk {
     Last,
 }
 
-fn setup(mdpy: &mut Display) {
-    let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
-    let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
+fn setup() {
+    unsafe { bindgen::setup() }
+    // let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
+    // let mut wa: MaybeUninit<XSetWindowAttributes> = MaybeUninit::uninit();
 
-    unsafe {
-        // do not transform children into zombies when they terminate
-        {
-            let sa = sa.as_mut_ptr();
-            sigemptyset(&mut (*sa).sa_mask);
-            (*sa).sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
-            (*sa).sa_sigaction = SIG_IGN;
-        }
-        let sa = sa.assume_init();
-        sigaction(SIGCHLD, &sa, null_mut());
+    // unsafe {
+    //     // do not transform children into zombies when they terminate
+    //     {
+    //         let sa = sa.as_mut_ptr();
+    //         sigemptyset(&mut (*sa).sa_mask);
+    //         (*sa).sa_flags = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART;
+    //         (*sa).sa_sigaction = SIG_IGN;
+    //     }
+    //     let sa = sa.assume_init();
+    //     sigaction(SIGCHLD, &sa, null_mut());
 
-        // clean up any zombies (inherited from .xinitrc etc) immediately
-        while waitpid(-1, null_mut(), WNOHANG) > 0 {}
+    //     // clean up any zombies (inherited from .xinitrc etc) immediately
+    //     while waitpid(-1, null_mut(), WNOHANG) > 0 {}
 
-        // init screen
-        SCREEN = XDefaultScreen(mdpy.inner);
-        SW = XDisplayWidth(mdpy.inner, SCREEN) as c_int;
-        SH = XDisplayHeight(mdpy.inner, SCREEN) as c_int;
-        ROOT = XRootWindow(mdpy.inner, SCREEN);
-        DRW = Box::into_raw(Box::new(Drw::new(
-            mdpy,
-            SCREEN,
-            ROOT,
-            SW as usize,
-            SH as usize,
-        )));
+    //     // init screen
+    //     SCREEN = XDefaultScreen(mdpy.inner);
+    //     SW = XDisplayWidth(mdpy.inner, SCREEN) as c_int;
+    //     SH = XDisplayHeight(mdpy.inner, SCREEN) as c_int;
+    //     ROOT = XRootWindow(mdpy.inner, SCREEN);
+    //     DRW = Box::into_raw(Box::new(Drw::new(
+    //         mdpy,
+    //         SCREEN,
+    //         ROOT,
+    //         SW as usize,
+    //         SH as usize,
+    //     )));
 
-        let drw = DRW.as_mut().unwrap();
+    //     let drw = DRW.as_mut().unwrap();
 
-        drw.fontset_create(FONTS).expect("no fonts could be loaded");
-        LRPAD = (*(*DRW).fonts).h;
-        BH = ((*(*DRW).fonts).h + 2) as i16;
-        updategeom(mdpy);
+    //     drw.fontset_create(FONTS).expect("no fonts could be loaded");
+    //     LRPAD = (*(*DRW).fonts).h;
+    //     BH = ((*(*DRW).fonts).h + 2) as i16;
+    //     updategeom(mdpy);
 
-        // init atoms - I really hope these CStrings live long enough.
-        let utf8_string: CString = CString::new("UTF8_STRING").unwrap();
-        let utf8string = XInternAtom(mdpy.inner, utf8_string.as_ptr(), False);
+    //     // init atoms - I really hope these CStrings live long enough.
+    //     let utf8_string: CString = CString::new("UTF8_STRING").unwrap();
+    //     let utf8string = XInternAtom(mdpy.inner, utf8_string.as_ptr(), False);
 
-        for (k, s) in [
-            (WM::Protocols, "WM_PROTOCOLS"),
-            (WM::Delete, "WM_DELETE_WINDOW"),
-            (WM::State, "WM_STATE"),
-            (WM::TakeFocus, "WM_TAKE_FOCUS"),
-        ] {
-            let s = CString::new(s).unwrap();
-            let v = XInternAtom(mdpy.inner, s.as_ptr(), False);
-            if v == BadAlloc as u64 || v == BadValue as u64 {
-                panic!("XInternAtom failed with {v}");
-            }
-            WMATOM[k as usize] = v;
-        }
+    //     for (k, s) in [
+    //         (WM::Protocols, "WM_PROTOCOLS"),
+    //         (WM::Delete, "WM_DELETE_WINDOW"),
+    //         (WM::State, "WM_STATE"),
+    //         (WM::TakeFocus, "WM_TAKE_FOCUS"),
+    //     ] {
+    //         let s = CString::new(s).unwrap();
+    //         let v = XInternAtom(mdpy.inner, s.as_ptr(), False);
+    //         if v == BadAlloc as u64 || v == BadValue as u64 {
+    //             panic!("XInternAtom failed with {v}");
+    //         }
+    //         WMATOM[k as usize] = v;
+    //     }
 
-        for (k, s) in [
-            (Net::ActiveWindow, "_NET_ACTIVE_WINDOW"),
-            (Net::Supported, "_NET_SUPPORTED"),
-            (Net::WMName, "_NET_WM_NAME"),
-            (Net::WMState, "_NET_WM_STATE"),
-            (Net::WMCheck, "_NET_SUPPORTING_WM_CHECK"),
-            (Net::WMFullscreen, "_NET_WM_STATE_FULLSCREEN"),
-            (Net::WMWindowType, "_NET_WM_WINDOW_TYPE"),
-            (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG"),
-            (Net::ClientList, "_NET_CLIENT_LIST"),
-        ] {
-            let s = CString::new(s).unwrap();
-            let v = XInternAtom(mdpy.inner, s.as_ptr(), False);
-            if v == BadAlloc as u64 || v == BadValue as u64 {
-                panic!("XInternAtom failed with {v}");
-            }
-            NETATOM[k as usize] = v;
-        }
+    //     for (k, s) in [
+    //         (Net::ActiveWindow, "_NET_ACTIVE_WINDOW"),
+    //         (Net::Supported, "_NET_SUPPORTED"),
+    //         (Net::WMName, "_NET_WM_NAME"),
+    //         (Net::WMState, "_NET_WM_STATE"),
+    //         (Net::WMCheck, "_NET_SUPPORTING_WM_CHECK"),
+    //         (Net::WMFullscreen, "_NET_WM_STATE_FULLSCREEN"),
+    //         (Net::WMWindowType, "_NET_WM_WINDOW_TYPE"),
+    //         (Net::WMWindowTypeDialog, "_NET_WM_WINDOW_TYPE_DIALOG"),
+    //         (Net::ClientList, "_NET_CLIENT_LIST"),
+    //     ] {
+    //         let s = CString::new(s).unwrap();
+    //         let v = XInternAtom(mdpy.inner, s.as_ptr(), False);
+    //         if v == BadAlloc as u64 || v == BadValue as u64 {
+    //             panic!("XInternAtom failed with {v}");
+    //         }
+    //         NETATOM[k as usize] = v;
+    //     }
 
-        // init cursors
-        CURSOR[Cur::Normal as usize] = drw.cur_create(XC_LEFT_PTR);
-        CURSOR[Cur::Resize as usize] = drw.cur_create(XC_SIZING);
-        CURSOR[Cur::Move as usize] = drw.cur_create(XC_FLEUR);
+    //     // init cursors
+    //     CURSOR[Cur::Normal as usize] = drw.cur_create(XC_LEFT_PTR);
+    //     CURSOR[Cur::Resize as usize] = drw.cur_create(XC_SIZING);
+    //     CURSOR[Cur::Move as usize] = drw.cur_create(XC_FLEUR);
 
-        // init appearance
-        SCHEME = Vec::with_capacity(COLORS.len());
-        for i in 0..COLORS.len() {
-            SCHEME.push(drw.scm_create(COLORS[i], 3));
-        }
+    //     // init appearance
+    //     SCHEME = Vec::with_capacity(COLORS.len());
+    //     for i in 0..COLORS.len() {
+    //         SCHEME.push(drw.scm_create(COLORS[i], 3));
+    //     }
 
-        // init bars
-        updatebars(mdpy);
+    //     // init bars
+    //     updatebars(mdpy);
 
-        updatestatus(mdpy);
+    //     updatestatus(mdpy);
 
-        // supporting window for NetWMCheck
-        WMCHECKWIN = XCreateSimpleWindow(mdpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
-        xchangeproperty(
-            mdpy,
-            WMCHECKWIN,
-            NETATOM[Net::WMCheck as usize],
-            XA_WINDOW,
-            32,
-            PropModeReplace,
-            &mut (WMCHECKWIN as u8),
-            1,
-        );
-        let rwm = CString::new("rwm").unwrap();
-        xchangeproperty(
-            mdpy,
-            WMCHECKWIN,
-            NETATOM[Net::WMName as usize],
-            utf8string,
-            8,
-            PropModeReplace,
-            rwm.as_ptr().cast_mut().cast(),
-            3,
-        );
-        xchangeproperty(
-            mdpy,
-            ROOT,
-            NETATOM[Net::WMCheck as usize],
-            XA_WINDOW,
-            32,
-            PropModeReplace,
-            &mut (WMCHECKWIN as u8),
-            1,
-        );
+    //     // supporting window for NetWMCheck
+    //     WMCHECKWIN = XCreateSimpleWindow(mdpy.inner, ROOT, 0, 0, 1, 1, 0, 0, 0);
+    //     xchangeproperty(
+    //         mdpy,
+    //         WMCHECKWIN,
+    //         NETATOM[Net::WMCheck as usize],
+    //         XA_WINDOW,
+    //         32,
+    //         PropModeReplace,
+    //         &mut (WMCHECKWIN as u8),
+    //         1,
+    //     );
+    //     let rwm = CString::new("rwm").unwrap();
+    //     xchangeproperty(
+    //         mdpy,
+    //         WMCHECKWIN,
+    //         NETATOM[Net::WMName as usize],
+    //         utf8string,
+    //         8,
+    //         PropModeReplace,
+    //         rwm.as_ptr().cast_mut().cast(),
+    //         3,
+    //     );
+    //     xchangeproperty(
+    //         mdpy,
+    //         ROOT,
+    //         NETATOM[Net::WMCheck as usize],
+    //         XA_WINDOW,
+    //         32,
+    //         PropModeReplace,
+    //         &mut (WMCHECKWIN as u8),
+    //         1,
+    //     );
 
-        // EWMH support per view
-        xchangeproperty(
-            mdpy,
-            ROOT,
-            NETATOM[Net::Supported as usize],
-            XA_ATOM,
-            32,
-            PropModeReplace,
-            NETATOM.as_ptr() as *mut _,
-            Net::Last as i32,
-        );
-        XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
+    //     // EWMH support per view
+    //     xchangeproperty(
+    //         mdpy,
+    //         ROOT,
+    //         NETATOM[Net::Supported as usize],
+    //         XA_ATOM,
+    //         32,
+    //         PropModeReplace,
+    //         NETATOM.as_ptr() as *mut _,
+    //         Net::Last as i32,
+    //     );
+    //     XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
 
-        // select events
-        {
-            let wa = wa.as_mut_ptr();
-            (*wa).cursor = CURSOR[Cur::Normal as usize];
-            (*wa).event_mask = SubstructureRedirectMask
-                | SubstructureNotifyMask
-                | ButtonPressMask
-                | PointerMotionMask
-                | EnterWindowMask
-                | LeaveWindowMask
-                | StructureNotifyMask
-                | PropertyChangeMask;
-        }
-        let mut wa = wa.assume_init();
-        xchangewindowattributes(mdpy, ROOT, CWEventMask | CWCursor, &mut wa);
-        if XSelectInput(mdpy.inner, ROOT, wa.event_mask) == BadWindow as i32 {
-            panic!("selecting bad window");
-        }
-        grabkeys(mdpy);
-        focus(mdpy, std::ptr::null_mut());
-    }
+    //     // select events
+    //     {
+    //         let wa = wa.as_mut_ptr();
+    //         (*wa).cursor = CURSOR[Cur::Normal as usize];
+    //         (*wa).event_mask = SubstructureRedirectMask
+    //             | SubstructureNotifyMask
+    //             | ButtonPressMask
+    //             | PointerMotionMask
+    //             | EnterWindowMask
+    //             | LeaveWindowMask
+    //             | StructureNotifyMask
+    //             | PropertyChangeMask;
+    //     }
+    //     let mut wa = wa.assume_init();
+    //     xchangewindowattributes(mdpy, ROOT, CWEventMask | CWCursor, &mut wa);
+    //     if XSelectInput(mdpy.inner, ROOT, wa.event_mask) == BadWindow as i32 {
+    //         panic!("selecting bad window");
+    //     }
+    //     grabkeys(mdpy);
+    //     focus(mdpy, std::ptr::null_mut());
+    // }
 }
 
 fn xchangewindowattributes(
@@ -2401,43 +2402,46 @@ fn isuniquegeom(
     true
 }
 
-fn cleanup(mdpy: &Display) {
-    let a = Arg::Uint(!0);
-    let l = Box::new(Layout {
-        symbol: "",
-        arrange: None,
-    });
-    let _i = 0;
-
-    view(mdpy, a);
+fn cleanup() {
     unsafe {
-        (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(l);
-        let mut m = MONS;
-        while !m.is_null() {
-            while !(*m).stack.is_null() {
-                unmanage(mdpy, (*m).stack, false);
-            }
-            m = (*m).next;
-        }
-        XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
-        while !MONS.is_null() {
-            cleanupmon(MONS, mdpy);
-        }
-        for i in 0..Cur::Last as usize {
-            DRW.as_ref().unwrap().cur_free(CURSOR[i]);
-        }
-        // shouldn't have to free SCHEME because it's actually a vec
-        XDestroyWindow(mdpy.inner, WMCHECKWIN);
-        drop(Box::from_raw(DRW));
-        XSync(mdpy.inner, False);
-        XSetInputFocus(
-            mdpy.inner,
-            PointerRoot as u64,
-            RevertToPointerRoot,
-            CurrentTime,
-        );
-        XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ActiveWindow as usize]);
+        bindgen::cleanup();
     }
+    // let a = Arg::Uint(!0);
+    // let l = Box::new(Layout {
+    //     symbol: "",
+    //     arrange: None,
+    // });
+    // let _i = 0;
+
+    // view(mdpy, a);
+    // unsafe {
+    //     (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(l);
+    //     let mut m = MONS;
+    //     while !m.is_null() {
+    //         while !(*m).stack.is_null() {
+    //             unmanage(mdpy, (*m).stack, false);
+    //         }
+    //         m = (*m).next;
+    //     }
+    //     XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
+    //     while !MONS.is_null() {
+    //         cleanupmon(MONS, mdpy);
+    //     }
+    //     for i in 0..Cur::Last as usize {
+    //         DRW.as_ref().unwrap().cur_free(CURSOR[i]);
+    //     }
+    //     // shouldn't have to free SCHEME because it's actually a vec
+    //     XDestroyWindow(mdpy.inner, WMCHECKWIN);
+    //     drop(Box::from_raw(DRW));
+    //     XSync(mdpy.inner, False);
+    //     XSetInputFocus(
+    //         mdpy.inner,
+    //         PointerRoot as u64,
+    //         RevertToPointerRoot,
+    //         CurrentTime,
+    //     );
+    //     XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ActiveWindow as usize]);
+    // }
 }
 
 fn unmanage(mdpy: &Display, c: *mut Client, destroyed: bool) {
@@ -2511,15 +2515,16 @@ fn setclientstate(mdpy: &Display, c: *mut Client, state: usize) {
     }
 }
 
-fn mrun(mdpy: &Display) {
-    // main event loop
-    let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
-    unsafe {
-        XSync(mdpy.inner, False);
-        while RUNNING && XNextEvent(mdpy.inner, ev.as_mut_ptr()) == 0 {
-            handler(mdpy, ev.as_mut_ptr());
-        }
-    }
+fn run() {
+    unsafe { bindgen::run() }
+    // // main event loop
+    // let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
+    // unsafe {
+    //     XSync(mdpy.inner, False);
+    //     while RUNNING && XNextEvent(mdpy.inner, ev.as_mut_ptr()) == 0 {
+    //         handler(mdpy, ev.as_mut_ptr());
+    //     }
+    // }
 }
 
 // not sure how this is my problem...
@@ -2938,58 +2943,59 @@ fn buttonpress(mdpy: &Display, e: *mut XEvent) {
     }
 }
 
-fn scan(mdpy: &Display) {
-    let mut num = 0;
-    let mut d1 = 0;
-    let mut d2 = 0;
-    let mut wins: *mut Window = std::ptr::null_mut();
-    let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
-    unsafe {
-        if XQueryTree(
-            mdpy.inner,
-            ROOT,
-            &mut d1,
-            &mut d2,
-            &mut wins as *mut _,
-            &mut num,
-        ) != 0
-        {
-            for i in 0..num {
-                if not_xgetwindowattributes(mdpy, wins, i, &mut wa)
-                    || (*wa.as_mut_ptr()).override_redirect != 0
-                    || xgettransientforhint(
-                        mdpy,
-                        *wins.offset(i as isize),
-                        &mut d1,
-                    )
-                {
-                    continue;
-                }
-                if (*wa.as_mut_ptr()).map_state == IsViewable
-                    || getstate(mdpy, *wins.offset(i as isize))
-                        .is_ok_and(|v| v == ICONIC_STATE)
-                {
-                    manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
-                }
-            }
-            for i in 0..num {
-                // now the transients
-                if not_xgetwindowattributes(mdpy, wins, i, &mut wa) {
-                    continue;
-                }
-                if xgettransientforhint(mdpy, *wins.offset(i as isize), &mut d1)
-                    && ((*wa.as_mut_ptr()).map_state == IsViewable
-                        || getstate(mdpy, *wins.offset(i as isize))
-                            .is_ok_and(|v| v == ICONIC_STATE))
-                {
-                    manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
-                }
-            }
-            if !wins.is_null() {
-                XFree(wins.cast());
-            }
-        }
-    }
+fn scan() {
+    unsafe { bindgen::scan() }
+    // let mut num = 0;
+    // let mut d1 = 0;
+    // let mut d2 = 0;
+    // let mut wins: *mut Window = std::ptr::null_mut();
+    // let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
+    // unsafe {
+    //     if XQueryTree(
+    //         mdpy.inner,
+    //         ROOT,
+    //         &mut d1,
+    //         &mut d2,
+    //         &mut wins as *mut _,
+    //         &mut num,
+    //     ) != 0
+    //     {
+    //         for i in 0..num {
+    //             if not_xgetwindowattributes(mdpy, wins, i, &mut wa)
+    //                 || (*wa.as_mut_ptr()).override_redirect != 0
+    //                 || xgettransientforhint(
+    //                     mdpy,
+    //                     *wins.offset(i as isize),
+    //                     &mut d1,
+    //                 )
+    //             {
+    //                 continue;
+    //             }
+    //             if (*wa.as_mut_ptr()).map_state == IsViewable
+    //                 || getstate(mdpy, *wins.offset(i as isize))
+    //                     .is_ok_and(|v| v == ICONIC_STATE)
+    //             {
+    //                 manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
+    //             }
+    //         }
+    //         for i in 0..num {
+    //             // now the transients
+    //             if not_xgetwindowattributes(mdpy, wins, i, &mut wa) {
+    //                 continue;
+    //             }
+    //             if xgettransientforhint(mdpy, *wins.offset(i as isize), &mut d1)
+    //                 && ((*wa.as_mut_ptr()).map_state == IsViewable
+    //                     || getstate(mdpy, *wins.offset(i as isize))
+    //                         .is_ok_and(|v| v == ICONIC_STATE))
+    //             {
+    //                 manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
+    //             }
+    //         }
+    //         if !wins.is_null() {
+    //             XFree(wins.cast());
+    //         }
+    //     }
+    // }
 }
 
 fn manage(mdpy: &Display, w: Window, wa: *mut XWindowAttributes) {
@@ -3350,11 +3356,13 @@ fn main() {
         if dpy.is_null() {
             die("rwm: cannot open display");
         }
-        checkotherwm();
-        bindgen::setup();
-        bindgen::scan();
-        bindgen::run();
-        bindgen::cleanup();
+    }
+    checkotherwm(); // DONE
+    setup();
+    scan();
+    run();
+    cleanup();
+    unsafe {
         bindgen::XCloseDisplay(dpy);
     }
 }
