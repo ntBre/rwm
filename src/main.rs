@@ -2172,22 +2172,22 @@ fn setup() {
 //     }
 // }
 
-// fn wintoclient(w: u64) -> *mut Client {
-//     unsafe {
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             let mut c = (*m).clients;
-//             while !c.is_null() {
-//                 if (*c).win == w {
-//                     return c;
-//                 }
-//                 c = (*c).next;
-//             }
-//             m = (*m).next;
-//         }
-//     }
-//     std::ptr::null_mut()
-// }
+fn wintoclient(w: u64) -> *mut bindgen::Client {
+    unsafe {
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            let mut c = (*m).clients;
+            while !c.is_null() {
+                if (*c).win == w {
+                    return c;
+                }
+                c = (*c).next;
+            }
+            m = (*m).next;
+        }
+    }
+    std::ptr::null_mut()
+}
 
 // fn recttomon(x: i32, y: i32, w: i32, h: i32) -> *mut Monitor {
 //     unsafe {
@@ -2980,7 +2980,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 
         bindgen::updatetitle(c);
         if bindgen::XGetTransientForHint(dpy, w, &mut trans) != 0 {
-            let t = bindgen::wintoclient(trans);
+            let t = wintoclient(trans);
             if !t.is_null() {
                 (*c).mon = (*t).mon;
                 (*c).tags = (*t).tags;
