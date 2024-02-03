@@ -2944,58 +2944,70 @@ fn buttonpress(mdpy: &Display, e: *mut XEvent) {
 }
 
 fn scan() {
-    unsafe { bindgen::scan() }
-    // let mut num = 0;
-    // let mut d1 = 0;
-    // let mut d2 = 0;
-    // let mut wins: *mut Window = std::ptr::null_mut();
-    // let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
-    // unsafe {
-    //     if XQueryTree(
-    //         mdpy.inner,
-    //         ROOT,
-    //         &mut d1,
-    //         &mut d2,
-    //         &mut wins as *mut _,
-    //         &mut num,
-    //     ) != 0
-    //     {
-    //         for i in 0..num {
-    //             if not_xgetwindowattributes(mdpy, wins, i, &mut wa)
-    //                 || (*wa.as_mut_ptr()).override_redirect != 0
-    //                 || xgettransientforhint(
-    //                     mdpy,
-    //                     *wins.offset(i as isize),
-    //                     &mut d1,
-    //                 )
-    //             {
-    //                 continue;
-    //             }
-    //             if (*wa.as_mut_ptr()).map_state == IsViewable
-    //                 || getstate(mdpy, *wins.offset(i as isize))
-    //                     .is_ok_and(|v| v == ICONIC_STATE)
-    //             {
-    //                 manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
-    //             }
-    //         }
-    //         for i in 0..num {
-    //             // now the transients
-    //             if not_xgetwindowattributes(mdpy, wins, i, &mut wa) {
-    //                 continue;
-    //             }
-    //             if xgettransientforhint(mdpy, *wins.offset(i as isize), &mut d1)
-    //                 && ((*wa.as_mut_ptr()).map_state == IsViewable
-    //                     || getstate(mdpy, *wins.offset(i as isize))
-    //                         .is_ok_and(|v| v == ICONIC_STATE))
-    //             {
-    //                 manage(mdpy, *wins.offset(i as isize), wa.as_mut_ptr());
-    //             }
-    //         }
-    //         if !wins.is_null() {
-    //             XFree(wins.cast());
-    //         }
-    //     }
-    // }
+    let mut num = 0;
+    let mut d1 = 0;
+    let mut d2 = 0;
+    let mut wins: *mut Window = std::ptr::null_mut();
+    let mut wa: MaybeUninit<bindgen::XWindowAttributes> = MaybeUninit::uninit();
+    unsafe {
+        if bindgen::XQueryTree(
+            dpy,
+            bindgen::root,
+            &mut d1,
+            &mut d2,
+            &mut wins as *mut _,
+            &mut num,
+        ) != 0
+        {
+            for i in 0..num {
+                if bindgen::XGetWindowAttributes(
+                    dpy,
+                    *wins.offset(i as isize),
+                    wa.as_mut_ptr(),
+                ) == 0
+                    || (*wa.as_mut_ptr()).override_redirect != 0
+                    || bindgen::XGetTransientForHint(
+                        dpy,
+                        *wins.offset(i as isize),
+                        &mut d1,
+                    ) != 0
+                {
+                    continue;
+                }
+                if (*wa.as_mut_ptr()).map_state == IsViewable
+                    || bindgen::getstate(*wins.offset(i as isize))
+                        == ICONIC_STATE as i64
+                {
+                    bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                }
+            }
+            for i in 0..num {
+                // now the transients
+                if bindgen::XGetWindowAttributes(
+                    dpy,
+                    *wins.offset(i as isize),
+                    wa.as_mut_ptr(),
+                ) == 0
+                {
+                    continue;
+                }
+                if bindgen::XGetTransientForHint(
+                    dpy,
+                    *wins.offset(i as isize),
+                    &mut d1,
+                ) != 0
+                    && ((*wa.as_mut_ptr()).map_state == IsViewable
+                        || bindgen::getstate(*wins.offset(i as isize))
+                            == ICONIC_STATE as i64)
+                {
+                    bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                }
+            }
+            if !wins.is_null() {
+                XFree(wins.cast());
+            }
+        }
+    }
 }
 
 fn manage(mdpy: &Display, w: Window, wa: *mut XWindowAttributes) {
@@ -3358,7 +3370,7 @@ fn main() {
         }
     }
     checkotherwm(); // DONE
-    setup();
+    setup(); // Scary - drawing code
     scan();
     run();
     cleanup();
