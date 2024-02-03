@@ -1,4 +1,4 @@
-install:
+install: dwm/libdwm.so
 	cargo install --path .
 
 test:
@@ -16,6 +16,6 @@ include config.mk
 
 SRC = $(addprefix dwm/,drw.c dwm.c util.c)
 
-dwm/libdwm.so: $(SRC)
+dwm/libdwm.so: $(SRC) dwm/config.h
 	cd dwm ; \
-	clang -fPIC -shared -o $(notdir $@ $^) $(CPPFLAGS) $(LDFLAGS)  $(INCS)
+	clang -fPIC -shared -o $(notdir $@ $(SRC)) $(CPPFLAGS) $(LDFLAGS)  $(INCS)
