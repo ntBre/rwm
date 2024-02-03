@@ -1,6 +1,9 @@
 use std::{env, path::PathBuf};
 
 fn main() {
+    println!("cargo:rerun-if-changed=dwm/dwm.h");
+    println!("cargo:rerun-if-changed=wrapper.h");
+
     println!("cargo:rustc-link-arg=-Ldwm");
     println!("cargo:rustc-link-arg=-ldwm");
     println!("cargo:rustc-link-arg=-Wl,-rpath,/home/brent/packages/rwm/dwm");

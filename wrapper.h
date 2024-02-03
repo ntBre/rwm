@@ -1,1 +1,1 @@
-#include "/home/brent/packages/dwm/dwm.h"
+#include "dwm/dwm.h"
