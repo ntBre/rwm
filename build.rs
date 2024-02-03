@@ -1,6 +1,7 @@
 use std::{env, path::PathBuf};
 
 fn main() {
+    println!("cargo:rerun-if-changed=dwm/config.h");
     println!("cargo:rerun-if-changed=dwm/dwm.h");
     println!("cargo:rerun-if-changed=wrapper.h");
 
