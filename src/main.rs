@@ -440,16 +440,16 @@ fn createmon() -> *mut Monitor {
     Box::into_raw(Box::new(mon))
 }
 
-fn checkotherwm(mdpy: &Display) {
+fn checkotherwm() {
     unsafe {
         XERRORXLIB = XSetErrorHandler(Some(xerrorstart));
-        XSelectInput(
-            mdpy.inner,
-            XDefaultRootWindow(mdpy.inner),
+        bindgen::XSelectInput(
+            dpy,
+            bindgen::XDefaultRootWindow(dpy),
             SubstructureRedirectMask,
         );
         XSetErrorHandler(Some(xerror));
-        XSync(mdpy.inner, False);
+        bindgen::XSync(dpy, False);
     }
 }
 
@@ -3350,17 +3350,11 @@ fn main() {
         if dpy.is_null() {
             die("rwm: cannot open display");
         }
-        bindgen::checkotherwm();
-        eprintln!("checked other wm");
+        checkotherwm();
         bindgen::setup();
-        eprintln!("ran setup");
         bindgen::scan();
-        eprintln!("ran scan");
         bindgen::run();
-        eprintln!("running");
         bindgen::cleanup();
-        eprintln!("cleaned up");
         bindgen::XCloseDisplay(dpy);
-        eprintln!("closed the display");
     }
 }
