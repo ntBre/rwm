@@ -16,16 +16,17 @@ mod bindgen {
 
 use std::cmp::max;
 use std::ffi::c_int;
+use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
 use libc::{c_long, c_uchar};
-use x11::xlib::Display as XDisplay;
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
     PropertyChangeMask, StructureNotifyMask, SubstructureRedirectMask, Success,
     XFree, XA_WINDOW,
 };
+use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use crate::bindgen::dpy;
@@ -2978,7 +2979,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         (*c).oldh = wa.height;
         (*c).oldbw = wa.border_width;
 
-        bindgen::updatetitle(c);
+        updatetitle(c);
         if bindgen::XGetTransientForHint(dpy, w, &mut trans) != 0 {
             let t = wintoclient(trans);
             if !t.is_null() {
@@ -3236,22 +3237,31 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 //     }
 // }
 
-// fn updatetitle(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         if !gettextprop(
-//             mdpy,
-//             (*c).win,
-//             NETATOM[Net::WMName as usize],
-//             &mut (*c).name,
-//         ) {
-//             gettextprop(mdpy, (*c).win, XA_WM_NAME, &mut (*c).name);
-//         }
-//         if (*c).name.is_empty() {
-//             /* hack to mark broken clients */
-//             (*c).name = BROKEN.to_owned();
-//         }
-//     }
-// }
+fn updatetitle(c: *mut bindgen::Client) {
+    unsafe {
+        if bindgen::gettextprop(
+            (*c).win,
+            bindgen::netatom[bindgen::NetWMName as usize],
+            &mut (*c).name as *mut _,
+            size_of_val(&(*c).name) as u32,
+        ) == 0
+        {
+            bindgen::gettextprop(
+                (*c).win,
+                XA_WM_NAME,
+                &mut (*c).name as *mut _,
+                size_of_val(&(*c).name) as u32,
+            );
+        }
+        if (*c).name[0] == '\0' as i8 {
+            /* hack to mark broken clients */
+            libc::strcpy(
+                &mut (*c).name as *mut _,
+                &bindgen::broken as *const _,
+            );
+        }
+    }
+}
 
 fn getstate(w: Window) -> c_long {
     let mut format = 0;

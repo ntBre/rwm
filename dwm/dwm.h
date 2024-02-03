@@ -142,7 +142,7 @@ static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
-static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
+int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
 static void incnmaster(const Arg *arg);
@@ -201,7 +201,7 @@ static void zoom(const Arg *arg);
 Monitor *mons, *selmon;
 
 /* variables */
-static const char broken[] = "broken";
+const char broken[] = "broken";
 static char stext[256];
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
