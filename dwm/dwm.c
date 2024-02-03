@@ -746,14 +746,12 @@ grabkeys(void)
 		XUngrabKey(dpy, AnyKey, AnyModifier, root);
 		XDisplayKeycodes(dpy, &start, &end);
 		syms = XGetKeyboardMapping(dpy, start, end - start + 1, &skip);
-		printf("start = %d, end = %d, skip = %d\n", start, end, skip);
 		if (!syms)
 			return;
 		for (k = start; k <= end; k++)
 			for (i = 0; i < LENGTH(keys); i++)
 				/* skip modifier codes, we do that ourselves */
 			  if (keys[i].keysym == syms[(k - start) * skip]) {
-				  printf("grabbing key %d at %d\n", i, (k - start) * skip);
 				  for (j = 0; j < LENGTH(modifiers); j++) {
 						XGrabKey(dpy, k,
 							 keys[i].mod | modifiers[j],
