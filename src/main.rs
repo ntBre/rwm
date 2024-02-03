@@ -2272,12 +2272,12 @@ fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
 }
 
 #[inline]
-fn width(x: *mut Client) -> i32 {
+fn width(x: *mut bindgen::Client) -> i32 {
     unsafe { (*x).w + 2 * (*x).bw }
 }
 
 #[inline]
-fn height(x: *mut Client) -> i32 {
+fn height(x: *mut bindgen::Client) -> i32 {
     unsafe { (*x).h + 2 * (*x).bw }
 }
 
@@ -2770,84 +2770,84 @@ fn focusin(mdpy: &Display, e: *mut XEvent) {
 //     }
 // }
 
-fn configurerequest(mdpy: &Display, e: *mut XEvent) {
-    unsafe {
-        let ev = (*e).configure_request;
-        let c = wintoclient(ev.window);
-        if !c.is_null() {
-            if ev.value_mask & CWBorderWidth as u64 != 0 {
-                (*c).bw = ev.border_width;
-            } else if (*c).isfloating
-                || (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
-            {
-                let m = (*c).mon;
-                let vm = ev.value_mask as u16;
-                if vm & CWX != 0 {
-                    (*c).oldx = (*c).x;
-                    (*c).x = (*m).mx as i32 + ev.x;
-                }
-                if vm & CWY != 0 {
-                    (*c).oldy = (*c).y;
-                    (*c).y = (*m).my as i32 + ev.y;
-                }
-                if vm & CWWidth != 0 {
-                    (*c).oldw = (*c).w;
-                    (*c).w = (*m).mw as i32 + ev.width;
-                }
-                if vm & CWHeight != 0 {
-                    (*c).oldh = (*c).h;
-                    (*c).h = (*m).mh as i32 + ev.height;
-                }
-                if ((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
-                    && (*c).isfloating
-                {
-                    // center in x direction
-                    (*c).x =
-                        ((*m).mx + ((*m).mw / 2 - width(c) as i16 / 2)) as i32;
-                }
-                if ((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
-                    && (*c).isfloating
-                {
-                    // center in y direction
-                    (*c).y =
-                        ((*m).my + ((*m).mh / 2 - height(c) as i16 / 2)) as i32;
-                }
-                if (vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0 {
-                    configure(mdpy, c);
-                }
-                if is_visible(c) {
-                    XMoveResizeWindow(
-                        mdpy.inner,
-                        (*c).win,
-                        (*c).x,
-                        (*c).y,
-                        (*c).w as u32,
-                        (*c).h as u32,
-                    );
-                }
-            } else {
-                configure(mdpy, c);
-            }
-        } else {
-            let mut wc = XWindowChanges {
-                x: ev.x,
-                y: ev.y,
-                width: ev.width,
-                height: ev.height,
-                border_width: ev.border_width,
-                sibling: ev.above,
-                stack_mode: ev.detail,
-            };
-            XConfigureWindow(
-                mdpy.inner,
-                ev.window,
-                ev.value_mask as u32,
-                &mut wc,
-            );
-        }
-        XSync(mdpy.inner, False);
-    }
-}
+// fn configurerequest(mdpy: &Display, e: *mut XEvent) {
+//     unsafe {
+//         let ev = (*e).configure_request;
+//         let c = wintoclient(ev.window);
+//         if !c.is_null() {
+//             if ev.value_mask & CWBorderWidth as u64 != 0 {
+//                 (*c).bw = ev.border_width;
+//             } else if (*c).isfloating
+//                 || (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+//             {
+//                 let m = (*c).mon;
+//                 let vm = ev.value_mask as u16;
+//                 if vm & CWX != 0 {
+//                     (*c).oldx = (*c).x;
+//                     (*c).x = (*m).mx as i32 + ev.x;
+//                 }
+//                 if vm & CWY != 0 {
+//                     (*c).oldy = (*c).y;
+//                     (*c).y = (*m).my as i32 + ev.y;
+//                 }
+//                 if vm & CWWidth != 0 {
+//                     (*c).oldw = (*c).w;
+//                     (*c).w = (*m).mw as i32 + ev.width;
+//                 }
+//                 if vm & CWHeight != 0 {
+//                     (*c).oldh = (*c).h;
+//                     (*c).h = (*m).mh as i32 + ev.height;
+//                 }
+//                 if ((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
+//                     && (*c).isfloating
+//                 {
+//                     // center in x direction
+//                     (*c).x =
+//                         ((*m).mx + ((*m).mw / 2 - width(c) as i16 / 2)) as i32;
+//                 }
+//                 if ((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
+//                     && (*c).isfloating
+//                 {
+//                     // center in y direction
+//                     (*c).y =
+//                         ((*m).my + ((*m).mh / 2 - height(c) as i16 / 2)) as i32;
+//                 }
+//                 if (vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0 {
+//                     configure(mdpy, c);
+//                 }
+//                 if is_visible(c) {
+//                     XMoveResizeWindow(
+//                         mdpy.inner,
+//                         (*c).win,
+//                         (*c).x,
+//                         (*c).y,
+//                         (*c).w as u32,
+//                         (*c).h as u32,
+//                     );
+//                 }
+//             } else {
+//                 configure(mdpy, c);
+//             }
+//         } else {
+//             let mut wc = XWindowChanges {
+//                 x: ev.x,
+//                 y: ev.y,
+//                 width: ev.width,
+//                 height: ev.height,
+//                 border_width: ev.border_width,
+//                 sibling: ev.above,
+//                 stack_mode: ev.detail,
+//             };
+//             XConfigureWindow(
+//                 mdpy.inner,
+//                 ev.window,
+//                 ev.value_mask as u32,
+//                 &mut wc,
+//             );
+//         }
+//         XSync(mdpy.inner, False);
+//     }
+// }
 
 // fn clientmessage(mdpy: &Display, e: *mut XEvent) {
 //     unsafe {
@@ -3010,113 +3010,115 @@ fn scan() {
 }
 
 fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
-    unsafe { bindgen::manage(w, wa) }
-    // let mut trans = 0;
-    // unsafe {
-    //     let wa = *wa;
-    //     let c = Box::into_raw(Box::new(Client {
-    //         x: wa.x,
-    //         y: wa.y,
-    //         w: wa.width,
-    //         h: wa.height,
-    //         oldx: wa.x,
-    //         oldy: wa.y,
-    //         oldw: wa.width,
-    //         oldh: wa.height,
-    //         oldbw: wa.border_width,
-    //         win: w,
-    //         ..Default::default()
-    //     }));
-    //     updatetitle(mdpy, c);
-    //     if xgettransientforhint(mdpy, w, &mut trans) {
-    //         let t = wintoclient(trans);
-    //         if !t.is_null() {
-    //             (*c).mon = (*t).mon;
-    //             (*c).tags = (*t).tags;
-    //         } else {
-    //             (*c).mon = SELMON;
-    //             applyrules(mdpy, c);
-    //         }
-    //     } else {
-    //         // copied else case from above because the condition is supposed
-    //         // to be xgettransientforhint && (t = wintoclient)
-    //         (*c).mon = SELMON;
-    //         applyrules(mdpy, c);
-    //     }
-    //     if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
-    //         (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
-    //     }
-    //     if (*c).y + height(c) > ((*(*c).mon).wy + (*(*c).mon).wh) as i32 {
-    //         (*c).y = ((*(*c).mon).wy + (*(*c).mon).wh) as i32 - height(c);
-    //     }
-    //     (*c).x = max((*c).x, (*(*c).mon).wx as i32);
-    //     (*c).y = max((*c).y, (*(*c).mon).wy as i32);
-    //     (*c).bw = BORDERPX;
-    //     let mut wc = XWindowChanges {
-    //         x: 0,
-    //         y: 0,
-    //         width: 0,
-    //         height: 0,
-    //         border_width: (*c).bw,
-    //         sibling: 0,
-    //         stack_mode: 0,
-    //     };
-    //     XConfigureWindow(mdpy.inner, w, CWBorderWidth as u32, &mut wc);
-    //     XSetWindowBorder(
-    //         mdpy.inner,
-    //         w,
-    //         SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
-    //     );
-    //     configure(mdpy, c); // propagates border width, if size doesn't change
-    //     updatewindowtype(mdpy, c);
-    //     updatesizehints(mdpy, c);
-    //     updatewmhints(mdpy, c);
-    //     XSelectInput(
-    //         mdpy.inner,
-    //         w,
-    //         EnterWindowMask
-    //             | FocusChangeMask
-    //             | PropertyChangeMask
-    //             | StructureNotifyMask,
-    //     );
-    //     grabbuttons(mdpy, c, false);
-    //     if !(*c).isfloating {
-    //         (*c).oldstate = trans != 0 || (*c).isfixed;
-    //         (*c).isfloating = (*c).oldstate;
-    //     }
-    //     if (*c).isfloating {
-    //         XRaiseWindow(mdpy.inner, (*c).win);
-    //     }
-    //     attach(c);
-    //     attachstack(c);
-    //     xchangeproperty(
-    //         mdpy,
-    //         ROOT,
-    //         NETATOM[Net::ClientList as usize],
-    //         XA_WINDOW,
-    //         32,
-    //         PropModeAppend,
-    //         &mut ((*c).win as c_uchar),
-    //         1,
-    //     );
-    //     // some windows require this
-    //     XMoveResizeWindow(
-    //         mdpy.inner,
-    //         (*c).win,
-    //         (*c).x + 2 * SW,
-    //         (*c).y,
-    //         (*c).w as u32,
-    //         (*c).h as u32,
-    //     );
-    //     setclientstate(mdpy, c, NORMAL_STATE);
-    //     if (*c).mon == SELMON {
-    //         unfocus(mdpy, (*SELMON).sel, false);
-    //     }
-    //     (*(*c).mon).sel = c;
-    //     arrange(mdpy, (*c).mon);
-    //     XMapWindow(mdpy.inner, (*c).win);
-    //     focus(mdpy, std::ptr::null_mut());
-    // }
+    let mut trans = 0;
+    unsafe {
+        let wa = *wa;
+        let mut c: *mut bindgen::Client =
+            bindgen::ecalloc(1, size_of::<bindgen::Client>()) as *mut _;
+        (*c).win = w;
+        (*c).x = wa.x;
+        (*c).oldx = wa.x;
+        (*c).y = wa.y;
+        (*c).oldy = wa.y;
+        (*c).w = wa.width;
+        (*c).oldw = wa.width;
+        (*c).h = wa.height;
+        (*c).oldh = wa.height;
+        (*c).oldbw = wa.border_width;
+
+        bindgen::updatetitle(c);
+        if bindgen::XGetTransientForHint(dpy, w, &mut trans) != 0 {
+            let t = bindgen::wintoclient(trans);
+            if !t.is_null() {
+                (*c).mon = (*t).mon;
+                (*c).tags = (*t).tags;
+            } else {
+                (*c).mon = bindgen::selmon;
+                bindgen::applyrules(c);
+            }
+        } else {
+            // copied else case from above because the condition is supposed
+            // to be xgettransientforhint && (t = wintoclient)
+            (*c).mon = bindgen::selmon;
+            bindgen::applyrules(c);
+        }
+        if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
+            (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
+        }
+        if (*c).y + height(c) > ((*(*c).mon).wy + (*(*c).mon).wh) as i32 {
+            (*c).y = ((*(*c).mon).wy + (*(*c).mon).wh) as i32 - height(c);
+        }
+        (*c).x = max((*c).x, (*(*c).mon).wx as i32);
+        (*c).y = max((*c).y, (*(*c).mon).wy as i32);
+        (*c).bw = bindgen::borderpx as i32;
+        let mut wc = bindgen::XWindowChanges {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            border_width: (*c).bw,
+            sibling: 0,
+            stack_mode: 0,
+        };
+        bindgen::XConfigureWindow(dpy, w, CWBorderWidth as u32, &mut wc);
+        bindgen::XSetWindowBorder(
+            dpy,
+            w,
+            (*(*bindgen::scheme
+                .offset(bindgen::SchemeNorm as isize)
+                .offset(bindgen::ColBorder as isize)))
+            .pixel,
+        );
+        bindgen::configure(c); // propagates border width, if size doesn't change
+        bindgen::updatewindowtype(c);
+        bindgen::updatesizehints(c);
+        bindgen::updatewmhints(c);
+        bindgen::XSelectInput(
+            dpy,
+            w,
+            EnterWindowMask
+                | FocusChangeMask
+                | PropertyChangeMask
+                | StructureNotifyMask,
+        );
+        bindgen::grabbuttons(c, false as c_int);
+        if (*c).isfloating == 0 {
+            (*c).oldstate = (trans != 0 || (*c).isfixed != 0) as c_int;
+            (*c).isfloating = (*c).oldstate;
+        }
+        if (*c).isfloating != 0 {
+            bindgen::XRaiseWindow(dpy, (*c).win);
+        }
+        bindgen::attach(c);
+        bindgen::attachstack(c);
+        bindgen::XChangeProperty(
+            dpy,
+            bindgen::root,
+            bindgen::netatom[bindgen::NetClientList as usize],
+            XA_WINDOW,
+            32,
+            PropModeAppend,
+            &mut ((*c).win as c_uchar),
+            1,
+        );
+        // some windows require this
+        bindgen::XMoveResizeWindow(
+            dpy,
+            (*c).win,
+            (*c).x + 2 * SW,
+            (*c).y,
+            (*c).w as u32,
+            (*c).h as u32,
+        );
+        bindgen::setclientstate(c, NORMAL_STATE as i64);
+        if (*c).mon == bindgen::selmon {
+            bindgen::unfocus((*bindgen::selmon).sel, false as c_int);
+        }
+        (*(*c).mon).sel = c;
+        bindgen::arrange((*c).mon);
+        bindgen::XMapWindow(dpy, (*c).win);
+        bindgen::focus(std::ptr::null_mut());
+    }
 }
 
 fn updatewmhints(mdpy: &Display, c: *mut Client) {
