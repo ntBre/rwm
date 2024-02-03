@@ -27,8 +27,8 @@ use config::{
 };
 use drw::Drw;
 use libc::{
-    abs, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset, waitpid,
-    SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
+    abs, c_long, c_uchar, c_uint, calloc, memcpy, sigaction, sigemptyset,
+    waitpid, SA_NOCLDSTOP, SA_NOCLDWAIT, SA_RESTART, SIGCHLD, SIG_IGN, WNOHANG,
 };
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
@@ -2975,8 +2975,7 @@ fn scan() {
                     continue;
                 }
                 if (*wa.as_mut_ptr()).map_state == IsViewable
-                    || bindgen::getstate(*wins.offset(i as isize))
-                        == ICONIC_STATE as i64
+                    || getstate(*wins.offset(i as isize)) == ICONIC_STATE as i64
                 {
                     bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
                 }
@@ -2997,7 +2996,7 @@ fn scan() {
                     &mut d1,
                 ) != 0
                     && ((*wa.as_mut_ptr()).map_state == IsViewable
-                        || bindgen::getstate(*wins.offset(i as isize))
+                        || getstate(*wins.offset(i as isize))
                             == ICONIC_STATE as i64)
                 {
                     bindgen::manage(*wins.offset(i as isize), wa.as_mut_ptr());
@@ -3299,35 +3298,33 @@ fn updatetitle(mdpy: &Display, c: *mut Client) {
     }
 }
 
-fn getstate(mdpy: &Display, w: Window) -> Result<usize, ()> {
-    let mut fmt = 0;
+fn getstate(w: Window) -> c_long {
+    let mut format = 0;
+    let mut result: c_long = -1;
     let mut p: *mut c_uchar = std::ptr::null_mut();
     let mut n = 0;
     let mut extra = 0;
     let mut real = 0;
-    let mut result = Err(());
     unsafe {
-        let cond = XGetWindowProperty(
-            mdpy.inner,
+        let cond = bindgen::XGetWindowProperty(
+            dpy,
             w,
-            WMATOM[WM::State as usize],
+            bindgen::wmatom[bindgen::WMState as usize],
             0,
             2,
             False,
-            WMATOM[WM::State as usize],
+            bindgen::wmatom[bindgen::WMState as usize],
             &mut real,
-            &mut fmt,
+            &mut format,
             &mut n,
             &mut extra,
-            &mut p,
+            (&mut p) as *mut *mut c_uchar,
         );
         if cond != Success as i32 {
-            return Err(());
+            return -1;
         }
         if n != 0 {
-            // they do this cast in the call to XGetWindowProperty, not sure if
-            // it matters
-            result = Ok(*p as usize);
+            result = *p as c_long;
         }
         XFree(p.cast());
         result
@@ -3371,7 +3368,7 @@ fn main() {
     }
     checkotherwm(); // DONE
     setup(); // Scary - drawing code
-    scan();
+    scan(); // OUTLINE
     run();
     cleanup();
     unsafe {
