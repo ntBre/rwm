@@ -779,45 +779,48 @@ fn setup() {
 //     }
 // }
 
-// fn grabbuttons(mdpy: &Display, c: *mut Client, focused: bool) {
-//     updatenumlockmask(mdpy);
-//     unsafe {
-//         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-//         XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-//         if !focused {
-//             XGrabButton(
-//                 mdpy.inner,
-//                 AnyButton as u32,
-//                 AnyModifier,
-//                 (*c).win,
-//                 False,
-//                 BUTTONMASK as u32,
-//                 GrabModeSync,
-//                 GrabModeSync,
-//                 0,
-//                 0,
-//             );
-//         }
-//         for i in 0..BUTTONS.len() {
-//             if BUTTONS[i].click == Clk::ClientWin {
-//                 for j in 0..modifiers.len() {
-//                     XGrabButton(
-//                         mdpy.inner,
-//                         BUTTONS[i].button,
-//                         BUTTONS[i].mask | modifiers[j],
-//                         (*c).win,
-//                         False,
-//                         BUTTONMASK as u32,
-//                         GrabModeAsync,
-//                         GrabModeSync,
-//                         0,
-//                         0,
-//                     );
-//                 }
-//             }
-//         }
-//     }
-// }
+fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
+    unsafe {
+        bindgen::grabbuttons(c, focused as c_int);
+    }
+    // updatenumlockmask(mdpy);
+    // unsafe {
+    //     let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+    //     XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
+    //     if !focused {
+    //         XGrabButton(
+    //             mdpy.inner,
+    //             AnyButton as u32,
+    //             AnyModifier,
+    //             (*c).win,
+    //             False,
+    //             BUTTONMASK as u32,
+    //             GrabModeSync,
+    //             GrabModeSync,
+    //             0,
+    //             0,
+    //         );
+    //     }
+    //     for i in 0..BUTTONS.len() {
+    //         if BUTTONS[i].click == Clk::ClientWin {
+    //             for j in 0..modifiers.len() {
+    //                 XGrabButton(
+    //                     mdpy.inner,
+    //                     BUTTONS[i].button,
+    //                     BUTTONS[i].mask | modifiers[j],
+    //                     (*c).win,
+    //                     False,
+    //                     BUTTONMASK as u32,
+    //                     GrabModeAsync,
+    //                     GrabModeSync,
+    //                     0,
+    //                     0,
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+}
 
 // pub fn setlayout(mdpy: &Display, arg: Arg) {
 //     unsafe {
@@ -1106,74 +1109,77 @@ fn configure(c: *mut bindgen::Client) {
 //     }
 // }
 
-// fn updatesizehints(mdpy: &Display, c: *mut Client) {
-//     let mut msize: i64 = 0;
-//     unsafe {
-//         let mut size: MaybeUninit<XSizeHints> = MaybeUninit::uninit();
-//         if XGetWMNormalHints(
-//             mdpy.inner,
-//             (*c).win,
-//             size.as_mut_ptr(),
-//             &mut msize as *mut _,
-//         ) != 0
-//         {
-//             (*size.as_mut_ptr()).flags = PSize;
-//         }
-//         let size = size.assume_init();
+fn updatesizehints(c: *mut bindgen::Client) {
+    unsafe {
+        bindgen::updatesizehints(c);
+    }
+    // let mut msize: i64 = 0;
+    // unsafe {
+    //     let mut size: MaybeUninit<XSizeHints> = MaybeUninit::uninit();
+    //     if XGetWMNormalHints(
+    //         mdpy.inner,
+    //         (*c).win,
+    //         size.as_mut_ptr(),
+    //         &mut msize as *mut _,
+    //     ) != 0
+    //     {
+    //         (*size.as_mut_ptr()).flags = PSize;
+    //     }
+    //     let size = size.assume_init();
 
-//         if size.flags & PBaseSize != 0 {
-//             (*c).basew = size.base_width;
-//             (*c).baseh = size.base_height;
-//         } else if size.flags & PMinSize != 0 {
-//             (*c).basew = size.min_width;
-//             (*c).baseh = size.min_height;
-//         } else {
-//             (*c).basew = 0;
-//             (*c).baseh = 0;
-//         }
+    //     if size.flags & PBaseSize != 0 {
+    //         (*c).basew = size.base_width;
+    //         (*c).baseh = size.base_height;
+    //     } else if size.flags & PMinSize != 0 {
+    //         (*c).basew = size.min_width;
+    //         (*c).baseh = size.min_height;
+    //     } else {
+    //         (*c).basew = 0;
+    //         (*c).baseh = 0;
+    //     }
 
-//         if size.flags & PResizeInc != 0 {
-//             (*c).incw = size.width_inc;
-//             (*c).inch = size.height_inc;
-//         } else {
-//             (*c).incw = 0;
-//             (*c).inch = 0;
-//         }
+    //     if size.flags & PResizeInc != 0 {
+    //         (*c).incw = size.width_inc;
+    //         (*c).inch = size.height_inc;
+    //     } else {
+    //         (*c).incw = 0;
+    //         (*c).inch = 0;
+    //     }
 
-//         if size.flags & PMaxSize != 0 {
-//             (*c).maxw = size.max_width;
-//             (*c).maxh = size.max_height;
-//         } else {
-//             (*c).maxw = 0;
-//             (*c).maxh = 0;
-//         }
+    //     if size.flags & PMaxSize != 0 {
+    //         (*c).maxw = size.max_width;
+    //         (*c).maxh = size.max_height;
+    //     } else {
+    //         (*c).maxw = 0;
+    //         (*c).maxh = 0;
+    //     }
 
-//         if size.flags & PMinSize != 0 {
-//             (*c).minw = size.min_width;
-//             (*c).minh = size.min_height;
-//         } else if size.flags & PBaseSize != 0 {
-//             (*c).minw = size.base_width;
-//             (*c).minh = size.base_height;
-//         } else {
-//             (*c).minw = 0;
-//             (*c).minh = 0;
-//         }
+    //     if size.flags & PMinSize != 0 {
+    //         (*c).minw = size.min_width;
+    //         (*c).minh = size.min_height;
+    //     } else if size.flags & PBaseSize != 0 {
+    //         (*c).minw = size.base_width;
+    //         (*c).minh = size.base_height;
+    //     } else {
+    //         (*c).minw = 0;
+    //         (*c).minh = 0;
+    //     }
 
-//         if size.flags & PAspect != 0 {
-//             (*c).mina = size.min_aspect.y as f64 / size.min_aspect.x as f64;
-//             (*c).maxa = size.max_aspect.y as f64 / size.max_aspect.x as f64;
-//         } else {
-//             (*c).mina = 0.0;
-//             (*c).maxa = 0.0;
-//         }
+    //     if size.flags & PAspect != 0 {
+    //         (*c).mina = size.min_aspect.y as f64 / size.min_aspect.x as f64;
+    //         (*c).maxa = size.max_aspect.y as f64 / size.max_aspect.x as f64;
+    //     } else {
+    //         (*c).mina = 0.0;
+    //         (*c).maxa = 0.0;
+    //     }
 
-//         (*c).isfixed = (*c).maxw != 0
-//             && (*c).maxh != 0
-//             && (*c).maxw == (*c).minw
-//             && (*c).maxh == (*c).minh;
-//         (*c).hintsvalid = true;
-//     }
-// }
+    //     (*c).isfixed = (*c).maxw != 0
+    //         && (*c).maxh != 0
+    //         && (*c).maxw == (*c).minw
+    //         && (*c).maxh == (*c).minh;
+    //     (*c).hintsvalid = true;
+    // }
+}
 
 // pub fn zoom(mdpy: &Display, _arg: Arg) {
 //     unsafe {
@@ -3022,9 +3028,9 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             .pixel,
         );
         configure(c); // propagates border width, if size doesn't change
-        bindgen::updatewindowtype(c);
-        bindgen::updatesizehints(c);
-        bindgen::updatewmhints(c);
+        updatewindowtype(c);
+        updatesizehints(c);
+        updatewmhints(c);
         bindgen::XSelectInput(
             dpy,
             w,
@@ -3033,7 +3039,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
                 | PropertyChangeMask
                 | StructureNotifyMask,
         );
-        bindgen::grabbuttons(c, false as c_int);
+        grabbuttons(c, false);
         if (*c).isfloating == 0 {
             (*c).oldstate = (trans != 0 || (*c).isfixed != 0) as c_int;
             (*c).isfloating = (*c).oldstate;
@@ -3073,38 +3079,40 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
     }
 }
 
-// fn updatewmhints(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         let wmh = XGetWMHints(mdpy.inner, (*c).win);
-//         if !wmh.is_null() {
-//             if c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0 {
-//                 (*wmh).flags &= !XUrgencyHint;
-//                 XSetWMHints(mdpy.inner, (*c).win, wmh);
-//             } else {
-//                 (*c).isurgent = (*wmh).flags & XUrgencyHint != 0;
-//             }
-//             if (*wmh).flags & InputHint != 0 {
-//                 (*c).neverfocus = (*wmh).input == 0;
-//             } else {
-//                 (*c).neverfocus = false;
-//             }
-//             XFree(wmh.cast());
-//         }
-//     }
-// }
+fn updatewmhints(c: *mut bindgen::Client) {
+    unsafe {
+        bindgen::updatewmhints(c);
+        // let wmh = XGetWMHints(mdpy.inner, (*c).win);
+        // if !wmh.is_null() {
+        //     if c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0 {
+        //         (*wmh).flags &= !XUrgencyHint;
+        //         XSetWMHints(mdpy.inner, (*c).win, wmh);
+        //     } else {
+        //         (*c).isurgent = (*wmh).flags & XUrgencyHint != 0;
+        //     }
+        //     if (*wmh).flags & InputHint != 0 {
+        //         (*c).neverfocus = (*wmh).input == 0;
+        //     } else {
+        //         (*c).neverfocus = false;
+        //     }
+        //     XFree(wmh.cast());
+        // }
+    }
+}
 
-// fn updatewindowtype(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         let state = getatomprop(mdpy, c, NETATOM[Net::WMState as usize]);
-//         let wtype = getatomprop(mdpy, c, NETATOM[Net::WMWindowType as usize]);
-//         if state == NETATOM[Net::WMFullscreen as usize] {
-//             setfullscreen(mdpy, c, true);
-//         }
-//         if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
-//             (*c).isfloating = true;
-//         }
-//     }
-// }
+fn updatewindowtype(c: *mut bindgen::Client) {
+    unsafe {
+        bindgen::updatewindowtype(c);
+        // let state = getatomprop(mdpy, c, NETATOM[Net::WMState as usize]);
+        // let wtype = getatomprop(mdpy, c, NETATOM[Net::WMWindowType as usize]);
+        // if state == NETATOM[Net::WMFullscreen as usize] {
+        //     setfullscreen(mdpy, c, true);
+        // }
+        // if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
+        //     (*c).isfloating = true;
+        // }
+    }
+}
 
 // fn setfullscreen(mdpy: &Display, c: *mut Client, fullscreen: bool) {
 //     unsafe {
