@@ -2282,19 +2282,19 @@ fn height(x: *mut bindgen::Client) -> i32 {
 //     }
 // }
 
-// fn attachstack(c: *mut Client) {
-//     unsafe {
-//         (*c).snext = (*(*c).mon).stack;
-//         (*(*c).mon).stack = c;
-//     }
-// }
+fn attachstack(c: *mut bindgen::Client) {
+    unsafe {
+        (*c).snext = (*(*c).mon).stack;
+        (*(*c).mon).stack = c;
+    }
+}
 
-// fn attach(c: *mut Client) {
-//     unsafe {
-//         (*c).next = (*(*c).mon).clients;
-//         (*(*c).mon).clients = c;
-//     }
-// }
+fn attach(c: *mut bindgen::Client) {
+    unsafe {
+        (*c).next = (*(*c).mon).clients;
+        (*(*c).mon).clients = c;
+    }
+}
 
 // fn detachstack(c: *mut Client) {
 //     unsafe {
@@ -3047,8 +3047,8 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         if (*c).isfloating != 0 {
             bindgen::XRaiseWindow(dpy, (*c).win);
         }
-        bindgen::attach(c);
-        bindgen::attachstack(c);
+        attach(c);
+        attachstack(c);
         bindgen::XChangeProperty(
             dpy,
             bindgen::root,
