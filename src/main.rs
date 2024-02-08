@@ -15,7 +15,7 @@ mod bindgen {
 }
 
 use std::cmp::max;
-use std::ffi::c_int;
+use std::ffi::{c_int, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
@@ -2987,13 +2987,13 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
                 (*c).tags = (*t).tags;
             } else {
                 (*c).mon = bindgen::selmon;
-                bindgen::applyrules(c);
+                applyrules(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
             (*c).mon = bindgen::selmon;
-            bindgen::applyrules(c);
+            applyrules(c);
         }
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
             (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
@@ -3188,54 +3188,64 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 //     atom
 // }
 
-// fn applyrules(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         let mut ch = XClassHint {
-//             res_name: std::ptr::null_mut(),
-//             res_class: std::ptr::null_mut(),
-//         };
-//         // rule matching
-//         (*c).isfloating = false;
-//         (*c).tags = 0;
-//         XGetClassHint(mdpy.inner, (*c).win, &mut ch);
-//         let class = if !ch.res_class.is_null() {
-//             CString::from_raw(ch.res_class).into_string().unwrap()
-//         } else {
-//             BROKEN.to_owned()
-//         };
-//         let instance = if !ch.res_name.is_null() {
-//             CString::from_raw(ch.res_name).into_string().unwrap()
-//         } else {
-//             BROKEN.to_owned()
-//         };
+fn applyrules(c: *mut bindgen::Client) {
+    unsafe {
+        let mut ch = bindgen::XClassHint {
+            res_name: std::ptr::null_mut(),
+            res_class: std::ptr::null_mut(),
+        };
+        // rule matching
+        (*c).isfloating = 0;
+        (*c).tags = 0;
+        bindgen::XGetClassHint(dpy, (*c).win, &mut ch);
+        let class = if !ch.res_class.is_null() {
+            CString::from_raw(ch.res_class)
+        } else {
+            CString::from_raw(bindgen::broken.as_ptr() as *mut _)
+        };
+        let instance = if !ch.res_name.is_null() {
+            CString::from_raw(ch.res_name)
+        } else {
+            CString::from_raw(bindgen::broken.as_ptr() as *mut _)
+        };
 
-//         for i in 0..RULES.len() {
-//             let r = &RULES[i];
-//             if (r.title.is_none()
-//                 || r.title.is_some_and(|t| (*c).name.contains(t)))
-//                 && (r.class.is_none()
-//                     || r.class.is_some_and(|t| class.contains(t)))
-//                 && (r.instance.is_none()
-//                     || r.instance.is_some_and(|t| instance.contains(t)))
-//             {
-//                 (*c).isfloating = r.isfloating;
-//                 (*c).tags |= r.tags;
-//                 let mut m = MONS;
-//                 while !m.is_null() && (*m).num != r.monitor as i32 {
-//                     m = (*m).next;
-//                 }
-//                 if !m.is_null() {
-//                     (*c).mon = m;
-//                 }
-//             }
-//         }
-//         (*c).tags = if (*c).tags & TAGMASK != 0 {
-//             (*c).tags & TAGMASK
-//         } else {
-//             (*(*c).mon).tagset[(*(*c).mon).seltags]
-//         };
-//     }
-// }
+        for i in 0..bindgen::rules.len() {
+            let r = &bindgen::rules[i];
+            if (r.title.is_null()
+                || !bindgen::strstr((*c).name.as_ptr(), (*r).title).is_null())
+                && (r.class.is_null()
+                    || !bindgen::strstr(class.as_ptr(), (*r).class).is_null())
+                && (r.instance.is_null()
+                    || !bindgen::strstr(instance.as_ptr(), (*r).instance)
+                        .is_null())
+            {
+                (*c).isfloating = r.isfloating;
+                (*c).tags |= r.tags;
+                let mut m = bindgen::mons;
+                while !m.is_null() && (*m).num != r.monitor as i32 {
+                    m = (*m).next;
+                }
+                if !m.is_null() {
+                    (*c).mon = m;
+                }
+            }
+        }
+        if !ch.res_class.is_null() {
+            bindgen::XFree(ch.res_class.cast());
+        }
+        if !ch.res_name.is_null() {
+            bindgen::XFree(ch.res_name.cast());
+        }
+        (*c).tags = if (*c).tags & TAGMASK != 0 {
+            (*c).tags & TAGMASK
+        } else {
+            (*(*c).mon).tagset[(*(*c).mon).seltags as usize]
+        };
+    }
+}
+
+// #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
+const TAGMASK: u32 = (1 << 9) - 1;
 
 fn updatetitle(c: *mut bindgen::Client) {
     unsafe {
