@@ -3211,17 +3211,17 @@ fn applyrules(c: *mut bindgen::Client) {
         for i in 0..bindgen::rules.len() {
             let r = &bindgen::rules[i];
             if (r.title.is_null()
-                || !bindgen::strstr((*c).name.as_ptr(), (*r).title).is_null())
+                || !bindgen::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
-                    || !bindgen::strstr(class.as_ptr(), (*r).class).is_null())
+                    || !bindgen::strstr(class.as_ptr(), r.class).is_null())
                 && (r.instance.is_null()
-                    || !bindgen::strstr(instance.as_ptr(), (*r).instance)
+                    || !bindgen::strstr(instance.as_ptr(), r.instance)
                         .is_null())
             {
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
                 let mut m = bindgen::mons;
-                while !m.is_null() && (*m).num != r.monitor as i32 {
+                while !m.is_null() && (*m).num != r.monitor {
                     m = (*m).next;
                 }
                 if !m.is_null() {
