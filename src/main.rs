@@ -650,45 +650,48 @@ fn setup() {
 //     }
 // }
 
-// fn focus(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         if c.is_null() || !is_visible(c) {
-//             let mut c = (*SELMON).stack;
-//             while !c.is_null() && !is_visible(c) {
-//                 c = (*c).snext;
-//             }
-//         }
-//         if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-//             unfocus(mdpy, (*SELMON).sel, false);
-//         }
-//         if !c.is_null() {
-//             if (*c).mon != SELMON {
-//                 SELMON = (*c).mon;
-//             }
-//             if (*c).isurgent {
-//                 seturgent(mdpy, c, false);
-//             }
-//             detachstack(c);
-//             attachstack(c);
-//             grabbuttons(mdpy, c, true);
-//             XSetWindowBorder(
-//                 mdpy.inner,
-//                 (*c).win,
-//                 SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
-//             );
-//             setfocus(mdpy, c);
-//         } else {
-//             XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-//             XDeleteProperty(
-//                 mdpy.inner,
-//                 ROOT,
-//                 NETATOM[Net::ActiveWindow as usize],
-//             );
-//         }
-//         (*SELMON).sel = c;
-//         drawbars();
-//     }
-// }
+fn focus(c: *mut bindgen::Client) {
+    unsafe {
+        bindgen::focus(c);
+    }
+    // unsafe {
+    //     if c.is_null() || !is_visible(c) {
+    //         let mut c = (*SELMON).stack;
+    //         while !c.is_null() && !is_visible(c) {
+    //             c = (*c).snext;
+    //         }
+    //     }
+    //     if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
+    //         unfocus(mdpy, (*SELMON).sel, false);
+    //     }
+    //     if !c.is_null() {
+    //         if (*c).mon != SELMON {
+    //             SELMON = (*c).mon;
+    //         }
+    //         if (*c).isurgent {
+    //             seturgent(mdpy, c, false);
+    //         }
+    //         detachstack(c);
+    //         attachstack(c);
+    //         grabbuttons(mdpy, c, true);
+    //         XSetWindowBorder(
+    //             mdpy.inner,
+    //             (*c).win,
+    //             SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
+    //         );
+    //         setfocus(mdpy, c);
+    //     } else {
+    //         XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+    //         XDeleteProperty(
+    //             mdpy.inner,
+    //             ROOT,
+    //             NETATOM[Net::ActiveWindow as usize],
+    //         );
+    //     }
+    //     (*SELMON).sel = c;
+    //     drawbars();
+    // }
+}
 
 // fn drawbars() {
 //     unsafe {
@@ -842,29 +845,32 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
 //     }
 // }
 
-// fn arrange(mdpy: &Display, mut m: *mut Monitor) {
-//     unsafe {
-//         if !m.is_null() {
-//             showhide(mdpy, (*m).stack);
-//         } else {
-//             m = MONS;
-//             while !m.is_null() {
-//                 showhide(mdpy, (*m).stack);
-//                 m = (*m).next;
-//             }
-//         }
+fn arrange(m: *mut bindgen::Monitor) {
+    unsafe {
+        bindgen::arrange(m);
+    }
+    // unsafe {
+    //     if !m.is_null() {
+    //         showhide(mdpy, (*m).stack);
+    //     } else {
+    //         m = MONS;
+    //         while !m.is_null() {
+    //             showhide(mdpy, (*m).stack);
+    //             m = (*m).next;
+    //         }
+    //     }
 
-//         if !m.is_null() {
-//             arrangemon(mdpy, m);
-//             restack(mdpy, m);
-//         } else {
-//             m = MONS;
-//             while !m.is_null() {
-//                 arrangemon(mdpy, m);
-//             }
-//         }
-//     }
-// }
+    //     if !m.is_null() {
+    //         arrangemon(mdpy, m);
+    //         restack(mdpy, m);
+    //     } else {
+    //         m = MONS;
+    //         while !m.is_null() {
+    //             arrangemon(mdpy, m);
+    //         }
+    //     }
+    // }
+}
 
 // fn arrangemon(mdpy: &Display, m: *mut Monitor) {
 //     unsafe {
@@ -1794,27 +1800,30 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// fn unfocus(mdpy: &Display, c: *mut Client, setfocus: bool) {
-//     if c.is_null() {
-//         return;
-//     }
-//     grabbuttons(mdpy, c, false);
-//     unsafe {
-//         XSetWindowBorder(
-//             mdpy.inner,
-//             (*c).win,
-//             SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
-//         );
-//         if setfocus {
-//             XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-//             XDeleteProperty(
-//                 mdpy.inner,
-//                 ROOT,
-//                 NETATOM[Net::ActiveWindow as usize],
-//             );
-//         }
-//     }
-// }
+fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
+    unsafe {
+        bindgen::unfocus(c, setfocus as c_int);
+    }
+    // if c.is_null() {
+    //     return;
+    // }
+    // grabbuttons(mdpy, c, false);
+    // unsafe {
+    //     XSetWindowBorder(
+    //         mdpy.inner,
+    //         (*c).win,
+    //         SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
+    //     );
+    //     if setfocus {
+    //         XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
+    //         XDeleteProperty(
+    //             mdpy.inner,
+    //             ROOT,
+    //             NETATOM[Net::ActiveWindow as usize],
+    //         );
+    //     }
+    // }
+}
 
 // fn updatestatus(mdpy: &Display) {
 //     unsafe {
@@ -2457,21 +2466,24 @@ fn cleanup() {
 //     }
 // }
 
-// fn setclientstate(mdpy: &Display, c: *mut Client, state: usize) {
-//     let mut data: [c_uchar; 2] = [state as c_uchar, 0]; // this zero is None
-//     unsafe {
-//         xchangeproperty(
-//             mdpy,
-//             (*c).win,
-//             WMATOM[WM::State as usize],
-//             WMATOM[WM::State as usize],
-//             32,
-//             PropModeReplace,
-//             data.as_mut_ptr(),
-//             2,
-//         );
-//     }
-// }
+fn setclientstate(c: *mut bindgen::Client, state: usize) {
+    unsafe {
+        bindgen::setclientstate(c, state as i64);
+    }
+    // let mut data: [c_uchar; 2] = [state as c_uchar, 0]; // this zero is None
+    // unsafe {
+    //     xchangeproperty(
+    //         mdpy,
+    //         (*c).win,
+    //         WMATOM[WM::State as usize],
+    //         WMATOM[WM::State as usize],
+    //         32,
+    //         PropModeReplace,
+    //         data.as_mut_ptr(),
+    //         2,
+    //     );
+    // }
+}
 
 fn run() {
     unsafe { bindgen::run() }
@@ -3068,14 +3080,14 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             (*c).w as u32,
             (*c).h as u32,
         );
-        bindgen::setclientstate(c, NORMAL_STATE as i64);
+        setclientstate(c, NORMAL_STATE);
         if (*c).mon == bindgen::selmon {
-            bindgen::unfocus((*bindgen::selmon).sel, false as c_int);
+            unfocus((*bindgen::selmon).sel, false);
         }
         (*(*c).mon).sel = c;
-        bindgen::arrange((*c).mon);
+        arrange((*c).mon);
         bindgen::XMapWindow(dpy, (*c).win);
-        bindgen::focus(std::ptr::null_mut());
+        focus(std::ptr::null_mut());
     }
 }
 
@@ -3350,7 +3362,7 @@ fn main() {
     }
     checkotherwm(); // DONE
     setup(); // Scary - drawing code
-    scan(); // DONE except manage
+    scan(); // DONE except trivial impls from manage
     run();
     cleanup();
     unsafe {
