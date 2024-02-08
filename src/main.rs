@@ -986,34 +986,33 @@ fn setup() {
 //     }
 // }
 
-// fn configure(mdpy: &Display, c: *mut Client) {
-//     // TODO this looks like a nice Into impl
-//     unsafe {
-//         let mut ce: MaybeUninit<XConfigureEvent> = MaybeUninit::uninit();
-//         {
-//             let ce = ce.as_mut_ptr();
-//             (*ce).type_ = ConfigureNotify;
-//             (*ce).display = mdpy.inner;
-//             (*ce).event = (*c).win;
-//             (*ce).window = (*c).win;
-//             (*ce).x = (*c).x;
-//             (*ce).y = (*c).y;
-//             (*ce).width = (*c).w;
-//             (*ce).height = (*c).h;
-//             (*ce).border_width = (*c).bw;
-//             (*ce).above = 0;
-//             (*ce).override_redirect = False;
-//         }
-//         let mut ce = ce.assume_init();
-//         XSendEvent(
-//             mdpy.inner,
-//             (*c).win,
-//             False,
-//             StructureNotifyMask,
-//             &mut ce as *mut _ as *mut _,
-//         );
-//     }
-// }
+fn configure(c: *mut bindgen::Client) {
+    // TODO this looks like a nice Into impl
+    unsafe {
+        let mut ce = bindgen::XConfigureEvent {
+            type_: bindgen::ConfigureNotify as i32,
+            serial: 0,
+            send_event: 0,
+            display: bindgen::dpy,
+            event: (*c).win,
+            window: (*c).win,
+            x: (*c).x,
+            y: (*c).y,
+            width: (*c).w,
+            height: (*c).h,
+            border_width: (*c).bw,
+            above: bindgen::None as u64,
+            override_redirect: bindgen::False as i32,
+        };
+        bindgen::XSendEvent(
+            bindgen::dpy,
+            (*c).win,
+            False,
+            StructureNotifyMask,
+            &mut ce as *mut bindgen::XConfigureEvent as *mut bindgen::XEvent,
+        );
+    }
+}
 
 // fn applysizehints(
 //     mdpy: &Display,
@@ -3022,7 +3021,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
                 .offset(bindgen::ColBorder as isize)))
             .pixel,
         );
-        bindgen::configure(c); // propagates border width, if size doesn't change
+        configure(c); // propagates border width, if size doesn't change
         bindgen::updatewindowtype(c);
         bindgen::updatesizehints(c);
         bindgen::updatewmhints(c);
