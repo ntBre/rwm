@@ -466,6 +466,7 @@ pub enum Clk {
     Last,
 }
 
+// DUMMY
 fn setup() {
     unsafe { bindgen::setup() }
     // let mut sa: MaybeUninit<sigaction> = MaybeUninit::uninit();
@@ -651,6 +652,7 @@ fn setup() {
 //     }
 // }
 
+// DUMMY
 fn focus(c: *mut bindgen::Client) {
     unsafe {
         bindgen::focus(c);
@@ -783,6 +785,7 @@ fn focus(c: *mut bindgen::Client) {
 //     }
 // }
 
+// DUMMY
 fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
     unsafe {
         bindgen::grabbuttons(c, focused as c_int);
@@ -846,6 +849,7 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
 //     }
 // }
 
+// DUMMY
 fn arrange(m: *mut bindgen::Monitor) {
     unsafe {
         bindgen::arrange(m);
@@ -1112,6 +1116,7 @@ fn configure(c: *mut bindgen::Client) {
 //     }
 // }
 
+// DUMMY
 fn updatesizehints(c: *mut bindgen::Client) {
     unsafe {
         bindgen::updatesizehints(c);
@@ -1797,6 +1802,7 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
+// DUMMY
 fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
     unsafe {
         bindgen::unfocus(c, setfocus as c_int);
@@ -2366,6 +2372,7 @@ fn attach(c: *mut bindgen::Client) {
 //     true
 // }
 
+// DUMMY
 fn cleanup() {
     unsafe {
         bindgen::cleanup();
@@ -2463,6 +2470,7 @@ fn cleanup() {
 //     }
 // }
 
+// DUMMY
 fn setclientstate(c: *mut bindgen::Client, state: usize) {
     unsafe {
         bindgen::setclientstate(c, state as i64);
@@ -2482,6 +2490,7 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
     // }
 }
 
+// DUMMY
 fn run() {
     unsafe { bindgen::run() }
     // // main event loop
