@@ -3092,23 +3092,23 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 }
 
 fn updatewmhints(c: *mut bindgen::Client) {
+    const URGENT: i64 = bindgen::XUrgencyHint as i64;
     unsafe {
-        bindgen::updatewmhints(c);
-        // let wmh = XGetWMHints(mdpy.inner, (*c).win);
-        // if !wmh.is_null() {
-        //     if c == (*SELMON).sel && (*wmh).flags & XUrgencyHint != 0 {
-        //         (*wmh).flags &= !XUrgencyHint;
-        //         XSetWMHints(mdpy.inner, (*c).win, wmh);
-        //     } else {
-        //         (*c).isurgent = (*wmh).flags & XUrgencyHint != 0;
-        //     }
-        //     if (*wmh).flags & InputHint != 0 {
-        //         (*c).neverfocus = (*wmh).input == 0;
-        //     } else {
-        //         (*c).neverfocus = false;
-        //     }
-        //     XFree(wmh.cast());
-        // }
+        let wmh = bindgen::XGetWMHints(dpy, (*c).win);
+        if !wmh.is_null() {
+            if c == (*bindgen::selmon).sel && (*wmh).flags & URGENT != 0 {
+                (*wmh).flags &= !URGENT;
+                bindgen::XSetWMHints(dpy, (*c).win, wmh);
+            } else {
+                (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
+            }
+            if (*wmh).flags & bindgen::InputHint as i64 != 0 {
+                (*c).neverfocus = ((*wmh).input == 0) as c_int;
+            } else {
+                (*c).neverfocus = 0;
+            }
+            bindgen::XFree(wmh.cast());
+        }
     }
 }
 
