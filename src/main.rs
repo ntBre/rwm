@@ -958,43 +958,39 @@ fn arrange(m: *mut bindgen::Monitor) {
 //     }
 // }
 
-// fn resizeclient(
-//     mdpy: &Display,
-//     c: *mut Client,
-//     x: i32,
-//     y: i32,
-//     w: i32,
-//     h: i32,
-// ) {
-//     unsafe {
-//         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-//         (*c).oldx = (*c).x;
-//         (*c).oldy = (*c).y;
-//         (*c).oldw = (*c).w;
-//         (*c).oldh = (*c).h;
-//         (*c).x = x;
-//         (*c).y = y;
-//         (*c).w = w;
-//         (*c).h = h;
-//         {
-//             let wc = wc.as_mut_ptr();
-//             (*wc).x = x;
-//             (*wc).y = y;
-//             (*wc).width = w;
-//             (*wc).height = h;
-//             (*wc).border_width = (*c).bw;
-//         }
-//         let mut wc = wc.assume_init();
-//         XConfigureWindow(
-//             mdpy.inner,
-//             (*c).win,
-//             (CWX | CWY | CWWidth | CWHeight | CWBorderWidth) as u32,
-//             &mut wc,
-//         );
-//         configure(mdpy, c);
-//         XSync(mdpy.inner, False);
-//     }
-// }
+fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
+    unsafe {
+        (*c).oldx = (*c).x;
+        (*c).oldy = (*c).y;
+        (*c).oldw = (*c).w;
+        (*c).oldh = (*c).h;
+        (*c).x = x;
+        (*c).y = y;
+        (*c).w = w;
+        (*c).h = h;
+        let mut wc = bindgen::XWindowChanges {
+            x,
+            y,
+            width: w,
+            height: h,
+            border_width: (*c).bw,
+            sibling: 0,
+            stack_mode: 0,
+        };
+        bindgen::XConfigureWindow(
+            dpy,
+            (*c).win,
+            (bindgen::CWX
+                | bindgen::CWY
+                | bindgen::CWWidth
+                | bindgen::CWHeight
+                | bindgen::CWBorderWidth) as u32,
+            &mut wc,
+        );
+        configure(c);
+        bindgen::XSync(dpy, False);
+    }
+}
 
 fn configure(c: *mut bindgen::Client) {
     // TODO this looks like a nice Into impl
@@ -3152,7 +3148,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).oldbw = (*c).bw;
             (*c).bw = 0;
             (*c).isfloating = 1;
-            bindgen::resizeclient(
+            resizeclient(
                 c,
                 (*(*c).mon).mx as i32,
                 (*(*c).mon).my as i32,
@@ -3178,7 +3174,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).y = (*c).oldy;
             (*c).w = (*c).oldw;
             (*c).h = (*c).oldh;
-            bindgen::resizeclient(c, (*c).x, (*c).y, (*c).w, (*c).h);
+            resizeclient(c, (*c).x, (*c).y, (*c).w, (*c).h);
             arrange((*c).mon);
         }
     }
