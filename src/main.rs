@@ -19,12 +19,13 @@ use std::ffi::{c_int, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
+use bindgen::{Atom, Client};
 use libc::{c_long, c_uchar};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
     PropertyChangeMask, StructureNotifyMask, SubstructureRedirectMask, Success,
-    XFree, XA_WINDOW,
+    XFree, XA_ATOM, XA_WINDOW,
 };
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
@@ -3113,99 +3114,107 @@ fn updatewmhints(c: *mut bindgen::Client) {
 }
 
 fn updatewindowtype(c: *mut bindgen::Client) {
+    use bindgen::{
+        netatom, NetWMFullscreen, NetWMState, NetWMWindowType,
+        NetWMWindowTypeDialog,
+    };
     unsafe {
-        bindgen::updatewindowtype(c);
-        // let state = getatomprop(mdpy, c, NETATOM[Net::WMState as usize]);
-        // let wtype = getatomprop(mdpy, c, NETATOM[Net::WMWindowType as usize]);
-        // if state == NETATOM[Net::WMFullscreen as usize] {
-        //     setfullscreen(mdpy, c, true);
-        // }
-        // if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
-        //     (*c).isfloating = true;
-        // }
+        let state = getatomprop(c, netatom[NetWMState as usize]);
+        let wtype = getatomprop(c, netatom[NetWMWindowType as usize]);
+        if state == netatom[NetWMFullscreen as usize] {
+            setfullscreen(c, true);
+        }
+        if wtype == netatom[NetWMWindowTypeDialog as usize] {
+            (*c).isfloating = 1;
+        }
     }
 }
 
-// fn setfullscreen(mdpy: &Display, c: *mut Client, fullscreen: bool) {
-//     unsafe {
-//         if fullscreen && !(*c).isfullscreen {
-//             xchangeproperty(
-//                 mdpy,
-//                 (*c).win,
-//                 NETATOM[Net::WMState as usize],
-//                 XA_ATOM,
-//                 32,
-//                 PropModeReplace,
-//                 &mut (NETATOM[Net::WMFullscreen as usize] as u8) as *mut _,
-//                 1,
-//             );
-//             (*c).isfullscreen = true;
-//             (*c).oldstate = (*c).isfloating;
-//             (*c).oldbw = (*c).bw;
-//             (*c).bw = 0;
-//             (*c).isfloating = true;
-//             resizeclient(
-//                 mdpy,
-//                 c,
-//                 (*(*c).mon).mx as i32,
-//                 (*(*c).mon).my as i32,
-//                 (*(*c).mon).mw as i32,
-//                 (*(*c).mon).mh as i32,
-//             );
-//             XRaiseWindow(mdpy.inner, (*c).win);
-//         } else if !fullscreen && (*c).isfullscreen {
-//             xchangeproperty(
-//                 mdpy,
-//                 (*c).win,
-//                 NETATOM[Net::WMState as usize],
-//                 XA_ATOM,
-//                 32,
-//                 PropModeReplace,
-//                 &mut 0_u8 as *mut _,
-//                 0,
-//             );
-//             (*c).isfullscreen = false;
-//             (*c).isfloating = (*c).oldstate;
-//             (*c).bw = (*c).oldbw;
-//             (*c).x = (*c).oldx;
-//             (*c).y = (*c).oldy;
-//             (*c).w = (*c).oldw;
-//             (*c).h = (*c).oldh;
-//             resizeclient(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h);
-//             arrange(mdpy, (*c).mon);
-//         }
-//     }
-// }
+fn setfullscreen(c: *mut Client, fullscreen: bool) {
+    use bindgen::{netatom, NetWMFullscreen, NetWMState};
+    unsafe {
+        if fullscreen && (*c).isfullscreen == 0 {
+            bindgen::XChangeProperty(
+                dpy,
+                (*c).win,
+                netatom[NetWMState as usize],
+                XA_ATOM,
+                32,
+                bindgen::PropModeReplace as i32,
+                // trying to emulate (unsigned char*)&netatom[NetWMFullscreen],
+                // so take a reference and then cast
+                &mut netatom[NetWMFullscreen as usize] as *mut u64
+                    as *mut c_uchar,
+                1,
+            );
+            (*c).isfullscreen = 1;
+            (*c).oldstate = (*c).isfloating;
+            (*c).oldbw = (*c).bw;
+            (*c).bw = 0;
+            (*c).isfloating = 1;
+            bindgen::resizeclient(
+                c,
+                (*(*c).mon).mx as i32,
+                (*(*c).mon).my as i32,
+                (*(*c).mon).mw as i32,
+                (*(*c).mon).mh as i32,
+            );
+            bindgen::XRaiseWindow(dpy, (*c).win);
+        } else if !fullscreen && (*c).isfullscreen != 0 {
+            bindgen::XChangeProperty(
+                dpy,
+                (*c).win,
+                netatom[NetWMState as usize],
+                XA_ATOM,
+                32,
+                bindgen::PropModeReplace as i32,
+                0_u64 as *mut c_uchar,
+                0,
+            );
+            (*c).isfullscreen = 0;
+            (*c).isfloating = (*c).oldstate;
+            (*c).bw = (*c).oldbw;
+            (*c).x = (*c).oldx;
+            (*c).y = (*c).oldy;
+            (*c).w = (*c).oldw;
+            (*c).h = (*c).oldh;
+            bindgen::resizeclient(c, (*c).x, (*c).y, (*c).w, (*c).h);
+            arrange((*c).mon);
+        }
+    }
+}
 
-// fn getatomprop(mdpy: &Display, c: *mut Client, prop: Atom) -> Atom {
-//     let mut di = 0;
-//     let mut dl = 0;
-//     let mut p = std::ptr::null_mut();
-//     let mut da = 0;
-//     let mut atom: Atom = 0;
-//     unsafe {
-//         if XGetWindowProperty(
-//             mdpy.inner,
-//             (*c).win,
-//             prop,
-//             0,
-//             std::mem::size_of::<Atom>() as i64,
-//             False,
-//             XA_ATOM,
-//             &mut da,
-//             &mut di,
-//             &mut dl,
-//             &mut dl,
-//             &mut p,
-//         ) == Success as i32
-//             && !p.is_null()
-//         {
-//             atom = *p as u64;
-//             XFree(p.cast());
-//         }
-//     }
-//     atom
-// }
+fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
+    let mut di = 0;
+    let mut dl = 0;
+    let mut p = std::ptr::null_mut();
+    let mut da = 0;
+    let mut atom: Atom = 0;
+    unsafe {
+        if bindgen::XGetWindowProperty(
+            dpy,
+            (*c).win,
+            prop,
+            0,
+            std::mem::size_of::<Atom>() as i64,
+            False,
+            XA_ATOM,
+            &mut da,
+            &mut di,
+            &mut dl,
+            &mut dl,
+            &mut p,
+        ) == Success as i32
+            && !p.is_null()
+        {
+            // the C code is *(Atom *)p. is that different from (Atom) *p?
+            // that's closer to what I had before
+            atom = *(p as *mut Atom);
+            XFree(p.cast());
+        }
+    }
+    atom
+}
 
 fn applyrules(c: *mut bindgen::Client) {
     unsafe {

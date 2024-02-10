@@ -16,6 +16,6 @@ include config.mk
 
 SRC = $(addprefix dwm/,drw.c dwm.c util.c)
 
-dwm/libdwm.so: $(SRC) dwm/config.h
+dwm/libdwm.so: $(SRC) dwm/config.h dwm/dwm.h
 	cd dwm ; \
 	clang -fPIC -shared -o $(notdir $@ $(SRC)) $(CPPFLAGS) $(LDFLAGS)  $(INCS)
