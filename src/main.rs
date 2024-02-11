@@ -24,13 +24,13 @@ use libc::{c_long, c_uchar};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
-    PropertyChangeMask, StructureNotifyMask, SubstructureRedirectMask, Success,
-    XFree, XA_ATOM, XA_WINDOW,
+    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
+    SubstructureRedirectMask, Success, XFree, XA_ATOM, XA_WINDOW,
 };
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
-use crate::bindgen::dpy;
+use crate::bindgen::{dpy, CurrentTime};
 // use crate::config::{
 //     BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
 // };
@@ -1802,30 +1802,34 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// DUMMY
 fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
-    unsafe {
-        bindgen::unfocus(c, setfocus as c_int);
+    use bindgen::{
+        netatom, root, scheme, ColBorder, NetActiveWindow, SchemeNorm,
+    };
+    if c.is_null() {
+        return;
     }
-    // if c.is_null() {
-    //     return;
-    // }
-    // grabbuttons(mdpy, c, false);
-    // unsafe {
-    //     XSetWindowBorder(
-    //         mdpy.inner,
-    //         (*c).win,
-    //         SCHEME[Scheme::Norm as usize][Col::Border as usize].pixel,
-    //     );
-    //     if setfocus {
-    //         XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-    //         XDeleteProperty(
-    //             mdpy.inner,
-    //             ROOT,
-    //             NETATOM[Net::ActiveWindow as usize],
-    //         );
-    //     }
-    // }
+    grabbuttons(c, false);
+    unsafe {
+        // scheme[SchemeNorm][ColBorder].pixel
+        let color = (*(*scheme.offset(SchemeNorm as isize))
+            .offset(ColBorder as isize))
+        .pixel;
+        bindgen::XSetWindowBorder(dpy, (*c).win, color);
+        if setfocus {
+            bindgen::XSetInputFocus(
+                dpy,
+                root,
+                RevertToPointerRoot,
+                CurrentTime as u64,
+            );
+            bindgen::XDeleteProperty(
+                dpy,
+                root,
+                netatom[NetActiveWindow as usize],
+            );
+        }
+    }
 }
 
 // fn updatestatus(mdpy: &Display) {
