@@ -19,8 +19,8 @@ use std::ffi::{c_int, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
-use bindgen::{Atom, Client};
-use libc::{c_long, c_uchar};
+use bindgen::{strncpy, Atom, Client};
+use libc::{c_long, c_uchar, c_ulong};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
@@ -862,26 +862,31 @@ fn arrange(mut m: *mut bindgen::Monitor) {
         }
 
         if !m.is_null() {
-            bindgen::arrangemon(m);
+            arrangemon(m);
             bindgen::restack(m);
         } else {
             m = bindgen::mons;
             while !m.is_null() {
-                bindgen::arrangemon(m);
+                arrangemon(m);
             }
         }
     }
 }
 
-// fn arrangemon(mdpy: &Display, m: *mut Monitor) {
-//     unsafe {
-//         (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
-//         let layout = &(*(*m).lt[(*m).sellt]);
-//         if let Some(arrange) = layout.arrange {
-//             (arrange)(mdpy, m)
-//         }
-//     }
-// }
+fn arrangemon(m: *mut bindgen::Monitor) {
+    unsafe {
+        strncpy(
+            (*m).ltsymbol.as_mut_ptr(),
+            (*(*m).lt[(*m).sellt as usize]).symbol,
+            size_of_val(&(*m).ltsymbol) as c_ulong,
+        );
+        // how did bindgen make this an Option??
+        let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
+        if let Some(arrange) = arrange {
+            (arrange)(m);
+        }
+    }
+}
 
 // fn restack(mdpy: &Display, m: *mut Monitor) {
 //     drawbar(m);
