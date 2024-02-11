@@ -985,11 +985,11 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
         bindgen::XConfigureWindow(
             dpy,
             (*c).win,
-            (bindgen::CWX
+            bindgen::CWX
                 | bindgen::CWY
                 | bindgen::CWWidth
                 | bindgen::CWHeight
-                | bindgen::CWBorderWidth) as u32,
+                | bindgen::CWBorderWidth,
             &mut wc,
         );
         configure(c);
@@ -3164,10 +3164,10 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).isfloating = 1;
             resizeclient(
                 c,
-                (*(*c).mon).mx as i32,
-                (*(*c).mon).my as i32,
-                (*(*c).mon).mw as i32,
-                (*(*c).mon).mh as i32,
+                (*(*c).mon).mx,
+                (*(*c).mon).my,
+                (*(*c).mon).mw,
+                (*(*c).mon).mh,
             );
             bindgen::XRaiseWindow(dpy, (*c).win);
         } else if !fullscreen && (*c).isfullscreen != 0 {
@@ -3178,7 +3178,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 XA_ATOM,
                 32,
                 bindgen::PropModeReplace as i32,
-                0_u64 as *mut c_uchar,
+                std::ptr::null_mut::<c_uchar>(),
                 0,
             );
             (*c).isfullscreen = 0;
