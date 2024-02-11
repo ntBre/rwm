@@ -849,32 +849,28 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
 //     }
 // }
 
-// DUMMY
-fn arrange(m: *mut bindgen::Monitor) {
+fn arrange(mut m: *mut bindgen::Monitor) {
     unsafe {
-        bindgen::arrange(m);
-    }
-    // unsafe {
-    //     if !m.is_null() {
-    //         showhide(mdpy, (*m).stack);
-    //     } else {
-    //         m = MONS;
-    //         while !m.is_null() {
-    //             showhide(mdpy, (*m).stack);
-    //             m = (*m).next;
-    //         }
-    //     }
+        if !m.is_null() {
+            bindgen::showhide((*m).stack);
+        } else {
+            m = bindgen::mons;
+            while !m.is_null() {
+                bindgen::showhide((*m).stack);
+                m = (*m).next;
+            }
+        }
 
-    //     if !m.is_null() {
-    //         arrangemon(mdpy, m);
-    //         restack(mdpy, m);
-    //     } else {
-    //         m = MONS;
-    //         while !m.is_null() {
-    //             arrangemon(mdpy, m);
-    //         }
-    //     }
-    // }
+        if !m.is_null() {
+            bindgen::arrangemon(m);
+            bindgen::restack(m);
+        } else {
+            m = bindgen::mons;
+            while !m.is_null() {
+                bindgen::arrangemon(m);
+            }
+        }
+    }
 }
 
 // fn arrangemon(mdpy: &Display, m: *mut Monitor) {
