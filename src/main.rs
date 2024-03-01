@@ -739,48 +739,56 @@ fn focus(c: *mut bindgen::Client) {
 //     }
 // }
 
-// DUMMY
 fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
     unsafe {
-        bindgen::grabbuttons(c, focused as c_int);
+        bindgen::updatenumlockmask();
+        let modifiers = [
+            0,
+            bindgen::LockMask,
+            bindgen::numlockmask,
+            bindgen::numlockmask | bindgen::LockMask,
+        ];
+        bindgen::XUngrabButton(
+            dpy,
+            bindgen::AnyButton,
+            bindgen::AnyModifier,
+            (*c).win,
+        );
+        const BUTTONMASK: u32 =
+            bindgen::ButtonPressMask | bindgen::ButtonReleaseMask;
+        if !focused {
+            bindgen::XGrabButton(
+                dpy,
+                bindgen::AnyButton,
+                bindgen::AnyModifier,
+                (*c).win,
+                False,
+                BUTTONMASK,
+                bindgen::GrabModeSync as i32,
+                bindgen::GrabModeSync as i32,
+                bindgen::None as u64,
+                bindgen::None as u64,
+            );
+        }
+        for i in 0..bindgen::buttons.len() {
+            if bindgen::buttons[i].click == bindgen::ClkClientWin {
+                for j in 0..modifiers.len() {
+                    bindgen::XGrabButton(
+                        dpy,
+                        bindgen::buttons[i].button,
+                        bindgen::buttons[i].mask | modifiers[j],
+                        (*c).win,
+                        False,
+                        BUTTONMASK,
+                        bindgen::GrabModeAsync as i32,
+                        bindgen::GrabModeSync as i32,
+                        bindgen::None as u64,
+                        bindgen::None as u64,
+                    );
+                }
+            }
+        }
     }
-    // updatenumlockmask(mdpy);
-    // unsafe {
-    //     let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-    //     XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-    //     if !focused {
-    //         XGrabButton(
-    //             mdpy.inner,
-    //             AnyButton as u32,
-    //             AnyModifier,
-    //             (*c).win,
-    //             False,
-    //             BUTTONMASK as u32,
-    //             GrabModeSync,
-    //             GrabModeSync,
-    //             0,
-    //             0,
-    //         );
-    //     }
-    //     for i in 0..BUTTONS.len() {
-    //         if BUTTONS[i].click == Clk::ClientWin {
-    //             for j in 0..modifiers.len() {
-    //                 XGrabButton(
-    //                     mdpy.inner,
-    //                     BUTTONS[i].button,
-    //                     BUTTONS[i].mask | modifiers[j],
-    //                     (*c).win,
-    //                     False,
-    //                     BUTTONMASK as u32,
-    //                     GrabModeAsync,
-    //                     GrabModeSync,
-    //                     0,
-    //                     0,
-    //                 );
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 // pub fn setlayout(mdpy: &Display, arg: Arg) {

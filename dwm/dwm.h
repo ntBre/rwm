@@ -184,7 +184,7 @@ static void updatebarpos(Monitor *m);
 static void updatebars(void);
 static void updateclientlist(void);
 static int updategeom(void);
-static void updatenumlockmask(void);
+void updatenumlockmask(void);
 void updatesizehints(Client *c);
 static void updatestatus(void);
 void updatetitle(Client *c);
