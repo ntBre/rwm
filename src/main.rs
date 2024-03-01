@@ -25,7 +25,7 @@ use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
     PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureRedirectMask, Success, XFree, XA_ATOM, XA_WINDOW,
+    SubstructureRedirectMask, Success, XFree, XA_ATOM, XA_STRING, XA_WINDOW,
 };
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
@@ -1925,41 +1925,44 @@ fn drawbar(m: *mut bindgen::Monitor) {
     //     }
 }
 
-// DUMMY
 fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
-    unsafe { bindgen::gettextprop(w, atom, text, size) }
-    // unsafe {
-    //     if (*text).is_empty() {
-    //         return false;
-    //     }
-    //     let mut name = MaybeUninit::uninit();
-    //     let c = XGetTextProperty(mdpy.inner, w, name.as_mut_ptr(), atom);
-    //     let name = name.assume_init();
-    //     if c != 0 || name.nitems == 0 {
-    //         return false;
-    //     }
+    unsafe {
+        if text.is_null() || size == 0 {
+            return 0;
+        }
+        *text = '\0' as i8;
+        let mut name = bindgen::XTextProperty {
+            value: std::ptr::null_mut(),
+            encoding: 0,
+            format: 0,
+            nitems: 0,
+        };
+        let c = bindgen::XGetTextProperty(dpy, w, &mut name, atom);
+        if c == 0 || name.nitems == 0 {
+            return 0;
+        }
 
-    //     let mut n = 0;
-    //     let list = std::ptr::null_mut();
-    //     if name.encoding == XA_STRING {
-    //         let t = CString::from_raw(name.value as *mut _);
-    //         *text = t.to_str().unwrap().to_owned();
-    //     } else if XmbTextPropertyToTextList(
-    //         mdpy.inner,
-    //         &name,
-    //         list,
-    //         &mut n as *mut _,
-    //     ) >= Success as i32
-    //         && n > 0
-    //         && !list.is_null()
-    //     {
-    //         let t = CString::from_raw(list as *mut _);
-    //         *text = t.to_str().unwrap().to_owned();
-    //         XFreeStringList(*list);
-    //     }
-    //     XFree(name.value as *mut _);
-    // }
-    // true
+        let mut n = 0;
+        let mut list: *mut *mut i8 = std::ptr::null_mut();
+        if name.encoding == XA_STRING {
+            bindgen::strncpy(text, name.value as *mut _, size as u64 - 1);
+        } else if bindgen::XmbTextPropertyToTextList(
+            dpy,
+            &name,
+            &mut list,
+            &mut n as *mut _,
+        ) >= Success as i32
+            && n > 0
+            && !(*list).is_null()
+        {
+            bindgen::strncpy(text, *list, size as u64 - 1);
+            bindgen::XFreeStringList(list);
+        }
+        let p = text.offset(size as isize - 1);
+        *p = '\0' as i8;
+        bindgen::XFree(name.value as *mut _);
+    }
+    1
 }
 
 // fn updatebars(mdpy: &Display) {
