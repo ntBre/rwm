@@ -674,15 +674,13 @@ fn focus(c: *mut bindgen::Client) {
     }
 }
 
-// DUMMY
 fn drawbars() {
     unsafe {
-        bindgen::drawbars();
-        // let mut m = MONS;
-        // while !m.is_null() {
-        //     drawbar(m);
-        //     m = (*m).next;
-        // }
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            bindgen::drawbar(m);
+            m = (*m).next;
+        }
     }
 }
 

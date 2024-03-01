@@ -132,7 +132,7 @@ static void destroynotify(XEvent *e);
 static void detach(Client *c);
 void detachstack(Client *c);
 static Monitor *dirtomon(int dir);
-static void drawbar(Monitor *m);
+void drawbar(Monitor *m);
 void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
