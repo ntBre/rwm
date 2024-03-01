@@ -648,7 +648,7 @@ fn focus(c: *mut bindgen::Client) {
             if (*c).isurgent != 0 {
                 seturgent(c, false);
             }
-            bindgen::detachstack(c);
+            detachstack(c);
             attachstack(c);
             grabbuttons(c, true);
             let color = (*(*scheme.offset(SchemeSel as isize))
@@ -2275,23 +2275,23 @@ fn attach(c: *mut bindgen::Client) {
     }
 }
 
-// fn detachstack(c: *mut Client) {
-//     unsafe {
-//         let mut tc: *mut *mut Client = &mut (*(*c).mon).stack;
-//         while !(*tc).is_null() && *tc != c {
-//             tc = &mut (*(*tc)).snext;
-//         }
-//         *tc = (*c).snext;
+fn detachstack(c: *mut Client) {
+    unsafe {
+        let mut tc: *mut *mut Client = &mut (*(*c).mon).stack;
+        while !(*tc).is_null() && *tc != c {
+            tc = &mut (*(*tc)).snext;
+        }
+        *tc = (*c).snext;
 
-//         if c == (*(*c).mon).sel {
-//             let mut t = (*(*c).mon).stack;
-//             while !t.is_null() && !is_visible(t) {
-//                 t = (*t).snext;
-//             }
-//             (*(*c).mon).sel = t;
-//         }
-//     }
-// }
+        if c == (*(*c).mon).sel {
+            let mut t = (*(*c).mon).stack;
+            while !t.is_null() && !is_visible(t) {
+                t = (*t).snext;
+            }
+            (*(*c).mon).sel = t;
+        }
+    }
+}
 
 /// this is actually a macro in the C code, but an inline function is probably
 /// as close as I can get
