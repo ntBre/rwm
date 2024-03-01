@@ -678,7 +678,7 @@ fn drawbars() {
     unsafe {
         let mut m = bindgen::mons;
         while !m.is_null() {
-            bindgen::drawbar(m);
+            drawbar(m);
             m = (*m).next;
         }
     }
@@ -1813,115 +1813,117 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
 //     }
 // }
 
-// fn drawbar(m: *mut Monitor) {
-//     unsafe {
-//         let boxs = (*(*DRW).fonts).h / 9;
-//         let boxw = (*(*DRW).fonts).h / 6 + 2;
-//         let mut occ = 0;
-//         let mut urg = 0;
-//         let mut x = 0;
-//         let mut w;
-//         let mut tw = 0;
+// DUMMY
+fn drawbar(m: *mut bindgen::Monitor) {
+    unsafe { bindgen::drawbar(m) }
+    //     unsafe {
+    //         let boxs = (*(*DRW).fonts).h / 9;
+    //         let boxw = (*(*DRW).fonts).h / 6 + 2;
+    //         let mut occ = 0;
+    //         let mut urg = 0;
+    //         let mut x = 0;
+    //         let mut w;
+    //         let mut tw = 0;
 
-//         if !(*m).showbar {
-//             return;
-//         }
+    //         if !(*m).showbar {
+    //             return;
+    //         }
 
-//         let drw = DRW.as_mut().unwrap();
+    //         let drw = DRW.as_mut().unwrap();
 
-//         // draw status first so it can be overdrawn by tags later
-//         if m == SELMON {
-//             // status is only drawn on selected monitor
-//             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-//             tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
-//             drw.text(
-//                 ((*m).ww - tw as i16) as i32,
-//                 0,
-//                 tw,
-//                 BH as usize,
-//                 0,
-//                 addr_of!(STEXT),
-//                 0,
-//             );
-//         }
+    //         // draw status first so it can be overdrawn by tags later
+    //         if m == SELMON {
+    //             // status is only drawn on selected monitor
+    //             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+    //             tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
+    //             drw.text(
+    //                 ((*m).ww - tw as i16) as i32,
+    //                 0,
+    //                 tw,
+    //                 BH as usize,
+    //                 0,
+    //                 addr_of!(STEXT),
+    //                 0,
+    //             );
+    //         }
 
-//         let mut c = (*m).clients;
-//         while !c.is_null() {
-//             occ |= (*c).tags;
-//             if (*c).isurgent {
-//                 urg |= (*c).tags;
-//             }
-//             c = (*c).next;
-//         }
+    //         let mut c = (*m).clients;
+    //         while !c.is_null() {
+    //             occ |= (*c).tags;
+    //             if (*c).isurgent {
+    //                 urg |= (*c).tags;
+    //             }
+    //             c = (*c).next;
+    //         }
 
-//         for i in 0..TAGS.len() {
-//             let text = TAGS[i].to_owned();
-//             w = drw.textw(&text);
-//             drw.setscheme(
-//                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
-//                     Scheme::Sel as usize
-//                 } else {
-//                     Scheme::Norm as usize
-//                 }],
-//             );
-//             drw.text(
-//                 x,
-//                 0,
-//                 w,
-//                 BH as usize,
-//                 LRPAD / 2,
-//                 &text,
-//                 (urg as i32) & 1 << i,
-//             );
+    //         for i in 0..TAGS.len() {
+    //             let text = TAGS[i].to_owned();
+    //             w = drw.textw(&text);
+    //             drw.setscheme(
+    //                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
+    //                     Scheme::Sel as usize
+    //                 } else {
+    //                     Scheme::Norm as usize
+    //                 }],
+    //             );
+    //             drw.text(
+    //                 x,
+    //                 0,
+    //                 w,
+    //                 BH as usize,
+    //                 LRPAD / 2,
+    //                 &text,
+    //                 (urg as i32) & 1 << i,
+    //             );
 
-//             if (occ & 1 << i) != 0 {
-//                 drw.rect(
-//                     x + boxs as i32,
-//                     boxs,
-//                     boxw,
-//                     boxw,
-//                     m == SELMON
-//                         && !(*SELMON).sel.is_null()
-//                         && ((*(*SELMON).sel).tags & 1 << i) != 0,
-//                     (urg & 1 << i) != 0,
-//                 );
-//             }
-//             x += w as i32;
-//         }
+    //             if (occ & 1 << i) != 0 {
+    //                 drw.rect(
+    //                     x + boxs as i32,
+    //                     boxs,
+    //                     boxw,
+    //                     boxw,
+    //                     m == SELMON
+    //                         && !(*SELMON).sel.is_null()
+    //                         && ((*(*SELMON).sel).tags & 1 << i) != 0,
+    //                     (urg & 1 << i) != 0,
+    //                 );
+    //             }
+    //             x += w as i32;
+    //         }
 
-//         w = drw.textw(&(*m).ltsymbol);
-//         drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-//         x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
+    //         w = drw.textw(&(*m).ltsymbol);
+    //         drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+    //         x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
 
-//         w = ((*m).ww - tw as i16 - x as i16) as usize;
-//         if w > BH as usize {
-//             if !(*m).sel.is_null() {
-//                 drw.setscheme(
-//                     &mut SCHEME[if m == SELMON {
-//                         Scheme::Sel
-//                     } else {
-//                         Scheme::Norm
-//                     } as usize],
-//                 );
-//                 drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
-//                 if (*(*m).sel).isfloating {
-//                     drw.rect(
-//                         x + boxs as i32,
-//                         boxs,
-//                         boxw,
-//                         boxw,
-//                         (*(*m).sel).isfixed,
-//                         false,
-//                     );
-//                 }
-//             } else {
-//                 drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-//                 drw.rect(x, 0, w, BH as usize, true, true);
-//             }
-//         }
-//         drw.map((*m).barwin, 0, 0, (*m).ww, BH);
-//     }
-// }
+    //         w = ((*m).ww - tw as i16 - x as i16) as usize;
+    //         if w > BH as usize {
+    //             if !(*m).sel.is_null() {
+    //                 drw.setscheme(
+    //                     &mut SCHEME[if m == SELMON {
+    //                         Scheme::Sel
+    //                     } else {
+    //                         Scheme::Norm
+    //                     } as usize],
+    //                 );
+    //                 drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
+    //                 if (*(*m).sel).isfloating {
+    //                     drw.rect(
+    //                         x + boxs as i32,
+    //                         boxs,
+    //                         boxw,
+    //                         boxw,
+    //                         (*(*m).sel).isfixed,
+    //                         false,
+    //                     );
+    //                 }
+    //             } else {
+    //                 drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
+    //                 drw.rect(x, 0, w, BH as usize, true, true);
+    //             }
+    //         }
+    //         drw.map((*m).barwin, 0, 0, (*m).ww, BH);
+    //     }
+}
 
 // DUMMY
 fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
