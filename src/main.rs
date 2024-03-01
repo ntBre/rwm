@@ -684,29 +684,27 @@ fn drawbars() {
     }
 }
 
-// DUMMY
 fn setfocus(c: *mut Client) {
     unsafe {
-        bindgen::setfocus(c);
-        // if !(*c).neverfocus {
-        //     XSetInputFocus(
-        //         mdpy.inner,
-        //         (*c).win,
-        //         RevertToPointerRoot,
-        //         CurrentTime,
-        //     );
-        //     xchangeproperty(
-        //         mdpy,
-        //         ROOT,
-        //         NETATOM[Net::ActiveWindow as usize],
-        //         XA_WINDOW,
-        //         32,
-        //         PropModeReplace,
-        //         &mut ((*c).win as u8),
-        //         1,
-        //     );
-        // }
-        // sendevent(mdpy, c, WMATOM[WM::TakeFocus as usize]);
+        if (*c).neverfocus == 0 {
+            bindgen::XSetInputFocus(
+                dpy,
+                (*c).win,
+                RevertToPointerRoot,
+                bindgen::CurrentTime as u64,
+            );
+            bindgen::XChangeProperty(
+                dpy,
+                bindgen::root,
+                bindgen::netatom[bindgen::NetActiveWindow as usize],
+                XA_WINDOW,
+                32,
+                bindgen::PropModeReplace as i32,
+                (&mut (*c).win) as *mut u64 as *mut c_uchar,
+                1,
+            );
+        }
+        bindgen::sendevent(c, bindgen::wmatom[bindgen::WMTakeFocus as usize]);
     }
 }
 

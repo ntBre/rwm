@@ -161,7 +161,7 @@ static void resize(Client *c, int x, int y, int w, int h, int interact);
 void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
 void restack(Monitor *m);
-static int sendevent(Client *c, Atom proto);
+int sendevent(Client *c, Atom proto);
 static void sendmon(Client *c, Monitor *m);
 void setclientstate(Client *c, long state);
 void setfocus(Client *c);
