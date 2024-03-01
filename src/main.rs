@@ -629,29 +629,6 @@ fn setup() {
     // }
 }
 
-// fn xchangewindowattributes(
-//     mdpy: &Display,
-//     w: Window,
-//     value_mask: c_ulong,
-//     wa: *mut XSetWindowAttributes,
-// ) {
-//     unsafe {
-//         let ret = XChangeWindowAttributes(mdpy.inner, w, value_mask, wa);
-//         if matches!(
-//             ret as u8,
-//             x11::xlib::BadAccess
-//                 | x11::xlib::BadColor
-//                 | x11::xlib::BadCursor
-//                 | x11::xlib::BadMatch
-//                 | x11::xlib::BadPixmap
-//                 | x11::xlib::BadValue
-//                 | x11::xlib::BadWindow
-//         ) {
-//             panic!("failed");
-//         }
-//     }
-// }
-
 fn focus(c: *mut bindgen::Client) {
     use bindgen::{scheme, selmon, ColBorder, SchemeSel};
     unsafe {
@@ -703,30 +680,6 @@ fn focus(c: *mut bindgen::Client) {
 //         while !m.is_null() {
 //             drawbar(m);
 //             m = (*m).next;
-//         }
-//     }
-// }
-
-// #[allow(non_upper_case_globals)]
-// fn xchangeproperty(
-//     mdpy: &Display,
-//     w: Window,
-//     prop: Atom,
-//     typ: Atom,
-//     fmt: c_int,
-//     mode: c_int,
-//     data: *mut c_uchar,
-//     nelements: c_int,
-// ) {
-//     unsafe {
-//         let ret = XChangeProperty(
-//             mdpy.inner, w, prop, typ, fmt, mode, data, nelements,
-//         );
-//         if matches!(
-//             ret as u8,
-//             BadAlloc | BadAtom | BadMatch | BadValue | BadWindow
-//         ) {
-//             panic!("failed");
 //         }
 //     }
 // }
@@ -3343,25 +3296,6 @@ fn getstate(w: Window) -> c_long {
         result
     }
 }
-
-// fn xgettransientforhint(mdpy: &Display, w: u64, d1: &mut u64) -> bool {
-//     unsafe { XGetTransientForHint(mdpy.inner, w, d1) != 0 }
-// }
-
-// fn not_xgetwindowattributes(
-//     mdpy: &Display,
-//     wins: *mut u64,
-//     i: u32,
-//     wa: &mut MaybeUninit<XWindowAttributes>,
-// ) -> bool {
-//     unsafe {
-//         XGetWindowAttributes(
-//             mdpy.inner,
-//             *wins.offset(i as isize),
-//             wa.as_mut_ptr(),
-//         ) == 0
-//     }
-// }
 
 // mod config;
 // mod drw;
