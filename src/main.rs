@@ -2475,24 +2475,21 @@ fn cleanup() {
 //     }
 // }
 
-// DUMMY
 fn setclientstate(c: *mut bindgen::Client, state: usize) {
+    let mut data: [c_long; 2] = [state as c_long, bindgen::None as c_long];
+    let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
-        bindgen::setclientstate(c, state as i64);
+        bindgen::XChangeProperty(
+            dpy,
+            (*c).win,
+            bindgen::wmatom[bindgen::WMState as usize],
+            bindgen::wmatom[bindgen::WMState as usize],
+            32,
+            bindgen::PropModeReplace as i32,
+            ptr,
+            2,
+        );
     }
-    // let mut data: [c_uchar; 2] = [state as c_uchar, 0]; // this zero is None
-    // unsafe {
-    //     xchangeproperty(
-    //         mdpy,
-    //         (*c).win,
-    //         WMATOM[WM::State as usize],
-    //         WMATOM[WM::State as usize],
-    //         32,
-    //         PropModeReplace,
-    //         data.as_mut_ptr(),
-    //         2,
-    //     );
-    // }
 }
 
 // DUMMY
