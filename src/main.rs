@@ -854,45 +854,45 @@ fn arrangemon(m: *mut bindgen::Monitor) {
     }
 }
 
-// DUMMY
 fn restack(m: *mut bindgen::Monitor) {
-    unsafe { bindgen::restack(m) }
-    // drawbar(m);
-    // unsafe {
-    //     if (*m).sel.is_null() {
-    //         return;
-    //     }
-    //     if (*(*m).sel).isfloating {
-    //         // supposed to be or arrange is null, but we only have empty arrange
-    //         // instead
-    //         XRaiseWindow(mdpy.inner, (*(*m).sel).win);
-    //     }
-    //     let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-    //     {
-    //         let wc = wc.as_mut_ptr();
-    //         (*wc).stack_mode = Below;
-    //         (*wc).sibling = (*m).barwin;
-    //     }
-    //     let mut wc = wc.assume_init();
-    //     let mut c = (*m).stack;
-    //     while !c.is_null() {
-    //         if !(*c).isfloating && is_visible(c) {
-    //             XConfigureWindow(
-    //                 mdpy.inner,
-    //                 (*c).win,
-    //                 (CWSibling | CWStackMode) as u32,
-    //                 &mut wc as *mut _,
-    //             );
-    //             wc.sibling = (*c).win;
-    //         }
-    //         c = (*c).snext;
-    //     }
-    //     XSync(mdpy.inner, False);
-    //     let mut ev: XEvent = MaybeUninit::uninit().assume_init();
-    //     while XCheckMaskEvent(mdpy.inner, EnterWindowMask, &mut ev as *mut _)
-    //         != 0
-    //     {}
-    // }
+    drawbar(m);
+    unsafe {
+        if (*m).sel.is_null() {
+            return;
+        }
+        if (*(*m).sel).isfloating != 0
+            || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
+        {
+            bindgen::XRaiseWindow(dpy, (*(*m).sel).win);
+        }
+        if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
+            let mut wc = bindgen::XWindowChanges {
+                stack_mode: bindgen::Below as i32,
+                sibling: (*m).barwin,
+                x: Default::default(),
+                y: Default::default(),
+                width: Default::default(),
+                height: Default::default(),
+                border_width: Default::default(),
+            };
+            let mut c = (*m).stack;
+            while !c.is_null() {
+                if (*c).isfloating == 0 && is_visible(c) {
+                    bindgen::XConfigureWindow(
+                        dpy,
+                        (*c).win,
+                        bindgen::CWSibling | bindgen::CWStackMode,
+                        &mut wc as *mut _,
+                    );
+                    wc.sibling = (*c).win;
+                }
+                c = (*c).snext;
+            }
+        }
+        bindgen::XSync(dpy, False);
+        let mut ev = bindgen::XEvent { type_: 0 };
+        while bindgen::XCheckMaskEvent(dpy, EnterWindowMask, &mut ev) != 0 {}
+    }
 }
 
 // DUMMY
