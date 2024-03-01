@@ -652,48 +652,49 @@ fn setup() {
 //     }
 // }
 
-// DUMMY
 fn focus(c: *mut bindgen::Client) {
+    use bindgen::{scheme, selmon, ColBorder, SchemeSel};
     unsafe {
-        bindgen::focus(c);
+        if c.is_null() || !is_visible(c) {
+            let mut c = (*selmon).stack;
+            while !c.is_null() && !is_visible(c) {
+                c = (*c).snext;
+            }
+        }
+        if !(*selmon).sel.is_null() && (*selmon).sel != c {
+            unfocus((*selmon).sel, false);
+        }
+        if !c.is_null() {
+            if (*c).mon != selmon {
+                selmon = (*c).mon;
+            }
+            if (*c).isurgent != 0 {
+                bindgen::seturgent(c, false as c_int);
+            }
+            bindgen::detachstack(c);
+            attachstack(c);
+            grabbuttons(c, true);
+            let color = (*(*scheme.offset(SchemeSel as isize))
+                .offset(ColBorder as isize))
+            .pixel;
+            bindgen::XSetWindowBorder(dpy, (*c).win, color);
+            bindgen::setfocus(c);
+        } else {
+            bindgen::XSetInputFocus(
+                dpy,
+                bindgen::root,
+                RevertToPointerRoot,
+                CurrentTime as u64,
+            );
+            bindgen::XDeleteProperty(
+                dpy,
+                bindgen::root,
+                bindgen::netatom[bindgen::NetActiveWindow as usize],
+            );
+        }
+        (*bindgen::selmon).sel = c;
+        bindgen::drawbars();
     }
-    // unsafe {
-    //     if c.is_null() || !is_visible(c) {
-    //         let mut c = (*SELMON).stack;
-    //         while !c.is_null() && !is_visible(c) {
-    //             c = (*c).snext;
-    //         }
-    //     }
-    //     if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-    //         unfocus(mdpy, (*SELMON).sel, false);
-    //     }
-    //     if !c.is_null() {
-    //         if (*c).mon != SELMON {
-    //             SELMON = (*c).mon;
-    //         }
-    //         if (*c).isurgent {
-    //             seturgent(mdpy, c, false);
-    //         }
-    //         detachstack(c);
-    //         attachstack(c);
-    //         grabbuttons(mdpy, c, true);
-    //         XSetWindowBorder(
-    //             mdpy.inner,
-    //             (*c).win,
-    //             SCHEME[Scheme::Sel as usize][Col::Border as usize].pixel,
-    //         );
-    //         setfocus(mdpy, c);
-    //     } else {
-    //         XSetInputFocus(mdpy.inner, ROOT, RevertToPointerRoot, CurrentTime);
-    //         XDeleteProperty(
-    //             mdpy.inner,
-    //             ROOT,
-    //             NETATOM[Net::ActiveWindow as usize],
-    //         );
-    //     }
-    //     (*SELMON).sel = c;
-    //     drawbars();
-    // }
 }
 
 // fn drawbars() {
@@ -2333,10 +2334,12 @@ fn attach(c: *mut bindgen::Client) {
 
 /// this is actually a macro in the C code, but an inline function is probably
 /// as close as I can get
-// #[inline]
-// fn is_visible(c: *const Client) -> bool {
-//     unsafe { ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags]) != 0 }
-// }
+#[inline]
+fn is_visible(c: *const Client) -> bool {
+    unsafe {
+        ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags as usize]) != 0
+    }
+}
 
 // fn updatebarpos(m: *mut Monitor) {
 //     unsafe {
