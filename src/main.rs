@@ -655,7 +655,7 @@ fn focus(c: *mut bindgen::Client) {
                 .offset(ColBorder as isize))
             .pixel;
             bindgen::XSetWindowBorder(dpy, (*c).win, color);
-            bindgen::setfocus(c);
+            setfocus(c);
         } else {
             bindgen::XSetInputFocus(
                 dpy,
@@ -670,43 +670,47 @@ fn focus(c: *mut bindgen::Client) {
             );
         }
         (*bindgen::selmon).sel = c;
-        bindgen::drawbars();
+        drawbars();
     }
 }
 
-// fn drawbars() {
-//     unsafe {
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             drawbar(m);
-//             m = (*m).next;
-//         }
-//     }
-// }
+// DUMMY
+fn drawbars() {
+    unsafe {
+        bindgen::drawbars();
+        // let mut m = MONS;
+        // while !m.is_null() {
+        //     drawbar(m);
+        //     m = (*m).next;
+        // }
+    }
+}
 
-// fn setfocus(mdpy: &Display, c: *mut Client) {
-//     unsafe {
-//         if !(*c).neverfocus {
-//             XSetInputFocus(
-//                 mdpy.inner,
-//                 (*c).win,
-//                 RevertToPointerRoot,
-//                 CurrentTime,
-//             );
-//             xchangeproperty(
-//                 mdpy,
-//                 ROOT,
-//                 NETATOM[Net::ActiveWindow as usize],
-//                 XA_WINDOW,
-//                 32,
-//                 PropModeReplace,
-//                 &mut ((*c).win as u8),
-//                 1,
-//             );
-//         }
-//         sendevent(mdpy, c, WMATOM[WM::TakeFocus as usize]);
-//     }
-// }
+// DUMMY
+fn setfocus(c: *mut Client) {
+    unsafe {
+        bindgen::setfocus(c);
+        // if !(*c).neverfocus {
+        //     XSetInputFocus(
+        //         mdpy.inner,
+        //         (*c).win,
+        //         RevertToPointerRoot,
+        //         CurrentTime,
+        //     );
+        //     xchangeproperty(
+        //         mdpy,
+        //         ROOT,
+        //         NETATOM[Net::ActiveWindow as usize],
+        //         XA_WINDOW,
+        //         32,
+        //         PropModeReplace,
+        //         &mut ((*c).win as u8),
+        //         1,
+        //     );
+        // }
+        // sendevent(mdpy, c, WMATOM[WM::TakeFocus as usize]);
+    }
+}
 
 // fn sendevent(mdpy: &Display, c: *mut Client, proto: Atom) -> bool {
 //     let mut n = 0;
@@ -741,7 +745,7 @@ fn focus(c: *mut bindgen::Client) {
 
 fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
     unsafe {
-        bindgen::updatenumlockmask();
+        updatenumlockmask();
         let modifiers = [
             0,
             bindgen::LockMask,
@@ -814,18 +818,18 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
 fn arrange(mut m: *mut bindgen::Monitor) {
     unsafe {
         if !m.is_null() {
-            bindgen::showhide((*m).stack);
+            showhide((*m).stack);
         } else {
             m = bindgen::mons;
             while !m.is_null() {
-                bindgen::showhide((*m).stack);
+                showhide((*m).stack);
                 m = (*m).next;
             }
         }
 
         if !m.is_null() {
             arrangemon(m);
-            bindgen::restack(m);
+            restack(m);
         } else {
             m = bindgen::mons;
             while !m.is_null() {
@@ -850,66 +854,70 @@ fn arrangemon(m: *mut bindgen::Monitor) {
     }
 }
 
-// fn restack(mdpy: &Display, m: *mut Monitor) {
-//     drawbar(m);
-//     unsafe {
-//         if (*m).sel.is_null() {
-//             return;
-//         }
-//         if (*(*m).sel).isfloating {
-//             // supposed to be or arrange is null, but we only have empty arrange
-//             // instead
-//             XRaiseWindow(mdpy.inner, (*(*m).sel).win);
-//         }
-//         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-//         {
-//             let wc = wc.as_mut_ptr();
-//             (*wc).stack_mode = Below;
-//             (*wc).sibling = (*m).barwin;
-//         }
-//         let mut wc = wc.assume_init();
-//         let mut c = (*m).stack;
-//         while !c.is_null() {
-//             if !(*c).isfloating && is_visible(c) {
-//                 XConfigureWindow(
-//                     mdpy.inner,
-//                     (*c).win,
-//                     (CWSibling | CWStackMode) as u32,
-//                     &mut wc as *mut _,
-//                 );
-//                 wc.sibling = (*c).win;
-//             }
-//             c = (*c).snext;
-//         }
-//         XSync(mdpy.inner, False);
-//         let mut ev: XEvent = MaybeUninit::uninit().assume_init();
-//         while XCheckMaskEvent(mdpy.inner, EnterWindowMask, &mut ev as *mut _)
-//             != 0
-//         {}
-//     }
-// }
+// DUMMY
+fn restack(m: *mut bindgen::Monitor) {
+    unsafe { bindgen::restack(m) }
+    // drawbar(m);
+    // unsafe {
+    //     if (*m).sel.is_null() {
+    //         return;
+    //     }
+    //     if (*(*m).sel).isfloating {
+    //         // supposed to be or arrange is null, but we only have empty arrange
+    //         // instead
+    //         XRaiseWindow(mdpy.inner, (*(*m).sel).win);
+    //     }
+    //     let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
+    //     {
+    //         let wc = wc.as_mut_ptr();
+    //         (*wc).stack_mode = Below;
+    //         (*wc).sibling = (*m).barwin;
+    //     }
+    //     let mut wc = wc.assume_init();
+    //     let mut c = (*m).stack;
+    //     while !c.is_null() {
+    //         if !(*c).isfloating && is_visible(c) {
+    //             XConfigureWindow(
+    //                 mdpy.inner,
+    //                 (*c).win,
+    //                 (CWSibling | CWStackMode) as u32,
+    //                 &mut wc as *mut _,
+    //             );
+    //             wc.sibling = (*c).win;
+    //         }
+    //         c = (*c).snext;
+    //     }
+    //     XSync(mdpy.inner, False);
+    //     let mut ev: XEvent = MaybeUninit::uninit().assume_init();
+    //     while XCheckMaskEvent(mdpy.inner, EnterWindowMask, &mut ev as *mut _)
+    //         != 0
+    //     {}
+    // }
+}
 
-// fn showhide(mdpy: &Display, c: *mut Client) {
-//     if c.is_null() {
-//         return;
-//     }
-//     if is_visible(c) {
-//         // show clients top down
-//         unsafe {
-//             XMoveWindow(mdpy.inner, (*c).win, (*c).x, (*c).y);
-//             if (*c).isfloating && !(*c).isfullscreen {
-//                 resize(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
-//             }
-//             showhide(mdpy, (*c).snext);
-//         }
-//     } else {
-//         // hide clients bottom up
-//         unsafe {
-//             showhide(mdpy, (*c).snext);
-//             XMoveWindow(mdpy.inner, (*c).win, width(c) * -2, (*c).y);
-//         }
-//     }
-// }
+// DUMMY
+fn showhide(c: *mut Client) {
+    unsafe { bindgen::showhide(c) }
+    //     if c.is_null() {
+    //         return;
+    //     }
+    //     if is_visible(c) {
+    //         // show clients top down
+    //         unsafe {
+    //             XMoveWindow(mdpy.inner, (*c).win, (*c).x, (*c).y);
+    //             if (*c).isfloating && !(*c).isfullscreen {
+    //                 resize(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
+    //             }
+    //             showhide(mdpy, (*c).snext);
+    //         }
+    //     } else {
+    //         // hide clients bottom up
+    //         unsafe {
+    //             showhide(mdpy, (*c).snext);
+    //             XMoveWindow(mdpy.inner, (*c).win, width(c) * -2, (*c).y);
+    //         }
+    //     }
+}
 
 // fn resize(
 //     mdpy: &Display,
@@ -1729,24 +1737,26 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// fn updatenumlockmask(mdpy: &Display) {
-//     unsafe {
-//         NUMLOCKMASK = 0;
-//         let modmap = XGetModifierMapping(mdpy.inner);
-//         for i in 0..8 {
-//             for j in 0..(*modmap).max_keypermod {
-//                 if *(*modmap)
-//                     .modifiermap
-//                     .offset((i * (*modmap).max_keypermod + j) as isize)
-//                     == XKeysymToKeycode(mdpy.inner, XK_Num_Lock as u64)
-//                 {
-//                     NUMLOCKMASK = 1 << i;
-//                 }
-//             }
-//         }
-//         XFreeModifiermap(modmap);
-//     }
-// }
+// DUMMY
+fn updatenumlockmask() {
+    unsafe {
+        bindgen::updatenumlockmask();
+        // NUMLOCKMASK = 0;
+        // let modmap = XGetModifierMapping(mdpy.inner);
+        // for i in 0..8 {
+        //     for j in 0..(*modmap).max_keypermod {
+        //         if *(*modmap)
+        //             .modifiermap
+        //             .offset((i * (*modmap).max_keypermod + j) as isize)
+        //             == XKeysymToKeycode(mdpy.inner, XK_Num_Lock as u64)
+        //         {
+        //             NUMLOCKMASK = 1 << i;
+        //         }
+        //     }
+        // }
+        // XFreeModifiermap(modmap);
+    }
+}
 
 fn seturgent(c: *mut Client, urg: bool) {
     unsafe {
@@ -1915,45 +1925,42 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
 //     }
 // }
 
-// fn gettextprop(
-//     mdpy: &Display,
-//     w: Window,
-//     atom: Atom,
-//     text: *mut String,
-// ) -> bool {
-//     unsafe {
-//         if (*text).is_empty() {
-//             return false;
-//         }
-//         let mut name = MaybeUninit::uninit();
-//         let c = XGetTextProperty(mdpy.inner, w, name.as_mut_ptr(), atom);
-//         let name = name.assume_init();
-//         if c != 0 || name.nitems == 0 {
-//             return false;
-//         }
+// DUMMY
+fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
+    unsafe { bindgen::gettextprop(w, atom, text, size) }
+    // unsafe {
+    //     if (*text).is_empty() {
+    //         return false;
+    //     }
+    //     let mut name = MaybeUninit::uninit();
+    //     let c = XGetTextProperty(mdpy.inner, w, name.as_mut_ptr(), atom);
+    //     let name = name.assume_init();
+    //     if c != 0 || name.nitems == 0 {
+    //         return false;
+    //     }
 
-//         let mut n = 0;
-//         let list = std::ptr::null_mut();
-//         if name.encoding == XA_STRING {
-//             let t = CString::from_raw(name.value as *mut _);
-//             *text = t.to_str().unwrap().to_owned();
-//         } else if XmbTextPropertyToTextList(
-//             mdpy.inner,
-//             &name,
-//             list,
-//             &mut n as *mut _,
-//         ) >= Success as i32
-//             && n > 0
-//             && !list.is_null()
-//         {
-//             let t = CString::from_raw(list as *mut _);
-//             *text = t.to_str().unwrap().to_owned();
-//             XFreeStringList(*list);
-//         }
-//         XFree(name.value as *mut _);
-//     }
-//     true
-// }
+    //     let mut n = 0;
+    //     let list = std::ptr::null_mut();
+    //     if name.encoding == XA_STRING {
+    //         let t = CString::from_raw(name.value as *mut _);
+    //         *text = t.to_str().unwrap().to_owned();
+    //     } else if XmbTextPropertyToTextList(
+    //         mdpy.inner,
+    //         &name,
+    //         list,
+    //         &mut n as *mut _,
+    //     ) >= Success as i32
+    //         && n > 0
+    //         && !list.is_null()
+    //     {
+    //         let t = CString::from_raw(list as *mut _);
+    //         *text = t.to_str().unwrap().to_owned();
+    //         XFreeStringList(*list);
+    //     }
+    //     XFree(name.value as *mut _);
+    // }
+    // true
+}
 
 // fn updatebars(mdpy: &Display) {
 //     let mut wa = XSetWindowAttributes {
@@ -3248,14 +3255,14 @@ const TAGMASK: u32 = (1 << 9) - 1;
 
 fn updatetitle(c: *mut bindgen::Client) {
     unsafe {
-        if bindgen::gettextprop(
+        if gettextprop(
             (*c).win,
             bindgen::netatom[bindgen::NetWMName as usize],
             &mut (*c).name as *mut _,
             size_of_val(&(*c).name) as u32,
         ) == 0
         {
-            bindgen::gettextprop(
+            gettextprop(
                 (*c).win,
                 XA_WM_NAME,
                 &mut (*c).name as *mut _,
