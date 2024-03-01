@@ -646,7 +646,7 @@ fn focus(c: *mut bindgen::Client) {
                 selmon = (*c).mon;
             }
             if (*c).isurgent != 0 {
-                bindgen::seturgent(c, false as c_int);
+                seturgent(c, false);
             }
             bindgen::detachstack(c);
             attachstack(c);
@@ -1748,22 +1748,22 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// fn seturgent(mdpy: &Display, c: *mut Client, urg: bool) {
-//     unsafe {
-//         (*c).isurgent = urg;
-//         let wmh = XGetWMHints(mdpy.inner, (*c).win);
-//         if wmh.is_null() {
-//             return;
-//         }
-//         (*wmh).flags = if urg {
-//             (*wmh).flags | XUrgencyHint
-//         } else {
-//             (*wmh).flags & !XUrgencyHint
-//         };
-//         XSetWMHints(mdpy.inner, (*c).win, wmh);
-//         XFree(wmh.cast());
-//     }
-// }
+fn seturgent(c: *mut Client, urg: bool) {
+    unsafe {
+        (*c).isurgent = urg as c_int;
+        let wmh = bindgen::XGetWMHints(dpy, (*c).win);
+        if wmh.is_null() {
+            return;
+        }
+        (*wmh).flags = if urg {
+            (*wmh).flags | bindgen::XUrgencyHint as i64
+        } else {
+            (*wmh).flags & !(bindgen::XUrgencyHint as i64)
+        };
+        bindgen::XSetWMHints(dpy, (*c).win, wmh);
+        XFree(wmh.cast());
+    }
+}
 
 fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
     use bindgen::{
