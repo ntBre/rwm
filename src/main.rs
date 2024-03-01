@@ -709,35 +709,38 @@ fn setfocus(c: *mut Client) {
 }
 
 fn sendevent(c: *mut Client, proto: Atom) -> c_int {
-    unsafe { bindgen::sendevent(c, proto) }
-    // let mut n = 0;
-    // let mut protocols = std::ptr::null_mut();
-    // let mut exists = false;
-    // let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
-    // unsafe {
-    //     if XGetWMProtocols(mdpy.inner, (*c).win, &mut protocols, &mut n) != 0 {
-    //         while !exists && n > 0 {
-    //             exists = *protocols.offset(n as isize) == proto;
-    //             n -= 1;
-    //         }
-    //         XFree(protocols.cast());
-    //     }
-    //     if exists {
-    //         {
-    //             let ev = ev.as_mut_ptr();
-    //             (*ev).type_ = ClientMessage;
-    //             (*ev).client_message.window = (*c).win;
-    //             (*ev).client_message.message_type =
-    //                 WMATOM[WM::Protocols as usize];
-    //             (*ev).client_message.format = 32;
-    //             (*ev).client_message.data.set_long(0, proto as i64);
-    //             (*ev).client_message.data.set_long(1, CurrentTime as i64);
-    //         }
-    //         let mut ev: XEvent = ev.assume_init();
-    //         XSendEvent(mdpy.inner, (*c).win, False, NoEventMask, &mut ev);
-    //     }
-    //     exists
-    // }
+    let mut n = 0;
+    let mut protocols = std::ptr::null_mut();
+    let mut exists = 0;
+    unsafe {
+        if bindgen::XGetWMProtocols(dpy, (*c).win, &mut protocols, &mut n) != 0
+        {
+            while exists == 0 && n > 0 {
+                exists = (*protocols.offset(n as isize) == proto) as c_int;
+                n -= 1;
+            }
+            XFree(protocols.cast());
+        }
+        use bindgen::{wmatom, WMProtocols};
+        if exists != 0 {
+            let mut ev = bindgen::XEvent {
+                type_: bindgen::ClientMessage as i32,
+            };
+            ev.xclient.window = (*c).win;
+            ev.xclient.message_type = wmatom[WMProtocols as usize];
+            ev.xclient.format = 32;
+            ev.xclient.data.l[0] = proto as c_long;
+            ev.xclient.data.l[1] = CurrentTime as c_long;
+            bindgen::XSendEvent(
+                dpy,
+                (*c).win,
+                False,
+                bindgen::NoEventMask as i64,
+                &mut ev,
+            );
+        }
+        exists
+    }
 }
 
 fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
