@@ -116,7 +116,7 @@ struct Monitor {
 };
 
 void applyrules(Client *c);
-static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
+int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 void arrange(Monitor *m);
 void arrangemon(Monitor *m);
 void attach(Client *c);

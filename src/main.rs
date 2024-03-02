@@ -909,7 +909,7 @@ fn showhide(c: *mut Client) {
                 || (*c).isfloating != 0)
                 && (*c).isfullscreen == 0
             {
-                bindgen::resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
+                resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
             }
             showhide((*c).snext);
         } else {
@@ -920,19 +920,22 @@ fn showhide(c: *mut Client) {
     }
 }
 
-// fn resize(
-//     mdpy: &Display,
-//     c: *mut Client,
-//     mut x: i32,
-//     mut y: i32,
-//     mut w: i32,
-//     mut h: i32,
-//     interact: bool,
-// ) {
-//     if applysizehints(mdpy, c, &mut x, &mut y, &mut w, &mut h, interact) {
-//         resizeclient(mdpy, c, x, y, w, h);
-//     }
-// }
+fn resize(
+    c: *mut Client,
+    mut x: i32,
+    mut y: i32,
+    mut w: i32,
+    mut h: i32,
+    interact: c_int,
+) {
+    unsafe {
+        if bindgen::applysizehints(c, &mut x, &mut y, &mut w, &mut h, interact)
+            != 0
+        {
+            resizeclient(c, x, y, w, h);
+        }
+    }
+}
 
 fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
     unsafe {
