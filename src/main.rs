@@ -1954,7 +1954,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
         let mut n = 0;
         let mut list: *mut *mut i8 = std::ptr::null_mut();
         if name.encoding == XA_STRING {
-            bindgen::strncpy(text, name.value as *mut _, size as u64 - 1);
+            libc::strncpy(text, name.value as *mut _, size as usize - 1);
         } else if bindgen::XmbTextPropertyToTextList(
             dpy,
             &name,
@@ -1964,7 +1964,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
             && n > 0
             && !(*list).is_null()
         {
-            bindgen::strncpy(text, *list, size as u64 - 1);
+            libc::strncpy(text, *list, size as usize - 1);
             bindgen::XFreeStringList(list);
         }
         let p = text.offset(size as isize - 1);
@@ -3230,12 +3230,11 @@ fn applyrules(c: *mut bindgen::Client) {
         for i in 0..bindgen::rules.len() {
             let r = &bindgen::rules[i];
             if (r.title.is_null()
-                || !bindgen::strstr((*c).name.as_ptr(), r.title).is_null())
+                || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
-                    || !bindgen::strstr(class.as_ptr(), r.class).is_null())
+                    || !libc::strstr(class.as_ptr(), r.class).is_null())
                 && (r.instance.is_null()
-                    || !bindgen::strstr(instance.as_ptr(), r.instance)
-                        .is_null())
+                    || !libc::strstr(instance.as_ptr(), r.instance).is_null())
             {
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
