@@ -14,6 +14,7 @@ fn main() {
         .clang_arg("-I/usr/include/freetype2")
         .clang_arg("-I/usr/include/X11/extensions")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .blocklist_var("numlockmask")
         .generate()
         .expect("Unable to generate bindings");
 

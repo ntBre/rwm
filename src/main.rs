@@ -15,7 +15,7 @@ mod bindgen {
 }
 
 use std::cmp::max;
-use std::ffi::{c_int, CString};
+use std::ffi::{c_int, c_uint, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
@@ -52,6 +52,10 @@ use crate::bindgen::{dpy, CurrentTime};
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
     panic!("another window manager is already running")
+}
+
+extern "C" {
+    static mut numlockmask: c_uint;
 }
 
 // from Xproto.h
@@ -147,7 +151,8 @@ static mut SW: c_int = 0;
 /// sum of left and right padding for text
 // static mut LRPAD: usize = 0;
 
-// static mut NUMLOCKMASK: u32 = 0;
+// #[allow(non_upper_case_globals)]
+// static mut numlockmask: u32 = 0;
 // const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
 // const TAGMASK: usize = (1 << TAGS.len()) - 1;
@@ -749,8 +754,8 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
         let modifiers = [
             0,
             bindgen::LockMask,
-            bindgen::numlockmask,
-            bindgen::numlockmask | bindgen::LockMask,
+            numlockmask,
+            numlockmask | bindgen::LockMask,
         ];
         bindgen::XUngrabButton(
             dpy,
@@ -1738,24 +1743,25 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// DUMMY
 fn updatenumlockmask() {
     unsafe {
-        bindgen::updatenumlockmask();
-        // NUMLOCKMASK = 0;
-        // let modmap = XGetModifierMapping(mdpy.inner);
-        // for i in 0..8 {
-        //     for j in 0..(*modmap).max_keypermod {
-        //         if *(*modmap)
-        //             .modifiermap
-        //             .offset((i * (*modmap).max_keypermod + j) as isize)
-        //             == XKeysymToKeycode(mdpy.inner, XK_Num_Lock as u64)
-        //         {
-        //             NUMLOCKMASK = 1 << i;
-        //         }
-        //     }
-        // }
-        // XFreeModifiermap(modmap);
+        numlockmask = 0;
+        let modmap = bindgen::XGetModifierMapping(dpy);
+        for i in 0..8 {
+            for j in 0..(*modmap).max_keypermod {
+                if *(*modmap)
+                    .modifiermap
+                    .offset((i * (*modmap).max_keypermod + j) as isize)
+                    == bindgen::XKeysymToKeycode(
+                        dpy,
+                        bindgen::XK_Num_Lock as u64,
+                    )
+                {
+                    numlockmask = 1 << i;
+                }
+            }
+        }
+        bindgen::XFreeModifiermap(modmap);
     }
 }
 
