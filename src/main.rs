@@ -1093,77 +1093,84 @@ fn applysizehints(
     }
 }
 
-// DUMMY
 fn updatesizehints(c: *mut bindgen::Client) {
+    let mut msize: i64 = 0;
+    let mut size = bindgen::XSizeHints {
+        flags: Default::default(),
+        x: Default::default(),
+        y: Default::default(),
+        width: Default::default(),
+        height: Default::default(),
+        min_width: Default::default(),
+        min_height: Default::default(),
+        max_width: Default::default(),
+        max_height: Default::default(),
+        width_inc: Default::default(),
+        height_inc: Default::default(),
+        min_aspect: bindgen::XSizeHints__bindgen_ty_1 { x: 0, y: 0 },
+        max_aspect: bindgen::XSizeHints__bindgen_ty_1 { x: 0, y: 0 },
+        base_width: Default::default(),
+        base_height: Default::default(),
+        win_gravity: Default::default(),
+    };
     unsafe {
-        bindgen::updatesizehints(c);
+        if bindgen::XGetWMNormalHints(dpy, (*c).win, &mut size, &mut msize) == 0
+        {
+            /* size is uninitialized, ensure that size.flags aren't used */
+            size.flags = bindgen::PSize as i64;
+        }
+        if size.flags & bindgen::PBaseSize as i64 != 0 {
+            (*c).basew = size.base_width;
+            (*c).baseh = size.base_height;
+        } else if size.flags & bindgen::PMinSize as i64 != 0 {
+            (*c).basew = size.min_width;
+            (*c).baseh = size.min_height;
+        } else {
+            (*c).basew = 0;
+            (*c).baseh = 0;
+        }
+
+        if size.flags & bindgen::PResizeInc as i64 != 0 {
+            (*c).incw = size.width_inc;
+            (*c).inch = size.height_inc;
+        } else {
+            (*c).incw = 0;
+            (*c).inch = 0;
+        }
+
+        if size.flags & bindgen::PMaxSize as i64 != 0 {
+            (*c).maxw = size.max_width;
+            (*c).maxh = size.max_height;
+        } else {
+            (*c).maxw = 0;
+            (*c).maxh = 0;
+        }
+
+        if size.flags & bindgen::PMinSize as i64 != 0 {
+            (*c).minw = size.min_width;
+            (*c).minh = size.min_height;
+        } else if size.flags & bindgen::PBaseSize as i64 != 0 {
+            (*c).minw = size.base_width;
+            (*c).minh = size.base_height;
+        } else {
+            (*c).minw = 0;
+            (*c).minh = 0;
+        }
+
+        if size.flags & bindgen::PAspect as i64 != 0 {
+            (*c).mina = size.min_aspect.y as f32 / size.min_aspect.x as f32;
+            (*c).maxa = size.max_aspect.x as f32 / size.max_aspect.y as f32;
+        } else {
+            (*c).mina = 0.0;
+            (*c).maxa = 0.0;
+        }
+
+        (*c).isfixed = ((*c).maxw != 0
+            && (*c).maxh != 0
+            && (*c).maxw == (*c).minw
+            && (*c).maxh == (*c).minh) as c_int;
+        (*c).hintsvalid = 1;
     }
-    // let mut msize: i64 = 0;
-    // unsafe {
-    //     let mut size: MaybeUninit<XSizeHints> = MaybeUninit::uninit();
-    //     if XGetWMNormalHints(
-    //         mdpy.inner,
-    //         (*c).win,
-    //         size.as_mut_ptr(),
-    //         &mut msize as *mut _,
-    //     ) != 0
-    //     {
-    //         (*size.as_mut_ptr()).flags = PSize;
-    //     }
-    //     let size = size.assume_init();
-
-    //     if size.flags & PBaseSize != 0 {
-    //         (*c).basew = size.base_width;
-    //         (*c).baseh = size.base_height;
-    //     } else if size.flags & PMinSize != 0 {
-    //         (*c).basew = size.min_width;
-    //         (*c).baseh = size.min_height;
-    //     } else {
-    //         (*c).basew = 0;
-    //         (*c).baseh = 0;
-    //     }
-
-    //     if size.flags & PResizeInc != 0 {
-    //         (*c).incw = size.width_inc;
-    //         (*c).inch = size.height_inc;
-    //     } else {
-    //         (*c).incw = 0;
-    //         (*c).inch = 0;
-    //     }
-
-    //     if size.flags & PMaxSize != 0 {
-    //         (*c).maxw = size.max_width;
-    //         (*c).maxh = size.max_height;
-    //     } else {
-    //         (*c).maxw = 0;
-    //         (*c).maxh = 0;
-    //     }
-
-    //     if size.flags & PMinSize != 0 {
-    //         (*c).minw = size.min_width;
-    //         (*c).minh = size.min_height;
-    //     } else if size.flags & PBaseSize != 0 {
-    //         (*c).minw = size.base_width;
-    //         (*c).minh = size.base_height;
-    //     } else {
-    //         (*c).minw = 0;
-    //         (*c).minh = 0;
-    //     }
-
-    //     if size.flags & PAspect != 0 {
-    //         (*c).mina = size.min_aspect.y as f64 / size.min_aspect.x as f64;
-    //         (*c).maxa = size.max_aspect.y as f64 / size.max_aspect.x as f64;
-    //     } else {
-    //         (*c).mina = 0.0;
-    //         (*c).maxa = 0.0;
-    //     }
-
-    //     (*c).isfixed = (*c).maxw != 0
-    //         && (*c).maxh != 0
-    //         && (*c).maxw == (*c).minw
-    //         && (*c).maxh == (*c).minh;
-    //     (*c).hintsvalid = true;
-    // }
 }
 
 // pub fn zoom(mdpy: &Display, _arg: Arg) {
