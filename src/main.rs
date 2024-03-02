@@ -895,28 +895,29 @@ fn restack(m: *mut bindgen::Monitor) {
     }
 }
 
-// DUMMY
 fn showhide(c: *mut Client) {
-    unsafe { bindgen::showhide(c) }
-    //     if c.is_null() {
-    //         return;
-    //     }
-    //     if is_visible(c) {
-    //         // show clients top down
-    //         unsafe {
-    //             XMoveWindow(mdpy.inner, (*c).win, (*c).x, (*c).y);
-    //             if (*c).isfloating && !(*c).isfullscreen {
-    //                 resize(mdpy, c, (*c).x, (*c).y, (*c).w, (*c).h, false);
-    //             }
-    //             showhide(mdpy, (*c).snext);
-    //         }
-    //     } else {
-    //         // hide clients bottom up
-    //         unsafe {
-    //             showhide(mdpy, (*c).snext);
-    //             XMoveWindow(mdpy.inner, (*c).win, width(c) * -2, (*c).y);
-    //         }
-    //     }
+    unsafe {
+        if c.is_null() {
+            return;
+        }
+        if is_visible(c) {
+            // show clients top down
+            bindgen::XMoveWindow(dpy, (*c).win, (*c).x, (*c).y);
+            if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
+                .arrange
+                .is_none()
+                || (*c).isfloating != 0)
+                && (*c).isfullscreen == 0
+            {
+                bindgen::resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
+            }
+            showhide((*c).snext);
+        } else {
+            // hide clients bottom up
+            showhide((*c).snext);
+            bindgen::XMoveWindow(dpy, (*c).win, width(c) * -2, (*c).y);
+        }
+    }
 }
 
 // fn resize(
