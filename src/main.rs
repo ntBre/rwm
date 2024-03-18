@@ -864,7 +864,9 @@ pub fn setlayout(dpy: &Display, arg: Arg) {
             // same as inner if above but not sure how to chain them otherwise
             (*SELMON).sellt ^= 1;
         }
-        (*SELMON).ltsymbol = (*(*SELMON).lt[(*SELMON).sellt]).symbol.to_owned();
+        (*(*SELMON).lt[(*SELMON).sellt])
+            .symbol
+            .clone_into(&mut (*SELMON).ltsymbol);
         if !(*SELMON).sel.is_null() {
             arrange(dpy, SELMON);
         } else {
@@ -899,7 +901,7 @@ fn arrange(dpy: &Display, mut m: *mut Monitor) {
 
 fn arrangemon(dpy: &Display, m: *mut Monitor) {
     unsafe {
-        (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.to_owned();
+        (*(*m).lt[(*m).sellt]).symbol.clone_into(&mut (*m).ltsymbol);
         let layout = &(*(*m).lt[(*m).sellt]);
         if let Some(arrange) = layout.arrange {
             (arrange)(dpy, m)
@@ -1842,7 +1844,7 @@ fn updatestatus(dpy: &Display) {
     unsafe {
         let c = gettextprop(dpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
         if !c {
-            STEXT = "rwm-0.0.1".to_owned();
+            "rwm-0.0.1".clone_into(&mut *addr_of_mut!(STEXT));
         }
         drawbar(SELMON);
     }
@@ -1979,7 +1981,7 @@ fn gettextprop(
         let list = std::ptr::null_mut();
         if name.encoding == XA_STRING {
             let t = CString::from_raw(name.value as *mut _);
-            *text = t.to_str().unwrap().to_owned();
+            t.to_str().unwrap().clone_into(&mut *text);
         } else if XmbTextPropertyToTextList(
             dpy.inner,
             &name,
@@ -1990,7 +1992,7 @@ fn gettextprop(
             && !list.is_null()
         {
             let t = CString::from_raw(list as *mut _);
-            *text = t.to_str().unwrap().to_owned();
+            t.to_str().unwrap().clone_into(&mut *text);
             XFreeStringList(*list);
         }
         XFree(name.value as *mut _);
@@ -3254,7 +3256,7 @@ fn updatetitle(dpy: &Display, c: *mut Client) {
         }
         if (*c).name.is_empty() {
             /* hack to mark broken clients */
-            (*c).name = BROKEN.to_owned();
+            BROKEN.clone_into(&mut (*c).name);
         }
     }
 }
