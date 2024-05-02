@@ -15,7 +15,7 @@ mod bindgen {
 }
 
 use std::cmp::max;
-use std::ffi::{c_int, c_uint, CString};
+use std::ffi::{c_char, c_int, c_uint, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 
@@ -3291,7 +3291,7 @@ fn updatetitle(c: *mut bindgen::Client) {
             /* hack to mark broken clients */
             libc::strcpy(
                 &mut (*c).name as *mut _,
-                bindgen::broken.as_ptr() as *const i8,
+                bindgen::broken.as_ptr() as *const c_char,
             );
         }
     }
