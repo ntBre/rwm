@@ -3291,7 +3291,7 @@ fn updatetitle(c: *mut bindgen::Client) {
             /* hack to mark broken clients */
             libc::strcpy(
                 &mut (*c).name as *mut _,
-                bindgen::broken as *const _ as *const _,
+                bindgen::broken.as_ptr() as *const i8,
             );
         }
     }
