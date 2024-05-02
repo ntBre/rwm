@@ -7,7 +7,7 @@ test:
 	scp target/release/rwm 'omsf:.cargo/bin/rwm'
 
 clippy:
-	cargo clippy
+	cargo clippy --workspace
 
 doc:
 	cargo doc --open
