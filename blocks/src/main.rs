@@ -118,10 +118,8 @@ impl Block {
                 return String::new();
             }
         };
-        write!(output, "{}", String::from_utf8(out.stdout).unwrap()).unwrap();
-        if !DELIM.is_empty() {
-            write!(output, "{}", DELIM).unwrap();
-        }
+        write!(output, "{}{DELIM}", String::from_utf8(out.stdout).unwrap())
+            .unwrap();
         output
     }
 }
