@@ -144,7 +144,7 @@ Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 void grabbuttons(Client *c, int focused);
-static void grabkeys(void);
+void grabkeys(void);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
 static void killclient(const Arg *arg);
@@ -181,12 +181,12 @@ void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
 static void updatebarpos(Monitor *m);
-static void updatebars(void);
+void updatebars(void);
 static void updateclientlist(void);
-static int updategeom(void);
+int updategeom(void);
 void updatenumlockmask(void);
 void updatesizehints(Client *c);
-static void updatestatus(void);
+void updatestatus(void);
 void updatetitle(Client *c);
 void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
@@ -203,7 +203,7 @@ Monitor *mons, *selmon;
 /* variables */
 const char broken[] = "broken";
 static char stext[256];
-static int screen;
+int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh;               /* bar height */
 static int lrpad;            /* sum of left and right padding for text */
