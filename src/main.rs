@@ -518,7 +518,7 @@ fn setup() {
         }
         lrpad = (*(*drw).fonts).h as i32;
         bh = (*(*drw).fonts).h as i32 + 2;
-        bindgen::updategeom();
+        updategeom();
 
         use bindgen::{netatom, wmatom, XInternAtom};
 
@@ -571,9 +571,9 @@ fn setup() {
                 bindgen::drw_scm_create(drw, colors[i].as_mut_ptr(), 3);
         }
 
-        // /* init bars */
-        bindgen::updatebars();
-        bindgen::updatestatus();
+        /* init bars */
+        updatebars();
+        updatestatus();
 
         use bindgen::wmcheckwin;
 
@@ -644,7 +644,7 @@ fn setup() {
             &mut wa,
         );
         bindgen::XSelectInput(dpy, root, wa.event_mask);
-        bindgen::grabkeys();
+        grabkeys();
         focus(null_mut());
     }
 }
@@ -1720,50 +1720,52 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     unsafe { RUNNING = false }
 // }
 
-// fn grabkeys(mdpy: &Display) {
-//     updatenumlockmask(mdpy);
-//     unsafe {
-//         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-//         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-//         XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
-//         XDisplayKeycodes(mdpy.inner, &mut start, &mut end);
-//         let syms = XGetKeyboardMapping(
-//             mdpy.inner,
-//             start as u8,
-//             end - start + 1,
-//             &mut skip,
-//         );
-//         if syms.is_null() {
-//             return;
-//         }
-//         for k in start..=end {
-//             for i in 0..KEYS.len() {
-//                 // skip modifier codes, we do that ourselves
-//                 if KEYS[i].keysym
-//                     == (*syms.offset(((k - start) * skip) as isize)) as u32
-//                 {
-//                     for j in 0..modifiers.len() {
-//                         let ret = XGrabKey(
-//                             mdpy.inner,
-//                             k,
-//                             KEYS[i].modkey | modifiers[j],
-//                             ROOT,
-//                             True,
-//                             GrabModeAsync,
-//                             GrabModeAsync,
-//                         );
-//                         if [BadAccess, BadValue, BadWindow]
-//                             .contains(&(ret as u8))
-//                         {
-//                             panic!("XGrabKey error on {k}: {ret}");
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//         XFree(syms.cast());
-//     }
-// }
+// DUMMY
+fn grabkeys() {
+    unsafe { bindgen::grabkeys() }
+    //     updatenumlockmask(mdpy);
+    //     unsafe {
+    //         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+    //         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
+    //         XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
+    //         XDisplayKeycodes(mdpy.inner, &mut start, &mut end);
+    //         let syms = XGetKeyboardMapping(
+    //             mdpy.inner,
+    //             start as u8,
+    //             end - start + 1,
+    //             &mut skip,
+    //         );
+    //         if syms.is_null() {
+    //             return;
+    //         }
+    //         for k in start..=end {
+    //             for i in 0..KEYS.len() {
+    //                 // skip modifier codes, we do that ourselves
+    //                 if KEYS[i].keysym
+    //                     == (*syms.offset(((k - start) * skip) as isize)) as u32
+    //                 {
+    //                     for j in 0..modifiers.len() {
+    //                         let ret = XGrabKey(
+    //                             mdpy.inner,
+    //                             k,
+    //                             KEYS[i].modkey | modifiers[j],
+    //                             ROOT,
+    //                             True,
+    //                             GrabModeAsync,
+    //                             GrabModeAsync,
+    //                         );
+    //                         if [BadAccess, BadValue, BadWindow]
+    //                             .contains(&(ret as u8))
+    //                         {
+    //                             panic!("XGrabKey error on {k}: {ret}");
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         XFree(syms.cast());
+    //     }
+}
 
 fn updatenumlockmask() {
     unsafe {
@@ -1834,15 +1836,17 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
     }
 }
 
-// fn updatestatus(mdpy: &Display) {
-//     unsafe {
-//         let c = gettextprop(mdpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
-//         if !c {
-//             STEXT = "rwm-0.0.1".to_owned();
-//         }
-//         drawbar(SELMON);
-//     }
-// }
+// DUMMY
+fn updatestatus() {
+    unsafe {
+        bindgen::updatestatus()
+        // let c = gettextprop(mdpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
+        // if !c {
+        //     STEXT = "rwm-0.0.1".to_owned();
+        // }
+        // drawbar(SELMON);
+    }
+}
 
 // DUMMY
 fn drawbar(m: *mut bindgen::Monitor) {
@@ -1996,184 +2000,188 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
     1
 }
 
-// fn updatebars(mdpy: &Display) {
-//     let mut wa = XSetWindowAttributes {
-//         background_pixmap: ParentRelative as u64,
-//         event_mask: ButtonPressMask | ExposureMask,
-//         override_redirect: True,
-//         // everything else should be uninit I guess
-//         background_pixel: 0,
-//         border_pixmap: 0,
-//         border_pixel: 0,
-//         bit_gravity: 0,
-//         win_gravity: 0,
-//         backing_store: 0,
-//         backing_planes: 0,
-//         backing_pixel: 0,
-//         save_under: 0,
-//         do_not_propagate_mask: 0,
-//         colormap: 0,
-//         cursor: 0,
-//     };
-//     let rwm = CString::new("rwm").unwrap();
-//     let mut ch = XClassHint {
-//         res_name: rwm.as_ptr().cast_mut(),
-//         res_class: rwm.as_ptr().cast_mut(),
-//     };
+// DUMMY
+fn updatebars() {
+    unsafe { bindgen::updatebars() }
+    //     let mut wa = XSetWindowAttributes {
+    //         background_pixmap: ParentRelative as u64,
+    //         event_mask: ButtonPressMask | ExposureMask,
+    //         override_redirect: True,
+    //         // everything else should be uninit I guess
+    //         background_pixel: 0,
+    //         border_pixmap: 0,
+    //         border_pixel: 0,
+    //         bit_gravity: 0,
+    //         win_gravity: 0,
+    //         backing_store: 0,
+    //         backing_planes: 0,
+    //         backing_pixel: 0,
+    //         save_under: 0,
+    //         do_not_propagate_mask: 0,
+    //         colormap: 0,
+    //         cursor: 0,
+    //     };
+    //     let rwm = CString::new("rwm").unwrap();
+    //     let mut ch = XClassHint {
+    //         res_name: rwm.as_ptr().cast_mut(),
+    //         res_class: rwm.as_ptr().cast_mut(),
+    //     };
 
-//     unsafe {
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             if (*m).barwin != 0 {
-//                 continue;
-//             }
-//             (*m).barwin = XCreateWindow(
-//                 mdpy.inner,
-//                 ROOT,
-//                 (*m).wx as c_int,
-//                 (*m).by as c_int,
-//                 (*m).ww as c_uint,
-//                 BH as c_uint,
-//                 0,
-//                 XDefaultDepth(mdpy.inner, SCREEN),
-//                 CopyFromParent as c_uint,
-//                 XDefaultVisual(mdpy.inner, SCREEN),
-//                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
-//                 &mut wa,
-//             );
-//             XDefineCursor(
-//                 mdpy.inner,
-//                 (*m).barwin,
-//                 CURSOR[Cur::Normal as usize],
-//             );
-//             XMapRaised(mdpy.inner, (*m).barwin);
-//             XSetClassHint(mdpy.inner, (*m).barwin, &mut ch);
-//             m = (*m).next;
-//         }
-//     }
-// }
+    //     unsafe {
+    //         let mut m = MONS;
+    //         while !m.is_null() {
+    //             if (*m).barwin != 0 {
+    //                 continue;
+    //             }
+    //             (*m).barwin = XCreateWindow(
+    //                 mdpy.inner,
+    //                 ROOT,
+    //                 (*m).wx as c_int,
+    //                 (*m).by as c_int,
+    //                 (*m).ww as c_uint,
+    //                 BH as c_uint,
+    //                 0,
+    //                 XDefaultDepth(mdpy.inner, SCREEN),
+    //                 CopyFromParent as c_uint,
+    //                 XDefaultVisual(mdpy.inner, SCREEN),
+    //                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
+    //                 &mut wa,
+    //             );
+    //             XDefineCursor(
+    //                 mdpy.inner,
+    //                 (*m).barwin,
+    //                 CURSOR[Cur::Normal as usize],
+    //             );
+    //             XMapRaised(mdpy.inner, (*m).barwin);
+    //             XSetClassHint(mdpy.inner, (*m).barwin, &mut ch);
+    //             m = (*m).next;
+    //         }
+    //     }
+}
 
-// fn updategeom(mdpy: &Display) -> bool {
-//     let mut dirty = false;
-//     unsafe {
-//         if XineramaIsActive(mdpy.inner) != 0 {
-//             // I think this is the number of monitors
-//             let mut nn: i32 = 0;
-//             let info = XineramaQueryScreens(mdpy.inner, &mut nn);
+// DUMMY
+fn updategeom() -> i32 {
+    unsafe { bindgen::updategeom() }
+    //     let mut dirty = false;
+    //     unsafe {
+    //         if XineramaIsActive(mdpy.inner) != 0 {
+    //             // I think this is the number of monitors
+    //             let mut nn: i32 = 0;
+    //             let info = XineramaQueryScreens(mdpy.inner, &mut nn);
 
-//             let mut n = 0;
-//             let mut m = MONS;
-//             while !m.is_null() {
-//                 m = (*m).next;
-//                 n += 1;
-//             }
+    //             let mut n = 0;
+    //             let mut m = MONS;
+    //             while !m.is_null() {
+    //                 m = (*m).next;
+    //                 n += 1;
+    //             }
 
-//             let unique: *mut XineramaScreenInfo =
-//                 calloc(nn as usize, size_of::<XineramaScreenInfo>()).cast();
+    //             let unique: *mut XineramaScreenInfo =
+    //                 calloc(nn as usize, size_of::<XineramaScreenInfo>()).cast();
 
-//             if unique.is_null() {
-//                 panic!("calloc failed");
-//             }
+    //             if unique.is_null() {
+    //                 panic!("calloc failed");
+    //             }
 
-//             let mut j = 0;
-//             for i in 0..nn {
-//                 if isuniquegeom(unique, j, info.offset(i as isize)) {
-//                     memcpy(
-//                         unique.offset(j).cast(),
-//                         info.offset(i as isize).cast(),
-//                         size_of::<XineramaScreenInfo>(),
-//                     );
-//                     j += 1;
-//                 }
-//             }
-//             XFree(info.cast());
-//             nn = j as i32;
+    //             let mut j = 0;
+    //             for i in 0..nn {
+    //                 if isuniquegeom(unique, j, info.offset(i as isize)) {
+    //                     memcpy(
+    //                         unique.offset(j).cast(),
+    //                         info.offset(i as isize).cast(),
+    //                         size_of::<XineramaScreenInfo>(),
+    //                     );
+    //                     j += 1;
+    //                 }
+    //             }
+    //             XFree(info.cast());
+    //             nn = j as i32;
 
-//             // new monitors if nn > n
-//             for _ in n..nn as usize {
-//                 let mut m = MONS;
-//                 while !m.is_null() && !(*m).next.is_null() {
-//                     m = (*m).next;
-//                 }
+    //             // new monitors if nn > n
+    //             for _ in n..nn as usize {
+    //                 let mut m = MONS;
+    //                 while !m.is_null() && !(*m).next.is_null() {
+    //                     m = (*m).next;
+    //                 }
 
-//                 if !m.is_null() {
-//                     (*m).next = createmon();
-//                 } else {
-//                     MONS = createmon();
-//                 }
-//             }
+    //                 if !m.is_null() {
+    //                     (*m).next = createmon();
+    //                 } else {
+    //                     MONS = createmon();
+    //                 }
+    //             }
 
-//             let mut i = 0;
-//             let mut m = MONS;
-//             while i < nn as usize && !m.is_null() {
-//                 let u = unique.add(i);
-//                 if i >= n
-//                     || (*u).x_org != (*m).mx
-//                     || (*u).y_org != (*m).my
-//                     || (*u).width != (*m).mw
-//                     || (*u).height != (*m).mh
-//                 {
-//                     dirty = true;
-//                     (*m).num = i as i32;
-//                     (*m).mx = (*u).x_org;
-//                     (*m).wx = (*u).x_org;
-//                     (*m).my = (*u).y_org;
-//                     (*m).wy = (*u).y_org;
-//                     (*m).mw = (*u).width;
-//                     (*m).ww = (*u).width;
-//                     (*m).mh = (*u).height;
-//                     (*m).wh = (*u).height;
-//                     updatebarpos(m);
-//                 }
+    //             let mut i = 0;
+    //             let mut m = MONS;
+    //             while i < nn as usize && !m.is_null() {
+    //                 let u = unique.add(i);
+    //                 if i >= n
+    //                     || (*u).x_org != (*m).mx
+    //                     || (*u).y_org != (*m).my
+    //                     || (*u).width != (*m).mw
+    //                     || (*u).height != (*m).mh
+    //                 {
+    //                     dirty = true;
+    //                     (*m).num = i as i32;
+    //                     (*m).mx = (*u).x_org;
+    //                     (*m).wx = (*u).x_org;
+    //                     (*m).my = (*u).y_org;
+    //                     (*m).wy = (*u).y_org;
+    //                     (*m).mw = (*u).width;
+    //                     (*m).ww = (*u).width;
+    //                     (*m).mh = (*u).height;
+    //                     (*m).wh = (*u).height;
+    //                     updatebarpos(m);
+    //                 }
 
-//                 m = (*m).next;
-//                 i += 1;
-//             }
+    //                 m = (*m).next;
+    //                 i += 1;
+    //             }
 
-//             // removed monitors if n > nn
-//             for _ in nn..n as i32 {
-//                 let mut m = MONS;
-//                 while !m.is_null() && !(*m).next.is_null() {
-//                     m = (*m).next;
-//                 }
+    //             // removed monitors if n > nn
+    //             for _ in nn..n as i32 {
+    //                 let mut m = MONS;
+    //                 while !m.is_null() && !(*m).next.is_null() {
+    //                     m = (*m).next;
+    //                 }
 
-//                 let c = (*m).clients;
-//                 while !c.is_null() {
-//                     dirty = true;
-//                     (*m).clients = (*c).next;
-//                     detachstack(c);
-//                     (*c).mon = MONS;
-//                     attach(c);
-//                     attachstack(c);
-//                 }
-//                 if m == SELMON {
-//                     SELMON = MONS;
-//                 }
-//                 cleanupmon(m, mdpy);
-//             }
-//             libc::free(unique.cast());
-//         } else {
-//             // default monitor setup
-//             if MONS.is_null() {
-//                 MONS = createmon();
-//             }
+    //                 let c = (*m).clients;
+    //                 while !c.is_null() {
+    //                     dirty = true;
+    //                     (*m).clients = (*c).next;
+    //                     detachstack(c);
+    //                     (*c).mon = MONS;
+    //                     attach(c);
+    //                     attachstack(c);
+    //                 }
+    //                 if m == SELMON {
+    //                     SELMON = MONS;
+    //                 }
+    //                 cleanupmon(m, mdpy);
+    //             }
+    //             libc::free(unique.cast());
+    //         } else {
+    //             // default monitor setup
+    //             if MONS.is_null() {
+    //                 MONS = createmon();
+    //             }
 
-//             if (*MONS).mw as i32 != SW || (*MONS).mh as i32 != SH {
-//                 dirty = true;
-//                 (*MONS).mw = SW as i16;
-//                 (*MONS).ww = SW as i16;
-//                 (*MONS).mh = SH as i16;
-//                 (*MONS).wh = SH as i16;
-//                 updatebarpos(MONS);
-//             }
-//         }
-//         if dirty {
-//             SELMON = MONS;
-//             SELMON = wintomon(mdpy, ROOT);
-//         }
-//     }
-//     dirty
-// }
+    //             if (*MONS).mw as i32 != SW || (*MONS).mh as i32 != SH {
+    //                 dirty = true;
+    //                 (*MONS).mw = SW as i16;
+    //                 (*MONS).ww = SW as i16;
+    //                 (*MONS).mh = SH as i16;
+    //                 (*MONS).wh = SH as i16;
+    //                 updatebarpos(MONS);
+    //             }
+    //         }
+    //         if dirty {
+    //             SELMON = MONS;
+    //             SELMON = wintomon(mdpy, ROOT);
+    //         }
+    //     }
+    //     dirty
+}
 
 // fn wintomon(mdpy: &Display, w: Window) -> *mut Monitor {
 //     unsafe {
