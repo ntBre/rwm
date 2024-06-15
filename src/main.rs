@@ -1,7 +1,6 @@
 //! tiling window manager based on dwm
 
-#![feature(vec_into_raw_parts)]
-#![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
+#![allow(clippy::needless_range_loop)]
 
 mod bindgen {
     #![allow(non_upper_case_globals)]
