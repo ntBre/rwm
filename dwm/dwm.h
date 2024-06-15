@@ -204,9 +204,9 @@ Monitor *mons, *selmon;
 const char broken[] = "broken";
 static char stext[256];
 int screen;
-static int sw, sh;           /* X display screen geometry width, height */
-static int bh;               /* bar height */
-static int lrpad;            /* sum of left and right padding for text */
+int sw, sh;           /* X display screen geometry width, height */
+int bh;               /* bar height */
+int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
