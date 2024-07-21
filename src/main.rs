@@ -1042,24 +1042,24 @@ fn applysizehints(
                 *y = 0;
             }
         } else {
-            if *x >= ((*m).wx + (*m).ww) as i32 {
-                *x = ((*m).wx + (*m).ww - width(c) as i32) as i32;
+            if *x >= ((*m).wx + (*m).ww) {
+                *x = (*m).wx + (*m).ww - width(c);
             }
-            if *y >= ((*m).wy + (*m).wh) as i32 {
-                *y = ((*m).wy + (*m).wh - height(c) as i32) as i32;
+            if *y >= ((*m).wy + (*m).wh) {
+                *y = (*m).wy + (*m).wh - height(c);
             }
-            if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
-                *x = (*m).wx as i32;
+            if *x + *w + 2 * (*c).bw <= (*m).wx {
+                *x = (*m).wx;
             }
-            if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
-                *y = (*m).wy as i32;
+            if *y + *h + 2 * (*c).bw <= (*m).wy {
+                *y = (*m).wy;
             }
         }
-        if *h < bindgen::bh as i32 {
-            *h = bindgen::bh as i32;
+        if *h < bindgen::bh {
+            *h = bindgen::bh;
         }
-        if *w < bindgen::bh as i32 {
-            *w = bindgen::bh as i32;
+        if *w < bindgen::bh {
+            *w = bindgen::bh;
         }
         if bindgen::resizehints != 0
             || (*c).isfloating != 0
