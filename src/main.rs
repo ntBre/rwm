@@ -132,7 +132,7 @@ static mut XERRORXLIB: Option<
 
 /// bar height
 // static mut BH: i16 = 0;
-static mut SW: c_int = 0;
+// static mut SW: c_int = 0;
 // static mut SH: c_int = 0;
 
 // static mut ROOT: Window = 0;
@@ -1014,7 +1014,6 @@ fn configure(c: *mut bindgen::Client) {
     }
 }
 
-// DUMMY
 fn applysizehints(
     c: *mut Client,
     x: &mut i32,
@@ -1024,86 +1023,91 @@ fn applysizehints(
     interact: c_int,
 ) -> c_int {
     unsafe {
-        bindgen::applysizehints(c, x, y, w, h, interact)
-        // let m = (*c).mon;
-        // // set minimum possible
-        // *w = 1.max(*w);
-        // *h = 1.max(*h);
-        // if interact {
-        //     if *x > SW {
-        //         *x = SW - width(c);
-        //     }
-        //     if *y > SH {
-        //         *y = SH - height(c);
-        //     }
-        //     if *x + *w + 2 * (*c).bw < 0 {
-        //         *x = 0;
-        //     }
-        //     if *y + *h + 2 * (*c).bw < 0 {
-        //         *y = 0;
-        //     }
-        // } else {
-        //     if *x >= ((*m).wx + (*m).ww) as i32 {
-        //         *x = ((*m).wx + (*m).ww - width(c) as i16) as i32;
-        //     }
-        //     if *y >= ((*m).wy + (*m).wh) as i32 {
-        //         *y = ((*m).wy + (*m).wh - height(c) as i16) as i32;
-        //     }
-        //     if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
-        //         *x = (*m).wx as i32;
-        //     }
-        //     if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
-        //         *y = (*m).wy as i32;
-        //     }
-        // }
-        // if *h < BH as i32 {
-        //     *h = BH as i32;
-        // }
-        // if *w < BH as i32 {
-        //     *w = BH as i32;
-        // }
-        // if RESIZEHINTS || (*c).isfloating {
-        //     if !(*c).hintsvalid {
-        //         updatesizehints(mdpy, c);
-        //     }
-        //     /* see last two sentences in ICCCM 4.1.2.3 */
-        //     let baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
-        //     if !baseismin {
-        //         /* temporarily remove base dimensions */
-        //         *w -= (*c).basew;
-        //         *h -= (*c).baseh;
-        //     }
-        //     /* adjust for aspect limits */
-        //     if (*c).mina > 0.0 && (*c).maxa > 0.0 {
-        //         if (*c).maxa < *w as f64 / *h as f64 {
-        //             *w = (*h as f64 * (*c).maxa + 0.5) as i32;
-        //         } else if (*c).mina < *h as f64 / *w as f64 {
-        //             *h = (*w as f64 * (*c).mina + 0.5) as i32;
-        //         }
-        //     }
-        //     if baseismin {
-        //         /* increment calculation requires this */
-        //         *w -= (*c).basew;
-        //         *h -= (*c).baseh;
-        //     }
-        //     /* adjust for increment value */
-        //     if (*c).incw != 0 {
-        //         *w -= *w % (*c).incw;
-        //     }
-        //     if (*c).inch != 0 {
-        //         *h -= *h % (*c).inch;
-        //     }
-        //     /* restore base dimensions */
-        //     *w = max(*w + (*c).basew, (*c).minw);
-        //     *h = max(*h + (*c).baseh, (*c).minh);
-        //     if (*c).maxw != 0 {
-        //         *w = min(*w, (*c).maxw);
-        //     }
-        //     if (*c).maxh != 0 {
-        //         *h = min(*h, (*c).maxh);
-        //     }
-        // }
-        // *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
+        let m = (*c).mon;
+        let interact = interact != 0;
+        // set minimum possible
+        *w = 1.max(*w);
+        *h = 1.max(*h);
+        if interact {
+            if *x > bindgen::sw {
+                *x = bindgen::sw - width(c);
+            }
+            if *y > bindgen::sh {
+                *y = bindgen::sh - height(c);
+            }
+            if *x + *w + 2 * (*c).bw < 0 {
+                *x = 0;
+            }
+            if *y + *h + 2 * (*c).bw < 0 {
+                *y = 0;
+            }
+        } else {
+            if *x >= ((*m).wx + (*m).ww) as i32 {
+                *x = ((*m).wx + (*m).ww - width(c) as i32) as i32;
+            }
+            if *y >= ((*m).wy + (*m).wh) as i32 {
+                *y = ((*m).wy + (*m).wh - height(c) as i32) as i32;
+            }
+            if *x + *w + 2 * (*c).bw <= (*m).wx as i32 {
+                *x = (*m).wx as i32;
+            }
+            if *y + *h + 2 * (*c).bw <= (*m).wy as i32 {
+                *y = (*m).wy as i32;
+            }
+        }
+        if *h < bindgen::bh as i32 {
+            *h = bindgen::bh as i32;
+        }
+        if *w < bindgen::bh as i32 {
+            *w = bindgen::bh as i32;
+        }
+        if bindgen::resizehints != 0
+            || (*c).isfloating != 0
+            || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
+                .arrange
+                .is_none()
+        {
+            if (*c).hintsvalid == 0 {
+                updatesizehints(c);
+            }
+            /* see last two sentences in ICCCM 4.1.2.3 */
+            let baseismin = (*c).basew == (*c).minw && (*c).baseh == (*c).minh;
+            if !baseismin {
+                /* temporarily remove base dimensions */
+                *w -= (*c).basew;
+                *h -= (*c).baseh;
+            }
+            /* adjust for aspect limits */
+            if (*c).mina > 0.0 && (*c).maxa > 0.0 {
+                if (*c).maxa < *w as f32 / *h as f32 {
+                    *w = (*h as f32 * (*c).maxa + 0.5) as i32;
+                } else if (*c).mina < *h as f32 / *w as f32 {
+                    *h = (*w as f32 * (*c).mina + 0.5) as i32;
+                }
+            }
+            if baseismin {
+                /* increment calculation requires this */
+                *w -= (*c).basew;
+                *h -= (*c).baseh;
+            }
+            /* adjust for increment value */
+            if (*c).incw != 0 {
+                *w -= *w % (*c).incw;
+            }
+            if (*c).inch != 0 {
+                *h -= *h % (*c).inch;
+            }
+            /* restore base dimensions */
+            *w = max(*w + (*c).basew, (*c).minw);
+            *h = max(*h + (*c).baseh, (*c).minh);
+            if (*c).maxw != 0 {
+                *w = std::cmp::min(*w, (*c).maxw);
+            }
+            if (*c).maxh != 0 {
+                *h = std::cmp::min(*h, (*c).maxh);
+            }
+        }
+        (*x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h) as c_int
     }
 }
 
@@ -3095,7 +3099,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XMoveResizeWindow(
             dpy,
             (*c).win,
-            (*c).x + 2 * SW,
+            (*c).x + 2 * bindgen::sw,
             (*c).y,
             (*c).w as u32,
             (*c).h as u32,
