@@ -23,6 +23,7 @@ dwm/libdwm.so: $(SRC) dwm/config.h dwm/dwm.h
 rust-src := $(shell find src -name '*.rs')
 
 target/release/rwm: dwm/libdwm.so $(rust-src)
+	cargo build --release
 
 build: target/release/rwm
 
