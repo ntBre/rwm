@@ -1723,51 +1723,54 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     unsafe { RUNNING = false }
 // }
 
-// DUMMY
 fn grabkeys() {
-    unsafe { bindgen::grabkeys() }
-    //     updatenumlockmask(mdpy);
-    //     unsafe {
-    //         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-    //         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-    //         XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
-    //         XDisplayKeycodes(mdpy.inner, &mut start, &mut end);
-    //         let syms = XGetKeyboardMapping(
-    //             mdpy.inner,
-    //             start as u8,
-    //             end - start + 1,
-    //             &mut skip,
-    //         );
-    //         if syms.is_null() {
-    //             return;
-    //         }
-    //         for k in start..=end {
-    //             for i in 0..KEYS.len() {
-    //                 // skip modifier codes, we do that ourselves
-    //                 if KEYS[i].keysym
-    //                     == (*syms.offset(((k - start) * skip) as isize)) as u32
-    //                 {
-    //                     for j in 0..modifiers.len() {
-    //                         let ret = XGrabKey(
-    //                             mdpy.inner,
-    //                             k,
-    //                             KEYS[i].modkey | modifiers[j],
-    //                             ROOT,
-    //                             True,
-    //                             GrabModeAsync,
-    //                             GrabModeAsync,
-    //                         );
-    //                         if [BadAccess, BadValue, BadWindow]
-    //                             .contains(&(ret as u8))
-    //                         {
-    //                             panic!("XGrabKey error on {k}: {ret}");
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         XFree(syms.cast());
-    //     }
+    unsafe {
+        updatenumlockmask();
+        let modifiers = [
+            0,
+            bindgen::LockMask,
+            numlockmask,
+            numlockmask | bindgen::LockMask,
+        ];
+        let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
+        bindgen::XUngrabKey(
+            dpy,
+            bindgen::AnyKey as i32,
+            bindgen::AnyModifier,
+            bindgen::root,
+        );
+        bindgen::XDisplayKeycodes(dpy, &mut start, &mut end);
+        let syms = bindgen::XGetKeyboardMapping(
+            dpy,
+            start as u8,
+            end - start + 1,
+            &mut skip,
+        );
+        if syms.is_null() {
+            return;
+        }
+        for k in start..=end {
+            for i in 0..bindgen::keys.len() {
+                // skip modifier codes, we do that ourselves
+                if bindgen::keys[i].keysym
+                    == (*syms.offset(((k - start) * skip) as isize)) as u64
+                {
+                    for j in 0..modifiers.len() {
+                        bindgen::XGrabKey(
+                            dpy,
+                            k,
+                            bindgen::keys[i].mod_ | modifiers[j],
+                            bindgen::root,
+                            bindgen::True as i32,
+                            bindgen::GrabModeAsync as i32,
+                            bindgen::GrabModeAsync as i32,
+                        );
+                    }
+                }
+            }
+        }
+        XFree(syms.cast());
+    }
 }
 
 fn updatenumlockmask() {
