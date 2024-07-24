@@ -17,7 +17,7 @@ use std::cmp::max;
 use std::ffi::{c_char, c_int, c_uint, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
-use std::ptr::{addr_of_mut, null_mut};
+use std::ptr::{addr_of, addr_of_mut, null_mut};
 
 use bindgen::{strncpy, Atom, Client};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
@@ -1842,15 +1842,25 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
     }
 }
 
-// DUMMY
 fn updatestatus() {
     unsafe {
-        bindgen::updatestatus()
-        // let c = gettextprop(mdpy, ROOT, XA_WM_NAME, addr_of_mut!(STEXT));
-        // if !c {
-        //     STEXT = "rwm-0.0.1".to_owned();
-        // }
-        // drawbar(SELMON);
+        if gettextprop(
+            bindgen::root,
+            XA_WM_NAME,
+            // cast pointer to the array itself as a pointer to the first
+            // element, safe??
+            addr_of_mut!(bindgen::stext) as *mut _,
+            // the lint leading to this instead of simply &bindgen::stext is
+            // very scary, but hopefully it's fine
+            size_of_val(&*addr_of!(bindgen::stext)) as u32,
+        ) == 0
+        {
+            libc::strcpy(
+                addr_of_mut!(bindgen::stext) as *mut _,
+                c"rwm-1.0".as_ptr(),
+            );
+        }
+        drawbar(bindgen::selmon);
     }
 }
 
