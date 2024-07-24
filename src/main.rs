@@ -1893,7 +1893,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
             tw = textw(addr_of!(stext) as *const _) - bindgen::lrpad + 2; // 2px right padding
             bindgen::drw_text(
                 drw,
-                ((*m).ww - tw) as i32,
+                (*m).ww - tw,
                 0,
                 tw as u32,
                 bindgen::bh as u32,
@@ -1970,8 +1970,8 @@ fn drawbar(m: *mut bindgen::Monitor) {
             0,
         ) as i32;
 
-        let w = ((*m).ww - tw as i32 - x as i32) as i32;
-        if w > bh as i32 {
+        let w = (*m).ww - tw - x;
+        if w > bh {
             if !(*m).sel.is_null() {
                 drw_setscheme(
                     drw,
