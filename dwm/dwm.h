@@ -202,7 +202,7 @@ Monitor *mons, *selmon;
 
 /* variables */
 const char broken[] = "broken";
-static char stext[256];
+char stext[256];
 int screen;
 int sw, sh;           /* X display screen geometry width, height */
 int bh;               /* bar height */
