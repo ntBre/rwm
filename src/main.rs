@@ -19,7 +19,7 @@ use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 
-use bindgen::{strncpy, Atom, Client};
+use bindgen::{drw, strncpy, Atom, Client};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
@@ -1864,116 +1864,151 @@ fn updatestatus() {
     }
 }
 
-// DUMMY
+fn textw(x: *const c_char) -> c_int {
+    unsafe { bindgen::drw_fontset_getwidth(drw, x) as c_int + bindgen::lrpad }
+}
+
 fn drawbar(m: *mut bindgen::Monitor) {
-    unsafe { bindgen::drawbar(m) }
-    //     unsafe {
-    //         let boxs = (*(*DRW).fonts).h / 9;
-    //         let boxw = (*(*DRW).fonts).h / 6 + 2;
-    //         let mut occ = 0;
-    //         let mut urg = 0;
-    //         let mut x = 0;
-    //         let mut w;
-    //         let mut tw = 0;
+    unsafe {
+        let mut tw = 0;
+        let boxs = (*(*drw).fonts).h / 9;
+        let boxw = (*(*drw).fonts).h / 6 + 2;
+        let (mut occ, mut urg) = (0, 0);
 
-    //         if !(*m).showbar {
-    //             return;
-    //         }
+        if (*m).showbar == 0 {
+            return;
+        }
 
-    //         let drw = DRW.as_mut().unwrap();
+        use bindgen::bh;
+        use bindgen::scheme;
+        use bindgen::selmon;
+        use bindgen::stext;
+        use bindgen::tags;
+        use bindgen::{SchemeNorm, SchemeSel};
 
-    //         // draw status first so it can be overdrawn by tags later
-    //         if m == SELMON {
-    //             // status is only drawn on selected monitor
-    //             drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-    //             tw = drw.textw(addr_of!(STEXT)) - LRPAD + 2; // 2px right padding
-    //             drw.text(
-    //                 ((*m).ww - tw as i16) as i32,
-    //                 0,
-    //                 tw,
-    //                 BH as usize,
-    //                 0,
-    //                 addr_of!(STEXT),
-    //                 0,
-    //             );
-    //         }
+        // draw status first so it can be overdrawn by tags later
+        if m == selmon {
+            // status is only drawn on selected monitor
+            bindgen::drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+            tw = textw(addr_of!(stext) as *const _) - bindgen::lrpad + 2; // 2px right padding
+            bindgen::drw_text(
+                drw,
+                ((*m).ww - tw) as i32,
+                0,
+                tw as u32,
+                bindgen::bh as u32,
+                0,
+                addr_of!(stext) as *const _,
+                0,
+            );
+        }
 
-    //         let mut c = (*m).clients;
-    //         while !c.is_null() {
-    //             occ |= (*c).tags;
-    //             if (*c).isurgent {
-    //                 urg |= (*c).tags;
-    //             }
-    //             c = (*c).next;
-    //         }
+        let mut c = (*m).clients;
+        while !c.is_null() {
+            occ |= (*c).tags;
+            if (*c).isurgent != 0 {
+                urg |= (*c).tags;
+            }
+            c = (*c).next;
+        }
 
-    //         for i in 0..TAGS.len() {
-    //             let text = TAGS[i].to_owned();
-    //             w = drw.textw(&text);
-    //             drw.setscheme(
-    //                 &mut SCHEME[if ((*m).tagset[(*m).seltags] & 1 << i) != 0 {
-    //                     Scheme::Sel as usize
-    //                 } else {
-    //                     Scheme::Norm as usize
-    //                 }],
-    //             );
-    //             drw.text(
-    //                 x,
-    //                 0,
-    //                 w,
-    //                 BH as usize,
-    //                 LRPAD / 2,
-    //                 &text,
-    //                 (urg as i32) & 1 << i,
-    //             );
+        let mut x = 0;
+        for i in 0..tags.len() {
+            let text = tags[i].to_owned();
+            let w = textw(text);
+            bindgen::drw_setscheme(
+                drw,
+                *scheme.add(
+                    if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
+                        SchemeSel as usize
+                    } else {
+                        SchemeNorm as usize
+                    },
+                ),
+            );
+            bindgen::drw_text(
+                drw,
+                x,
+                0,
+                w as u32,
+                bindgen::bh as u32,
+                bindgen::lrpad as u32 / 2,
+                text,
+                (urg as i32) & 1 << i,
+            );
 
-    //             if (occ & 1 << i) != 0 {
-    //                 drw.rect(
-    //                     x + boxs as i32,
-    //                     boxs,
-    //                     boxw,
-    //                     boxw,
-    //                     m == SELMON
-    //                         && !(*SELMON).sel.is_null()
-    //                         && ((*(*SELMON).sel).tags & 1 << i) != 0,
-    //                     (urg & 1 << i) != 0,
-    //                 );
-    //             }
-    //             x += w as i32;
-    //         }
+            if (occ & 1 << i) != 0 {
+                bindgen::drw_rect(
+                    drw,
+                    x + boxs as i32,
+                    boxs as i32,
+                    boxw,
+                    boxw,
+                    (m == selmon
+                        && !(*selmon).sel.is_null()
+                        && ((*(*selmon).sel).tags & 1 << i) != 0)
+                        as c_int,
+                    (urg & 1 << i) as c_int,
+                );
+            }
+            x += w as i32;
+        }
 
-    //         w = drw.textw(&(*m).ltsymbol);
-    //         drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-    //         x = drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*m).ltsymbol, 0) as i32;
+        use bindgen::lrpad;
+        use bindgen::{drw_setscheme, drw_text};
 
-    //         w = ((*m).ww - tw as i16 - x as i16) as usize;
-    //         if w > BH as usize {
-    //             if !(*m).sel.is_null() {
-    //                 drw.setscheme(
-    //                     &mut SCHEME[if m == SELMON {
-    //                         Scheme::Sel
-    //                     } else {
-    //                         Scheme::Norm
-    //                     } as usize],
-    //                 );
-    //                 drw.text(x, 0, w, BH as usize, LRPAD / 2, &(*(*m).sel).name, 0);
-    //                 if (*(*m).sel).isfloating {
-    //                     drw.rect(
-    //                         x + boxs as i32,
-    //                         boxs,
-    //                         boxw,
-    //                         boxw,
-    //                         (*(*m).sel).isfixed,
-    //                         false,
-    //                     );
-    //                 }
-    //             } else {
-    //                 drw.setscheme(&mut SCHEME[Scheme::Norm as usize]);
-    //                 drw.rect(x, 0, w, BH as usize, true, true);
-    //             }
-    //         }
-    //         drw.map((*m).barwin, 0, 0, (*m).ww, BH);
-    //     }
+        let w = textw((*m).ltsymbol.as_ptr());
+        drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+        x = drw_text(
+            drw,
+            x,
+            0,
+            w as u32,
+            bh as u32,
+            lrpad as u32 / 2,
+            (*m).ltsymbol.as_ptr(),
+            0,
+        ) as i32;
+
+        let w = ((*m).ww - tw as i32 - x as i32) as i32;
+        if w > bh as i32 {
+            if !(*m).sel.is_null() {
+                drw_setscheme(
+                    drw,
+                    *scheme.offset(if m == selmon {
+                        SchemeSel as isize
+                    } else {
+                        SchemeNorm as isize
+                    }),
+                );
+                drw_text(
+                    drw,
+                    x,
+                    0,
+                    w as u32,
+                    bh as u32,
+                    lrpad as u32 / 2,
+                    (*(*m).sel).name.as_ptr(),
+                    0,
+                );
+                if (*(*m).sel).isfloating != 0 {
+                    bindgen::drw_rect(
+                        drw,
+                        x + boxs as i32,
+                        boxs as i32,
+                        boxw,
+                        boxw,
+                        (*(*m).sel).isfixed,
+                        0,
+                    );
+                }
+            } else {
+                drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+                bindgen::drw_rect(drw, x, 0, w as u32, bh as u32, 1, 1);
+            }
+        }
+        bindgen::drw_map(drw, (*m).barwin, 0, 0, (*m).ww as u32, bh as u32);
+    }
 }
 
 fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
