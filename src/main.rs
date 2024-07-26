@@ -2051,63 +2051,63 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
     1
 }
 
-// DUMMY
 fn updatebars() {
-    unsafe { bindgen::updatebars() }
-    //     let mut wa = XSetWindowAttributes {
-    //         background_pixmap: ParentRelative as u64,
-    //         event_mask: ButtonPressMask | ExposureMask,
-    //         override_redirect: True,
-    //         // everything else should be uninit I guess
-    //         background_pixel: 0,
-    //         border_pixmap: 0,
-    //         border_pixel: 0,
-    //         bit_gravity: 0,
-    //         win_gravity: 0,
-    //         backing_store: 0,
-    //         backing_planes: 0,
-    //         backing_pixel: 0,
-    //         save_under: 0,
-    //         do_not_propagate_mask: 0,
-    //         colormap: 0,
-    //         cursor: 0,
-    //     };
-    //     let rwm = CString::new("rwm").unwrap();
-    //     let mut ch = XClassHint {
-    //         res_name: rwm.as_ptr().cast_mut(),
-    //         res_class: rwm.as_ptr().cast_mut(),
-    //     };
+    let mut wa = bindgen::XSetWindowAttributes {
+        override_redirect: bindgen::True as i32,
+        background_pixmap: bindgen::ParentRelative as u64,
+        event_mask: bindgen::ButtonPressMask as i64
+            | bindgen::ExposureMask as i64,
+        // everything else should be uninit I guess
+        background_pixel: 0,
+        border_pixmap: 0,
+        border_pixel: 0,
+        bit_gravity: 0,
+        win_gravity: 0,
+        backing_store: 0,
+        backing_planes: 0,
+        backing_pixel: 0,
+        save_under: 0,
+        do_not_propagate_mask: 0,
+        colormap: 0,
+        cursor: 0,
+    };
+    let mut ch = bindgen::XClassHint {
+        res_name: c"rwm".as_ptr().cast_mut(),
+        res_class: c"rwm".as_ptr().cast_mut(),
+    };
 
-    //     unsafe {
-    //         let mut m = MONS;
-    //         while !m.is_null() {
-    //             if (*m).barwin != 0 {
-    //                 continue;
-    //             }
-    //             (*m).barwin = XCreateWindow(
-    //                 mdpy.inner,
-    //                 ROOT,
-    //                 (*m).wx as c_int,
-    //                 (*m).by as c_int,
-    //                 (*m).ww as c_uint,
-    //                 BH as c_uint,
-    //                 0,
-    //                 XDefaultDepth(mdpy.inner, SCREEN),
-    //                 CopyFromParent as c_uint,
-    //                 XDefaultVisual(mdpy.inner, SCREEN),
-    //                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
-    //                 &mut wa,
-    //             );
-    //             XDefineCursor(
-    //                 mdpy.inner,
-    //                 (*m).barwin,
-    //                 CURSOR[Cur::Normal as usize],
-    //             );
-    //             XMapRaised(mdpy.inner, (*m).barwin);
-    //             XSetClassHint(mdpy.inner, (*m).barwin, &mut ch);
-    //             m = (*m).next;
-    //         }
-    //     }
+    unsafe {
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            if (*m).barwin != 0 {
+                continue;
+            }
+            (*m).barwin = bindgen::XCreateWindow(
+                dpy,
+                bindgen::root,
+                (*m).wx as c_int,
+                (*m).by as c_int,
+                (*m).ww as c_uint,
+                bindgen::bh as c_uint,
+                0,
+                bindgen::XDefaultDepth(dpy, bindgen::screen),
+                bindgen::CopyFromParent as c_uint,
+                bindgen::XDefaultVisual(dpy, bindgen::screen),
+                (bindgen::CWOverrideRedirect
+                    | bindgen::CWBackPixmap
+                    | bindgen::CWEventMask) as u64,
+                &mut wa,
+            );
+            bindgen::XDefineCursor(
+                dpy,
+                (*m).barwin,
+                (*bindgen::cursor[bindgen::CurNormal as usize]).cursor,
+            );
+            bindgen::XMapRaised(dpy, (*m).barwin);
+            bindgen::XSetClassHint(dpy, (*m).barwin, &mut ch);
+            m = (*m).next;
+        }
+    }
 }
 
 // DUMMY
