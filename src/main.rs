@@ -2555,17 +2555,26 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
     }
 }
 
-// DUMMY
+/// main event loop
 fn run() {
-    unsafe { bindgen::run() }
-    // // main event loop
-    // let mut ev: MaybeUninit<XEvent> = MaybeUninit::uninit();
-    // unsafe {
-    //     XSync(mdpy.inner, False);
-    //     while RUNNING && XNextEvent(mdpy.inner, ev.as_mut_ptr()) == 0 {
-    //         handler(mdpy, ev.as_mut_ptr());
-    //     }
-    // }
+    unsafe {
+        bindgen::XSync(dpy, bindgen::False as i32);
+        let mut ev: MaybeUninit<bindgen::XEvent> = MaybeUninit::uninit();
+        while bindgen::running != 0
+            && bindgen::XNextEvent(dpy, ev.as_mut_ptr()) == 0
+        {
+            let mut ev: bindgen::XEvent = ev.assume_init();
+            // no bounds check in dwm, but I'm scared. continue should move on
+            // to the next event if we receive something we can't handle
+            if ev.type_ as usize > bindgen::handler.len() {
+                eprintln!("unknown event type {}", ev.type_);
+                continue;
+            }
+            if let Some(handler) = bindgen::handler[ev.type_ as usize] {
+                handler(&mut ev);
+            }
+        }
+    }
 }
 
 // not sure how this is my problem...
