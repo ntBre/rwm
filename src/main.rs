@@ -510,7 +510,7 @@ fn setup() {
         sh = bindgen::XDisplayHeight(dpy, screen);
         root = bindgen::XRootWindow(dpy, screen);
         drw = drw::create(dpy, screen, root, sw as u32, sh as u32);
-        if bindgen::drw_fontset_create(drw, fonts.as_mut_ptr(), fonts.len())
+        if drw::fontset_create(drw, &mut *addr_of_mut!(fonts), fonts.len())
             .is_null()
         {
             panic!("no fonts could be loaded");
@@ -567,7 +567,7 @@ fn setup() {
         scheme = bindgen::ecalloc(colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..colors.len() {
             *scheme.add(i) =
-                bindgen::drw_scm_create(drw, colors[i].as_mut_ptr(), 3);
+                drw::scm_create(drw, &mut *addr_of_mut!(colors[i]), 3);
         }
 
         /* init bars */
@@ -1865,7 +1865,7 @@ fn updatestatus() {
 }
 
 fn textw(x: *const c_char) -> c_int {
-    unsafe { bindgen::drw_fontset_getwidth(drw, x) as c_int + bindgen::lrpad }
+    unsafe { drw::fontset_getwidth(drw, x) as c_int + bindgen::lrpad }
 }
 
 fn drawbar(m: *mut bindgen::Monitor) {
@@ -1891,7 +1891,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
             // status is only drawn on selected monitor
             drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
             tw = textw(addr_of!(stext) as *const _) - bindgen::lrpad + 2; // 2px right padding
-            bindgen::drw_text(
+            drw::text(
                 drw,
                 (*m).ww - tw,
                 0,
@@ -1926,7 +1926,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                     },
                 ),
             );
-            bindgen::drw_text(
+            drw::text(
                 drw,
                 x,
                 0,
@@ -1954,12 +1954,11 @@ fn drawbar(m: *mut bindgen::Monitor) {
             x += w as i32;
         }
 
-        use bindgen::drw_text;
         use bindgen::lrpad;
 
         let w = textw((*m).ltsymbol.as_ptr());
         drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
-        x = drw_text(
+        x = drw::text(
             drw,
             x,
             0,
@@ -1981,7 +1980,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                         SchemeNorm as isize
                     }),
                 );
-                drw_text(
+                drw::text(
                     drw,
                     x,
                     0,
@@ -2007,7 +2006,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                 drw::rect(drw, x, 0, w as u32, bh as u32, 1, 1);
             }
         }
-        bindgen::drw_map(drw, (*m).barwin, 0, 0, (*m).ww as u32, bh as u32);
+        drw::map(drw, (*m).barwin, 0, 0, (*m).ww as u32, bh as u32);
     }
 }
 

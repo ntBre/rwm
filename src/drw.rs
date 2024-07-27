@@ -1,10 +1,11 @@
-use std::ffi::{c_int, c_uint};
+use std::ffi::{c_char, c_int, c_uint};
+use std::ptr::null_mut;
 
 use crate::bindgen;
 use crate::bindgen::Cur;
 use crate::bindgen::Drw;
 use crate::bindgen::Window;
-use bindgen::{Clr, Display};
+use bindgen::{Clr, Display, Fnt};
 
 pub(crate) fn create(
     dpy: *mut Display,
@@ -106,5 +107,92 @@ pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
         unsafe {
             (*drw).scheme = scm;
         }
+    }
+}
+
+pub(crate) fn fontset_create(
+    drw: *mut Drw,
+    fonts: &mut [*const c_char],
+    fontcount: usize,
+) -> *mut Fnt {
+    unsafe {
+        let mut ret: *mut Fnt = null_mut();
+
+        // since fonts is a & not a *, it can't be null, but it could be empty
+        if drw.is_null() || fonts.is_empty() {
+            return null_mut();
+        }
+
+        for i in 1..=fontcount {
+            let cur =
+                bindgen::xfont_create(drw, fonts[fontcount - i], null_mut());
+            if !cur.is_null() {
+                (*cur).next = ret;
+                ret = cur;
+            }
+        }
+        (*drw).fonts = ret;
+        ret
+    }
+}
+
+// DUMMY
+pub(crate) fn scm_create(
+    drw: *mut Drw,
+    clrnames: &mut [*const c_char],
+    clrcount: usize,
+) -> *mut Clr {
+    unsafe { bindgen::drw_scm_create(drw, clrnames.as_mut_ptr(), clrcount) }
+}
+
+pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
+    unsafe {
+        if drw.is_null() || (*drw).fonts.is_null() || text.is_null() {
+            return 0;
+        }
+    }
+    self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
+}
+
+// DUMMY
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn text(
+    drw: *mut Drw,
+    x: c_int,
+    y: c_int,
+    w: c_uint,
+    h: c_uint,
+    lpad: c_uint,
+    text: *const c_char,
+    invert: c_int,
+) -> c_int {
+    unsafe { bindgen::drw_text(drw, x, y, w, h, lpad, text, invert) }
+}
+
+pub(crate) fn map(
+    drw: *mut Drw,
+    win: Window,
+    x: c_int,
+    y: c_int,
+    w: c_uint,
+    h: c_uint,
+) {
+    if drw.is_null() {
+        return;
+    }
+    unsafe {
+        bindgen::XCopyArea(
+            (*drw).dpy,
+            (*drw).drawable,
+            win,
+            (*drw).gc,
+            x,
+            y,
+            w,
+            h,
+            x,
+            y,
+        );
+        bindgen::XSync((*drw).dpy, bindgen::False as i32);
     }
 }
