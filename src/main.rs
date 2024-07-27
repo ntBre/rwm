@@ -1938,7 +1938,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
             );
 
             if (occ & 1 << i) != 0 {
-                bindgen::drw_rect(
+                drw::rect(
                     drw,
                     x + boxs as i32,
                     boxs as i32,
@@ -1992,7 +1992,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                     0,
                 );
                 if (*(*m).sel).isfloating != 0 {
-                    bindgen::drw_rect(
+                    drw::rect(
                         drw,
                         x + boxs as i32,
                         boxs as i32,
@@ -2004,7 +2004,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                 }
             } else {
                 drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
-                bindgen::drw_rect(drw, x, 0, w as u32, bh as u32, 1, 1);
+                drw::rect(drw, x, 0, w as u32, bh as u32, 1, 1);
             }
         }
         bindgen::drw_map(drw, (*m).barwin, 0, 0, (*m).ww as u32, bh as u32);
@@ -3405,7 +3405,7 @@ fn getstate(w: Window) -> c_long {
 }
 
 // mod config;
-// mod drw;
+mod drw;
 // mod layouts;
 
 fn die(msg: &str) {
