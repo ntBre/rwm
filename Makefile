@@ -12,6 +12,9 @@ clippy:
 doc:
 	cargo doc --open
 
+fmt:
+	cargo fmt
+
 include config.mk
 
 SRC = $(addprefix dwm/,drw.c dwm.c util.c)
