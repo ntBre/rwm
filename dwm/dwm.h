@@ -209,7 +209,7 @@ int bh;               /* bar height */
 int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 unsigned int numlockmask = 0;
-static void (*handler[LASTEvent]) (XEvent *) = {
+void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
 	[ConfigureRequest] = configurerequest,
