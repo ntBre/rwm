@@ -18,6 +18,7 @@ use std::ffi::{c_char, c_int, c_uint, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
+use std::sync::LazyLock;
 
 use bindgen::{drw, strncpy, Atom, Client};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
@@ -2555,6 +2556,31 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
     }
 }
 
+unsafe extern "C" fn default_handler(_ev: *mut bindgen::XEvent) {}
+
+static HANDLER: LazyLock<
+    [unsafe extern "C" fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize],
+> = LazyLock::new(|| {
+    let mut handler = [default_handler
+        as unsafe extern "C" fn(*mut bindgen::XEvent);
+        bindgen::LASTEvent as usize];
+    handler[bindgen::ButtonPress as usize] = bindgen::buttonpress;
+    handler[bindgen::ClientMessage as usize] = bindgen::clientmessage;
+    handler[bindgen::ConfigureRequest as usize] = bindgen::configurerequest;
+    handler[bindgen::ConfigureNotify as usize] = bindgen::configurenotify;
+    handler[bindgen::DestroyNotify as usize] = bindgen::destroynotify;
+    handler[bindgen::EnterNotify as usize] = bindgen::enternotify;
+    handler[bindgen::Expose as usize] = bindgen::expose;
+    handler[bindgen::FocusIn as usize] = bindgen::focusin;
+    handler[bindgen::KeyPress as usize] = bindgen::keypress;
+    handler[bindgen::MappingNotify as usize] = bindgen::mappingnotify;
+    handler[bindgen::MapRequest as usize] = bindgen::maprequest;
+    handler[bindgen::MotionNotify as usize] = bindgen::motionnotify;
+    handler[bindgen::PropertyNotify as usize] = bindgen::propertynotify;
+    handler[bindgen::UnmapNotify as usize] = bindgen::unmapnotify;
+    handler
+});
+
 /// main event loop
 fn run() {
     unsafe {
@@ -2564,43 +2590,12 @@ fn run() {
             && bindgen::XNextEvent(dpy, ev.as_mut_ptr()) == 0
         {
             let mut ev: bindgen::XEvent = ev.assume_init();
-            // no bounds check in dwm, but I'm scared. continue should move on
-            // to the next event if we receive something we can't handle
-            if ev.type_ as usize > bindgen::handler.len() {
-                eprintln!("unknown event type {}", ev.type_);
-                continue;
-            }
-            if let Some(handler) = bindgen::handler[ev.type_ as usize] {
+            if let Some(handler) = HANDLER.get(ev.type_ as usize) {
                 handler(&mut ev);
             }
         }
     }
 }
-
-// not sure how this is my problem...
-#[allow(non_upper_case_globals, non_snake_case)]
-// fn handler(mdpy: &Display, ev: *mut XEvent) {
-//     unsafe {
-//         match (*ev).type_ {
-//             ButtonPress => buttonpress(mdpy, ev),
-//             ClientMessage => clientmessage(mdpy, ev),
-//             ConfigureRequest => configurerequest(mdpy, ev),
-//             ConfigureNotify => configurenotify(mdpy, ev),
-//             DestroyNotify => destroynotify(mdpy, ev),
-//             EnterNotify => enternotify(mdpy, ev),
-//             Expose => expose(mdpy, ev),
-//             FocusIn => focusin(mdpy, ev),
-//             KeyPress => keypress(mdpy, ev),
-//             MappingNotify => mappingnotify(mdpy, ev),
-//             MapRequest => maprequest(mdpy, ev),
-//             MotionNotify => motionnotify(mdpy, ev),
-//             PropertyNotify => propertynotify(mdpy, ev),
-//             UnmapNotify => unmapnotify(mdpy, ev),
-//             NoExpose | LeaveNotify | MapNotify => (),
-//             _ => (),
-//         }
-//     }
-// }
 
 // fn unmapnotify(mdpy: &Display, e: *mut XEvent) {
 //     unsafe {
