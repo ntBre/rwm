@@ -3,6 +3,43 @@ use std::ffi::{c_int, c_uint};
 use crate::bindgen;
 use crate::bindgen::Cur;
 use crate::bindgen::Drw;
+use crate::bindgen::Window;
+use bindgen::Display;
+
+pub(crate) fn create(
+    dpy: *mut Display,
+    screen: c_int,
+    root: Window,
+    w: c_uint,
+    h: c_uint,
+) -> *mut Drw {
+    unsafe {
+        // funny they don't check ecalloc output here but do in other places
+        let drw: *mut Drw = bindgen::ecalloc(1, size_of::<Drw>()).cast();
+        (*drw).dpy = dpy;
+        (*drw).screen = screen;
+        (*drw).root = root;
+        (*drw).w = w;
+        (*drw).h = h;
+        (*drw).drawable = bindgen::XCreatePixmap(
+            dpy,
+            root,
+            w,
+            h,
+            bindgen::XDefaultDepth(dpy, screen) as u32,
+        );
+        (*drw).gc = bindgen::XCreateGC(dpy, root, 0, std::ptr::null_mut());
+        bindgen::XSetLineAttributes(
+            dpy,
+            (*drw).gc,
+            1,
+            bindgen::LineSolid as i32,
+            bindgen::CapButt as i32,
+            bindgen::JoinMiter as i32,
+        );
+        drw
+    }
+}
 
 pub(crate) fn rect(
     drw: *mut Drw,

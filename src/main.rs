@@ -509,7 +509,7 @@ fn setup() {
         sw = bindgen::XDisplayWidth(dpy, screen);
         sh = bindgen::XDisplayHeight(dpy, screen);
         root = bindgen::XRootWindow(dpy, screen);
-        drw = bindgen::drw_create(dpy, screen, root, sw as u32, sh as u32);
+        drw = drw::create(dpy, screen, root, sw as u32, sh as u32);
         if bindgen::drw_fontset_create(drw, fonts.as_mut_ptr(), fonts.len())
             .is_null()
         {
