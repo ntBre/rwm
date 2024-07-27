@@ -552,14 +552,14 @@ fn setup() {
         netatom[bindgen::NetClientList as usize] =
             XInternAtom(dpy, c"_NET_CLIENT_LIST".as_ptr(), False);
 
-        use bindgen::{cursor, drw_cur_create};
+        use bindgen::cursor;
         /* init cursors */
         cursor[bindgen::CurNormal as usize] =
-            drw_cur_create(drw, bindgen::XC_left_ptr as i32);
+            drw::cur_create(drw, bindgen::XC_left_ptr as i32);
         cursor[bindgen::CurResize as usize] =
-            drw_cur_create(drw, bindgen::XC_sizing as i32);
+            drw::cur_create(drw, bindgen::XC_sizing as i32);
         cursor[bindgen::CurMove as usize] =
-            drw_cur_create(drw, bindgen::XC_fleur as i32);
+            drw::cur_create(drw, bindgen::XC_fleur as i32);
 
         use bindgen::{colors, scheme, Clr};
 

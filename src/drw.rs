@@ -1,6 +1,7 @@
 use std::ffi::{c_int, c_uint};
 
 use crate::bindgen;
+use crate::bindgen::Cur;
 use crate::bindgen::Drw;
 
 pub(crate) fn rect(
@@ -46,5 +47,19 @@ pub(crate) fn rect(
                 h - 1,
             );
         }
+    }
+}
+
+pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
+    if drw.is_null() {
+        return std::ptr::null_mut();
+    }
+    unsafe {
+        let cur: *mut Cur = bindgen::ecalloc(1, size_of::<Cur>()).cast();
+        if cur.is_null() {
+            return std::ptr::null_mut();
+        }
+        (*cur).cursor = bindgen::XCreateFontCursor((*drw).dpy, shape as c_uint);
+        cur
     }
 }
