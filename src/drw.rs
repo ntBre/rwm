@@ -4,7 +4,7 @@ use crate::bindgen;
 use crate::bindgen::Cur;
 use crate::bindgen::Drw;
 use crate::bindgen::Window;
-use bindgen::Display;
+use bindgen::{Clr, Display};
 
 pub(crate) fn create(
     dpy: *mut Display,
@@ -98,5 +98,13 @@ pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
         }
         (*cur).cursor = bindgen::XCreateFontCursor((*drw).dpy, shape as c_uint);
         cur
+    }
+}
+
+pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
+    if !drw.is_null() {
+        unsafe {
+            (*drw).scheme = scm;
+        }
     }
 }

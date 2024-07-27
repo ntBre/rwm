@@ -1889,7 +1889,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == selmon {
             // status is only drawn on selected monitor
-            bindgen::drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+            drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
             tw = textw(addr_of!(stext) as *const _) - bindgen::lrpad + 2; // 2px right padding
             bindgen::drw_text(
                 drw,
@@ -1916,7 +1916,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
         for i in 0..tags.len() {
             let text = tags[i].to_owned();
             let w = textw(text);
-            bindgen::drw_setscheme(
+            drw::setscheme(
                 drw,
                 *scheme.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
@@ -1954,11 +1954,11 @@ fn drawbar(m: *mut bindgen::Monitor) {
             x += w as i32;
         }
 
+        use bindgen::drw_text;
         use bindgen::lrpad;
-        use bindgen::{drw_setscheme, drw_text};
 
         let w = textw((*m).ltsymbol.as_ptr());
-        drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+        drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
         x = drw_text(
             drw,
             x,
@@ -1973,7 +1973,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
         let w = (*m).ww - tw - x;
         if w > bh {
             if !(*m).sel.is_null() {
-                drw_setscheme(
+                drw::setscheme(
                     drw,
                     *scheme.offset(if m == selmon {
                         SchemeSel as isize
@@ -2003,7 +2003,7 @@ fn drawbar(m: *mut bindgen::Monitor) {
                     );
                 }
             } else {
-                drw_setscheme(drw, *scheme.add(SchemeNorm as usize));
+                drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
                 drw::rect(drw, x, 0, w as u32, bh as u32, 1, 1);
             }
         }
