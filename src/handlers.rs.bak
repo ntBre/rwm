@@ -1,0 +1,390 @@
+fn unmapnotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = &(*e).unmap;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            if ev.send_event != 0 {
+                setclientstate(mdpy, c, WITHDRAWN_STATE);
+            } else {
+                unmanage(mdpy, c, false);
+            }
+        }
+    }
+}
+
+fn propertynotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let mut trans: Window = 0;
+        let ev = (*e).property;
+        if ev.window == ROOT && ev.atom == XA_WM_NAME {
+            updatestatus(mdpy);
+        } else if ev.state == PropertyDelete {
+            return;
+        } else {
+            let c = wintoclient(ev.window);
+            if !c.is_null() {
+                match ev.atom {
+                    XA_WM_TRANSIENT_FOR => {
+                        if !(*c).isfloating
+                            && xgettransientforhint(mdpy, (*c).win, &mut trans)
+                        {
+                            (*c).isfloating = !wintoclient(trans).is_null();
+                            if (*c).isfloating {
+                                arrange(mdpy, (*c).mon);
+                            }
+                        }
+                    }
+                    XA_WM_NORMAL_HINTS => {
+                        (*c).hintsvalid = false;
+                    }
+                    XA_WM_HINTS => {
+                        updatewmhints(mdpy, c);
+                        drawbars();
+                    }
+                    _ => (),
+                }
+                if ev.atom == XA_WM_NAME
+                    || ev.atom == NETATOM[Net::WMName as usize]
+                {
+                    updatetitle(mdpy, c);
+                    if c == (*(*c).mon).sel {
+                        drawbar((*c).mon);
+                    }
+                }
+                if ev.atom == NETATOM[Net::WMWindowType as usize] {
+                    updatewindowtype(mdpy, c);
+                }
+            }
+        }
+    }
+}
+
+declared static inside motionnotify, which apparently means it persists
+between function calls
+static mut MOTIONNOTIFY_MON: *mut Monitor = null_mut();
+fn motionnotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = &(*e).motion;
+        if ev.window != ROOT {
+            return;
+        }
+        let m = recttomon(ev.x_root, ev.y_root, 1, 1);
+        if m != MOTIONNOTIFY_MON && !MOTIONNOTIFY_MON.is_null() {
+            unfocus(mdpy, (*SELMON).sel, true);
+            SELMON = m;
+            focus(mdpy, null_mut());
+        }
+        MOTIONNOTIFY_MON = m;
+    }
+}
+
+fn maprequest(mdpy: &Display, e: *mut XEvent) {
+    let mut wa: MaybeUninit<XWindowAttributes> = MaybeUninit::uninit();
+    unsafe {
+        let ev = &(*e).map_request;
+        if XGetWindowAttributes(mdpy.inner, ev.window, wa.as_mut_ptr()) == 0
+            || (*wa.as_mut_ptr()).override_redirect != 0
+        {
+            return;
+        }
+        if wintoclient(ev.window).is_null() {
+            manage(mdpy, ev.window, wa.as_mut_ptr());
+        }
+    }
+}
+
+fn mappingnotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let mut ev = (*e).mapping;
+        XRefreshKeyboardMapping(&mut ev);
+        if ev.request == MappingKeyboard {
+            grabkeys(mdpy);
+        }
+    }
+}
+
+fn keypress(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).key;
+        let keysym: KeySym = XKeycodeToKeysym(mdpy.inner, ev.keycode as u8, 0);
+        for i in 0..KEYS.len() {
+            if keysym == KEYS[i].keysym as u64
+                && cleanmask(KEYS[i].modkey) == cleanmask(ev.state)
+            {
+                (KEYS[i].func)(mdpy, KEYS[i].arg.clone());
+            }
+        }
+    }
+}
+
+fn focusin(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).focus_change;
+        if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
+            setfocus(mdpy, (*SELMON).sel);
+        }
+    }
+}
+
+fn expose(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).expose;
+        if ev.count == 0 {
+            let m = wintomon(mdpy, ev.window);
+            if !m.is_null() {
+                drawbar(m);
+            }
+        }
+    }
+}
+
+fn enternotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).crossing;
+        if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
+            && ev.window != ROOT
+        {
+            return;
+        }
+        let c = wintoclient(ev.window);
+        let m = if !c.is_null() {
+            (*c).mon
+        } else {
+            wintomon(mdpy, ev.window)
+        };
+        if m != SELMON {
+            unfocus(mdpy, (*SELMON).sel, true);
+            SELMON = m;
+        } else if c.is_null() || c == (*SELMON).sel {
+            return;
+        }
+        focus(mdpy, c);
+    }
+}
+
+fn destroynotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).destroy_window;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            unmanage(mdpy, c, true);
+        }
+    }
+}
+
+fn configurenotify(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).configure;
+        // dwm TODO updategeom handling sucks, needs to be simplified
+        if ev.window == ROOT {
+            let dirty = (SW != ev.width) || (SH != ev.height);
+            SW = ev.width;
+            SH = ev.height;
+            if updategeom(mdpy) || dirty {
+                DRW.as_mut().unwrap().resize(SW as i16, BH);
+                updatebars(mdpy);
+                let mut m = MONS;
+                while !m.is_null() {
+                    let mut c = (*m).clients;
+                    while !c.is_null() {
+                        if (*c).isfullscreen {
+                            resizeclient(
+                                mdpy,
+                                c,
+                                (*m).mx as i32,
+                                (*m).my as i32,
+                                (*m).mw as i32,
+                                (*m).mh as i32,
+                            );
+                        }
+                        c = (*c).next;
+                    }
+                    XMoveResizeWindow(
+                        mdpy.inner,
+                        (*m).barwin,
+                        (*m).wx as i32,
+                        (*m).by as i32,
+                        (*m).ww as u32,
+                        BH as u32,
+                    );
+                    m = (*m).next;
+                }
+                focus(mdpy, null_mut());
+                arrange(mdpy, null_mut());
+            }
+        }
+    }
+}
+
+fn configurerequest(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).configure_request;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            if ev.value_mask & CWBorderWidth as u64 != 0 {
+                (*c).bw = ev.border_width;
+            } else if (*c).isfloating
+                || (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none()
+            {
+                let m = (*c).mon;
+                let vm = ev.value_mask as u16;
+                if vm & CWX != 0 {
+                    (*c).oldx = (*c).x;
+                    (*c).x = (*m).mx as i32 + ev.x;
+                }
+                if vm & CWY != 0 {
+                    (*c).oldy = (*c).y;
+                    (*c).y = (*m).my as i32 + ev.y;
+                }
+                if vm & CWWidth != 0 {
+                    (*c).oldw = (*c).w;
+                    (*c).w = (*m).mw as i32 + ev.width;
+                }
+                if vm & CWHeight != 0 {
+                    (*c).oldh = (*c).h;
+                    (*c).h = (*m).mh as i32 + ev.height;
+                }
+                if ((*c).x + (*c).w) as i16 > (*m).mx + (*m).mw
+                    && (*c).isfloating
+                {
+                    // center in x direction
+                    (*c).x =
+                        ((*m).mx + ((*m).mw / 2 - width(c) as i16 / 2)) as i32;
+                }
+                if ((*c).y + (*c).h) > ((*m).my + (*m).mh) as i32
+                    && (*c).isfloating
+                {
+                    // center in y direction
+                    (*c).y =
+                        ((*m).my + ((*m).mh / 2 - height(c) as i16 / 2)) as i32;
+                }
+                if (vm & (CWX | CWY) != 0) && (vm & (CWWidth | CWHeight)) == 0 {
+                    configure(mdpy, c);
+                }
+                if is_visible(c) {
+                    XMoveResizeWindow(
+                        mdpy.inner,
+                        (*c).win,
+                        (*c).x,
+                        (*c).y,
+                        (*c).w as u32,
+                        (*c).h as u32,
+                    );
+                }
+            } else {
+                configure(mdpy, c);
+            }
+        } else {
+            let mut wc = XWindowChanges {
+                x: ev.x,
+                y: ev.y,
+                width: ev.width,
+                height: ev.height,
+                border_width: ev.border_width,
+                sibling: ev.above,
+                stack_mode: ev.detail,
+            };
+            XConfigureWindow(
+                mdpy.inner,
+                ev.window,
+                ev.value_mask as u32,
+                &mut wc,
+            );
+        }
+        XSync(mdpy.inner, False);
+    }
+}
+
+fn clientmessage(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let cme = (*e).client_message;
+        let c = wintoclient(cme.window);
+        if c.is_null() {
+            return;
+        }
+        if cme.message_type == NETATOM[Net::WMState as usize] {
+            if cme.data.get_long(1)
+                == NETATOM[Net::WMFullscreen as usize] as i64
+                || cme.data.get_long(2)
+                    == NETATOM[Net::WMFullscreen as usize] as i64
+            {
+                setfullscreen(
+                    mdpy,
+                    c,
+                    cme.data.get_long(0) == 1
+                        || (cme.data.get_long(0) == 2 && !(*c).isfullscreen),
+                );
+            }
+        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
+            && c != (*SELMON).sel
+            && !(*c).isurgent
+        {
+            seturgent(mdpy, c, true);
+        }
+    }
+}
+
+fn buttonpress(mdpy: &Display, e: *mut XEvent) {
+    unsafe {
+        let ev = (*e).button;
+        let mut click = Clk::RootWin;
+        let mut arg = Arg::Uint(0);
+        // focus monitor if necessary
+        let m = wintomon(mdpy, ev.window);
+        if m != SELMON {
+            unfocus(mdpy, (*SELMON).sel, true);
+            SELMON = m;
+            focus(mdpy, null_mut());
+        }
+        if ev.window == (*SELMON).barwin {
+            let mut x = 0;
+            let mut i = 0;
+            // do while with ++i in condition
+            let drw = &DRW.as_ref().unwrap();
+            let text = TAGS[i].to_owned();
+            x += drw.textw(&text);
+            i += 1;
+            while ev.x >= x as i32 && i < TAGS.len() {
+                let text = TAGS[i].to_owned();
+                x += drw.textw(&text);
+                i += 1;
+            }
+            if i < TAGS.len() {
+                click = Clk::TagBar;
+                arg = Arg::Uint(1 << i);
+            } else if ev.x < (x + drw.textw(&(*SELMON).ltsymbol)) as i32 {
+                click = Clk::LtSymbol;
+            } else if ev.x
+                > ((*SELMON).ww as usize - drw.textw(addr_of!(STEXT))) as i32
+            {
+                click = Clk::StatusText;
+            } else {
+                click = Clk::WinTitle;
+            }
+        } else {
+            let c = wintoclient(ev.window);
+            if !c.is_null() {
+                focus(mdpy, c);
+                restack(mdpy, SELMON);
+                XAllowEvents(mdpy.inner, ReplayPointer, CurrentTime);
+                click = Clk::ClientWin;
+            }
+        }
+        for i in 0..BUTTONS.len() {
+            let b = &BUTTONS[i];
+            if click == b.click
+                && b.button == ev.button
+                && cleanmask(b.mask) == cleanmask(ev.state)
+            {
+                let arg = if click == Clk::TagBar
+                    && matches!(b.arg, Arg::Int(i) if i == 0)
+                {
+                    arg.clone()
+                } else {
+                    b.arg.clone()
+                };
+                (b.func)(mdpy, arg);
+            }
+        }
+    }
+}
