@@ -57,6 +57,7 @@ extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
 
 extern "C" {
     static mut numlockmask: c_uint;
+    static mut running: c_int;
 }
 
 // from Xproto.h
@@ -2586,9 +2587,7 @@ fn run() {
     unsafe {
         bindgen::XSync(dpy, bindgen::False as i32);
         let mut ev: MaybeUninit<bindgen::XEvent> = MaybeUninit::uninit();
-        while bindgen::running != 0
-            && bindgen::XNextEvent(dpy, ev.as_mut_ptr()) == 0
-        {
+        while running != 0 && bindgen::XNextEvent(dpy, ev.as_mut_ptr()) == 0 {
             let mut ev: bindgen::XEvent = ev.assume_init();
             if let Some(handler) = HANDLER.get(ev.type_ as usize) {
                 handler(&mut ev);
