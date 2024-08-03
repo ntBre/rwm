@@ -3,7 +3,7 @@ use std::ptr::{addr_of, null_mut};
 use crate::{
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, height, is_visible, restack, setfullscreen,
-    seturgent, textw, width, wintoclient,
+    seturgent, textw, width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -16,7 +16,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
         let ev = &(*e).xbutton;
         let mut click = ClkRootWin;
         // focus monitor if necessary
-        let m = bindgen::wintomon(ev.window);
+        let m = wintomon(ev.window);
         if !m.is_null() && m != selmon {
             crate::unfocus((*selmon).sel, true);
             selmon = m;

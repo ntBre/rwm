@@ -2235,28 +2235,10 @@ fn updategeom() -> i32 {
     //     dirty
 }
 
-// fn wintomon(mdpy: &Display, w: Window) -> *mut Monitor {
-//     unsafe {
-//         let mut x = 0;
-//         let mut y = 0;
-//         if w == ROOT && getrootptr(mdpy, &mut x, &mut y) {
-//             return recttomon(x, y, 1, 1);
-//         }
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             if w == (*m).barwin {
-//                 return m;
-//             }
-//             m = (*m).next;
-//         }
-
-//         let c = wintoclient(w);
-//         if !c.is_null() {
-//             return (*c).mon;
-//         }
-//         SELMON
-//     }
-// }
+// DUMMY
+fn wintomon(w: Window) -> *mut bindgen::Monitor {
+    unsafe { bindgen::wintomon(w) }
+}
 
 fn wintoclient(w: u64) -> *mut bindgen::Client {
     unsafe {
