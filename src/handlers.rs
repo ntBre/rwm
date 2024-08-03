@@ -1,8 +1,9 @@
 use std::ptr::{addr_of, null_mut};
 
 use crate::{
-    bindgen::{self, selmon, tags, Arg, XEvent},
-    cleanmask, restack, setfullscreen, seturgent, textw, wintoclient,
+    bindgen::{self, dpy, selmon, tags, Arg, XEvent},
+    cleanmask, configure, height, is_visible, restack, setfullscreen,
+    seturgent, textw, width, wintoclient,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -110,9 +111,83 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn configurerequest(e: *mut XEvent) {
-    unsafe { bindgen::configurerequest(e) }
+    use bindgen::{CWBorderWidth, CWHeight, CWWidth, CWX, CWY};
+    unsafe {
+        let ev = &(*e).xconfigurerequest;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            if (ev.value_mask & CWBorderWidth as u64) != 0 {
+                (*c).bw = ev.border_width;
+            } else if (*c).isfloating != 0
+                || (*(*selmon).lt[(*selmon).sellt as usize]).arrange.is_none()
+            {
+                let m = (*c).mon;
+                if ev.value_mask & CWX as u64 != 0 {
+                    (*c).oldx = (*c).x;
+                    (*c).x = (*m).mx + ev.x;
+                }
+                if ev.value_mask & CWY as u64 != 0 {
+                    (*c).oldy = (*c).y;
+                    (*c).y = (*m).my + ev.y;
+                }
+                if ev.value_mask & CWWidth as u64 != 0 {
+                    (*c).oldw = (*c).w;
+                    (*c).w = ev.width;
+                }
+                if ev.value_mask & CWHeight as u64 != 0 {
+                    (*c).oldh = (*c).h;
+                    (*c).h = ev.height;
+                }
+                assert!(!c.is_null());
+                assert!(!m.is_null());
+                let c = &mut *c;
+                let m = &mut *m;
+                if (c.x + c.w) > m.mx + m.mw && c.isfloating != 0 {
+                    c.x = m.mx + (m.mw / 2 - width(c) / 2); // center x
+                }
+                if (c.y + c.h) > m.my + m.mh && c.isfloating != 0 {
+                    c.y = m.my + (m.mh / 2 - height(c) / 2); // center y
+                }
+                if (ev.value_mask & (CWX | CWY) as u64) != 0
+                    && (ev.value_mask & (CWWidth | CWHeight) as u64) == 0
+                {
+                    configure(c);
+                }
+                if is_visible(c) {
+                    bindgen::XMoveResizeWindow(
+                        dpy, c.win, c.x, c.y, c.w as u32, c.h as u32,
+                    );
+                }
+            } else {
+                configure(c);
+            }
+        } else {
+            let x = ev.x;
+            let y = ev.y;
+            let width = ev.width;
+            let height = ev.height;
+            let border_width = ev.border_width;
+            let sibling = ev.above;
+            let stack_mode = ev.detail;
+            let mut wc = bindgen::XWindowChanges {
+                x,
+                y,
+                width,
+                height,
+                border_width,
+                sibling,
+                stack_mode,
+            };
+            bindgen::XConfigureWindow(
+                dpy,
+                ev.window,
+                ev.value_mask as u32,
+                &mut wc,
+            );
+        }
+        bindgen::XSync(dpy, bindgen::False as i32);
+    }
 }
 
 // DUMMY
