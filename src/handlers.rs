@@ -2,7 +2,7 @@ use std::ptr::{addr_of, null_mut};
 
 use crate::{
     bindgen::{self, selmon, tags, Arg, XEvent},
-    cleanmask, restack, textw, wintoclient,
+    cleanmask, restack, setfullscreen, seturgent, textw, wintoclient,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -81,9 +81,32 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn clientmessage(e: *mut XEvent) {
-    unsafe { bindgen::clientmessage(e) }
+    unsafe {
+        let cme = &(*e).xclient;
+        let c = wintoclient(cme.window);
+
+        if c.is_null() {
+            return;
+        }
+        use bindgen::{netatom, NetActiveWindow, NetWMFullscreen, NetWMState};
+        if cme.message_type == netatom[NetWMState as usize] {
+            if cme.data.l[1] == netatom[NetWMFullscreen as usize] as i64
+                || cme.data.l[2] == netatom[NetWMFullscreen as usize] as i64
+            {
+                setfullscreen(
+                    c,
+                    cme.data.l[0] == 1 // _NET_WM_STATE_ADD
+                        || (cme.data.l[0] == 2 // _NET_WM_STATE_TOGGLE
+                            && (*c).isfullscreen == 0),
+                );
+            }
+        } else if cme.message_type == netatom[NetActiveWindow as usize] {
+            if c != (*selmon).sel && (*c).isurgent == 0 {
+                seturgent(c, true);
+            }
+        }
+    }
 }
 
 // DUMMY
