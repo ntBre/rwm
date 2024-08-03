@@ -192,7 +192,7 @@ void updatewindowtype(Client *c);
 void updatewmhints(Client *c);
 static void view(const Arg *arg);
 Client *wintoclient(Window w);
-static Monitor *wintomon(Window w);
+Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);

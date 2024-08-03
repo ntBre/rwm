@@ -1,8 +1,82 @@
-use crate::bindgen::{self, XEvent};
+use std::ptr::{addr_of, null_mut};
 
-// DUMMY
+use crate::{
+    bindgen::{self, selmon, tags, Arg, XEvent},
+    cleanmask, restack, textw, wintoclient,
+};
+
 pub(crate) fn buttonpress(e: *mut XEvent) {
-    unsafe { bindgen::buttonpress(e) }
+    use bindgen::{
+        ClkClientWin, ClkLtSymbol, ClkRootWin, ClkStatusText, ClkTagBar,
+        ClkWinTitle,
+    };
+    unsafe {
+        let mut arg = Arg { i: 0 };
+        let ev = &(*e).xbutton;
+        let mut click = ClkRootWin;
+        // focus monitor if necessary
+        let m = bindgen::wintomon((*ev).window);
+        if !m.is_null() && m != selmon {
+            crate::unfocus((*selmon).sel, true);
+            selmon = m;
+            crate::focus(null_mut());
+        }
+        if (*ev).window == (*selmon).barwin {
+            let mut i = 0;
+            let mut x = 0;
+            // emulating do-while
+            loop {
+                x += textw(tags[i]);
+                // condition
+                i += 1;
+                if !((*ev).x >= x && i < tags.len()) {
+                    break;
+                }
+            }
+            if i < tags.len() {
+                click = ClkTagBar;
+                arg = Arg { ui: 1 << i };
+            } else if (*ev).x
+                < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
+            {
+                click = ClkLtSymbol;
+            } else if (*ev).x
+                > (*selmon).ww - textw(addr_of!(bindgen::stext) as *const _)
+            {
+                click = ClkStatusText;
+            } else {
+                click = ClkWinTitle;
+            }
+        } else {
+            let c = wintoclient((*ev).window);
+            if !c.is_null() {
+                crate::focus(c);
+                restack(selmon);
+                bindgen::XAllowEvents(
+                    bindgen::dpy,
+                    bindgen::ReplayPointer as i32,
+                    bindgen::CurrentTime as u64,
+                );
+                click = ClkClientWin;
+            }
+        }
+        use bindgen::buttons;
+        for i in 0..buttons.len() {
+            if click == buttons[i].click
+                && buttons[i].func.is_some()
+                && buttons[i].button == (*ev).button
+                && cleanmask(buttons[i].mask) == cleanmask((*ev).state)
+            {
+                let f = buttons[i].func.unwrap();
+                let a = if click == ClkTagBar && buttons[i].arg.i == 0 {
+                    &arg
+                } else {
+                    &buttons[i].arg
+                };
+                f(a)
+            }
+        }
+    }
 }
 
 // DUMMY

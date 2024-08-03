@@ -2319,19 +2319,19 @@ fn height(x: *mut bindgen::Client) -> i32 {
     unsafe { (*x).h + 2 * (*x).bw }
 }
 
-// #[inline]
-// fn cleanmask(mask: u32) -> u32 {
-//     unsafe {
-//         mask & !(NUMLOCKMASK | LockMask)
-//             & (ShiftMask
-//                 | ControlMask
-//                 | Mod1Mask
-//                 | Mod2Mask
-//                 | Mod3Mask
-//                 | Mod4Mask
-//                 | Mod5Mask)
-//     }
-// }
+#[inline]
+fn cleanmask(mask: u32) -> u32 {
+    unsafe {
+        mask & !(numlockmask | bindgen::LockMask)
+            & (bindgen::ShiftMask
+                | bindgen::ControlMask
+                | bindgen::Mod1Mask
+                | bindgen::Mod2Mask
+                | bindgen::Mod3Mask
+                | bindgen::Mod4Mask
+                | bindgen::Mod5Mask)
+    }
+}
 
 // fn getrootptr(mdpy: &Display, x: &mut i32, y: &mut i32) -> bool {
 //     let mut di = 0;
