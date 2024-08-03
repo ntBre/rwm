@@ -28,8 +28,11 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             loop {
                 x += textw(tags[i]);
                 // condition
+                if !(ev.x >= x) {
+                    break;
+                }
                 i += 1;
-                if !(ev.x >= x && i < tags.len()) {
+                if !(i < tags.len()) {
                     break;
                 }
             }
