@@ -15,13 +15,13 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
         let ev = &(*e).xbutton;
         let mut click = ClkRootWin;
         // focus monitor if necessary
-        let m = bindgen::wintomon((*ev).window);
+        let m = bindgen::wintomon(ev.window);
         if !m.is_null() && m != selmon {
             crate::unfocus((*selmon).sel, true);
             selmon = m;
             crate::focus(null_mut());
         }
-        if (*ev).window == (*selmon).barwin {
+        if ev.window == (*selmon).barwin {
             let mut i = 0;
             let mut x = 0;
             // emulating do-while
@@ -29,18 +29,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 x += textw(tags[i]);
                 // condition
                 i += 1;
-                if !((*ev).x >= x && i < tags.len()) {
+                if !(ev.x >= x && i < tags.len()) {
                     break;
                 }
             }
             if i < tags.len() {
                 click = ClkTagBar;
                 arg = Arg { ui: 1 << i };
-            } else if (*ev).x
-                < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
+            } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
             {
                 click = ClkLtSymbol;
-            } else if (*ev).x
+            } else if ev.x
                 > (*selmon).ww - textw(addr_of!(bindgen::stext) as *const _)
             {
                 click = ClkStatusText;
@@ -48,7 +47,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = ClkWinTitle;
             }
         } else {
-            let c = wintoclient((*ev).window);
+            let c = wintoclient(ev.window);
             if !c.is_null() {
                 crate::focus(c);
                 restack(selmon);
@@ -64,8 +63,8 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
         for i in 0..buttons.len() {
             if click == buttons[i].click
                 && buttons[i].func.is_some()
-                && buttons[i].button == (*ev).button
-                && cleanmask(buttons[i].mask) == cleanmask((*ev).state)
+                && buttons[i].button == ev.button
+                && cleanmask(buttons[i].mask) == cleanmask(ev.state)
             {
                 let f = buttons[i].func.unwrap();
                 let a = if click == ClkTagBar && buttons[i].arg.i == 0 {
