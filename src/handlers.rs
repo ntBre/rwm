@@ -28,11 +28,11 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             loop {
                 x += textw(tags[i]);
                 // condition
-                if !(ev.x >= x) {
+                if ev.x < x {
                     break;
                 }
                 i += 1;
-                if !(i < tags.len()) {
+                if i >= tags.len() {
                     break;
                 }
             }
@@ -101,10 +101,11 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                             && (*c).isfullscreen == 0),
                 );
             }
-        } else if cme.message_type == netatom[NetActiveWindow as usize] {
-            if c != (*selmon).sel && (*c).isurgent == 0 {
-                seturgent(c, true);
-            }
+        } else if cme.message_type == netatom[NetActiveWindow as usize]
+            && c != (*selmon).sel
+            && (*c).isurgent == 0
+        {
+            seturgent(c, true);
         }
     }
 }
