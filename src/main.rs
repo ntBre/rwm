@@ -566,7 +566,7 @@ fn setup() {
         use bindgen::{colors, scheme, Clr};
 
         /* init appearance */
-        scheme = bindgen::ecalloc(colors.len(), size_of::<*mut Clr>()).cast();
+        scheme = util::ecalloc(colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..colors.len() {
             *scheme.add(i) =
                 drw::scm_create(drw, &mut *addr_of_mut!(colors[i]), 3);
@@ -2666,7 +2666,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
     unsafe {
         let wa = *wa;
         let c: *mut bindgen::Client =
-            bindgen::ecalloc(1, size_of::<bindgen::Client>()) as *mut _;
+            util::ecalloc(1, size_of::<bindgen::Client>()) as *mut _;
         (*c).win = w;
         (*c).x = wa.x;
         (*c).oldx = wa.x;
@@ -3015,9 +3015,20 @@ fn getstate(w: Window) -> c_long {
 }
 
 // mod config;
+// mod layouts;
 mod drw;
 mod handlers;
-// mod layouts;
+mod util {
+    use libc::{c_void, size_t};
+
+    pub(crate) fn ecalloc(nmemb: size_t, size: size_t) -> *mut c_void {
+        let ret = unsafe { libc::calloc(nmemb, size) };
+        if ret.is_null() {
+            crate::die("calloc:");
+        }
+        ret
+    }
+}
 
 fn die(msg: &str) {
     eprintln!("{}", msg);

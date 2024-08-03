@@ -15,8 +15,7 @@ pub(crate) fn create(
     h: c_uint,
 ) -> *mut Drw {
     unsafe {
-        // funny they don't check ecalloc output here but do in other places
-        let drw: *mut Drw = bindgen::ecalloc(1, size_of::<Drw>()).cast();
+        let drw: *mut Drw = crate::util::ecalloc(1, size_of::<Drw>()).cast();
         (*drw).dpy = dpy;
         (*drw).screen = screen;
         (*drw).root = root;
@@ -93,7 +92,7 @@ pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
         return std::ptr::null_mut();
     }
     unsafe {
-        let cur: *mut Cur = bindgen::ecalloc(1, size_of::<Cur>()).cast();
+        let cur: *mut Cur = crate::util::ecalloc(1, size_of::<Cur>()).cast();
         if cur.is_null() {
             return std::ptr::null_mut();
         }
