@@ -6,8 +6,13 @@ test:
 	-ssh omsf -t 'pkill rwm'
 	scp target/release/rwm 'omsf:.cargo/bin/rwm'
 
+clippy_args :=
+ifdef FIX
+    clippy_args += --fix
+endif
+
 clippy:
-	cargo clippy --workspace
+	cargo clippy --workspace $(clippy_args)
 
 doc:
 	cargo doc --open
