@@ -178,7 +178,7 @@ static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 void unfocus(Client *c, int setfocus);
-static void unmanage(Client *c, int destroyed);
+void unmanage(Client *c, int destroyed);
 void unmapnotify(XEvent *e);
 static void updatebarpos(Monitor *m);
 void updatebars(void);
