@@ -6,9 +6,9 @@ use std::{
 use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
-    cleanmask, configure, drw, focus, height, is_visible, resizeclient,
-    restack, setfullscreen, seturgent, textw, unmanage, updatebars, updategeom,
-    width, wintoclient, wintomon,
+    cleanmask, configure, drawbar, drw, focus, height, is_visible,
+    resizeclient, restack, setfullscreen, seturgent, textw, unmanage,
+    updatebars, updategeom, width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -247,9 +247,16 @@ pub(crate) fn enternotify(e: *mut XEvent) {
     unsafe { bindgen::enternotify(e) }
 }
 
-// DUMMY
 pub(crate) fn expose(e: *mut XEvent) {
-    unsafe { bindgen::expose(e) }
+    unsafe {
+        let ev = &(*e).xexpose;
+        if ev.count == 0 {
+            let m = wintomon(ev.window);
+            if !m.is_null() {
+                drawbar(m);
+            }
+        }
+    }
 }
 
 // DUMMY
