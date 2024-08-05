@@ -1,9 +1,14 @@
-use std::ptr::{addr_of, null_mut};
+use std::{
+    ffi::c_uint,
+    ptr::{addr_of, null_mut},
+};
 
 use crate::{
+    arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
-    cleanmask, configure, height, is_visible, restack, setfullscreen,
-    seturgent, textw, width, wintoclient, wintomon,
+    cleanmask, configure, drw, focus, height, is_visible, resizeclient,
+    restack, setfullscreen, seturgent, textw, updatebars, updategeom, width,
+    wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -190,9 +195,41 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn configurenotify(e: *mut XEvent) {
-    unsafe { bindgen::configurenotify(e) }
+    unsafe {
+        let ev = &mut (*e).xconfigure;
+        /* TODO: updategeom handling sucks, needs to be simplified */
+        if ev.window == bindgen::root {
+            let dirty = bindgen::sw != ev.width || bindgen::sh != ev.height;
+            bindgen::sw = ev.width;
+            bindgen::sh = ev.height;
+            if updategeom() != 0 || dirty {
+                drw::resize(drw, bindgen::sw as c_uint, bindgen::bh as c_uint);
+                updatebars();
+                let mut m = bindgen::mons;
+                while !m.is_null() {
+                    let mut c = (*m).clients;
+                    while !c.is_null() {
+                        if (*c).isfullscreen != 0 {
+                            resizeclient(c, (*m).mx, (*m).my, (*m).mw, (*m).mh);
+                        }
+                        c = (*c).next;
+                    }
+                    bindgen::XMoveResizeWindow(
+                        dpy,
+                        (*m).barwin,
+                        (*m).wx,
+                        (*m).by,
+                        (*m).ww as u32,
+                        bindgen::bh as u32,
+                    );
+                    m = (*m).next;
+                }
+                focus(null_mut());
+                arrange(null_mut());
+            }
+        }
+    }
 }
 
 // DUMMY

@@ -195,3 +195,8 @@ pub(crate) fn map(
         bindgen::XSync((*drw).dpy, bindgen::False as i32);
     }
 }
+
+// DUMMY
+pub(crate) fn resize(drw: *mut Drw, sw: c_uint, bh: c_uint) {
+    unsafe { bindgen::drw_resize(drw, sw, bh) }
+}
