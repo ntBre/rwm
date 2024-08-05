@@ -2467,36 +2467,10 @@ fn cleanup() {
     // }
 }
 
-// fn unmanage(mdpy: &Display, c: *mut Client, destroyed: bool) {
-//     unsafe {
-//         let m = (*c).mon;
-//         let mut wc: MaybeUninit<XWindowChanges> = MaybeUninit::uninit();
-//         detach(c);
-//         detachstack(c);
-//         if !destroyed {
-//             (*wc.as_mut_ptr()).border_width = (*c).oldbw;
-//             XGrabServer(mdpy.inner); // avoid race conditions
-//             XSetErrorHandler(Some(xerrordummy));
-//             XSelectInput(mdpy.inner, (*c).win, NoEventMask);
-//             // restore border
-//             XConfigureWindow(
-//                 mdpy.inner,
-//                 (*c).win,
-//                 CWBorderWidth as u32,
-//                 wc.as_mut_ptr(),
-//             );
-//             XUngrabButton(mdpy.inner, AnyButton as u32, AnyModifier, (*c).win);
-//             setclientstate(mdpy, c, WITHDRAWN_STATE);
-//             XSync(mdpy.inner, False);
-//             XSetErrorHandler(Some(xerror));
-//             XUngrabServer(mdpy.inner);
-//         }
-//         drop(Box::from_raw(c));
-//         focus(mdpy, std::ptr::null_mut());
-//         updateclientlist(mdpy);
-//         arrange(mdpy, m);
-//     }
-// }
+// DUMMY
+fn unmanage(c: *mut Client, destroyed: c_int) {
+    unsafe { bindgen::unmanage(c, destroyed) }
+}
 
 // fn updateclientlist(mdpy: &Display) {
 //     unsafe {
