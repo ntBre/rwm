@@ -7,7 +7,7 @@ use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drw, focus, height, is_visible,
-    resizeclient, restack, setfullscreen, seturgent, textw, unmanage,
+    resizeclient, restack, setfocus, setfullscreen, seturgent, textw, unmanage,
     updatebars, updategeom, width, wintoclient, wintomon,
 };
 
@@ -259,9 +259,14 @@ pub(crate) fn expose(e: *mut XEvent) {
     }
 }
 
-// DUMMY
+/* there are some broken focus acquiring clients needing extra handling */
 pub(crate) fn focusin(e: *mut XEvent) {
-    unsafe { bindgen::focusin(e) }
+    unsafe {
+        let ev = &(*e).xfocus;
+        if !(*selmon).sel.is_null() && ev.window != (*(*selmon).sel).win {
+            setfocus((*selmon).sel);
+        }
+    }
 }
 
 // DUMMY
