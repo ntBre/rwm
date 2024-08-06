@@ -2464,6 +2464,10 @@ fn cleanup() {
     // }
 }
 
+// TODO bug here. open 3 windows, move one to master, close another one, and
+// focus is lost. current trace is unmanage -> unmapnotify -> wintoclient x
+// 3. bisecting showed bad commit is `impl unmanage` and calling
+// bindgen::unmanage here resolves the issue
 fn unmanage(c: *mut Client, destroyed: c_int) {
     log::trace!("unmanage");
     unsafe {
