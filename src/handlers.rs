@@ -8,7 +8,7 @@ use crate::{
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
     manage, resizeclient, restack, setfocus, setfullscreen, seturgent, textw,
-    unmanage, updatebars, updategeom, width, wintoclient, wintomon,
+    unfocus, unmanage, updatebars, updategeom, width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -332,9 +332,22 @@ pub(crate) fn maprequest(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn motionnotify(e: *mut XEvent) {
-    unsafe { bindgen::motionnotify(e) }
+    log::trace!("motionnotify");
+    static mut MON: *mut bindgen::Monitor = null_mut();
+    unsafe {
+        let ev = &(*e).xmotion;
+        if ev.window != bindgen::root {
+            return;
+        }
+        let m = bindgen::recttomon(ev.x_root, ev.y_root, 1, 1);
+        if m != MON && !MON.is_null() {
+            unfocus((*selmon).sel, true);
+            selmon = m;
+            focus(null_mut());
+        }
+        MON = m;
+    }
 }
 
 // DUMMY
