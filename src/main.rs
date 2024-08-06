@@ -20,7 +20,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
-use bindgen::{drw, strncpy, Atom, Client};
+use bindgen::{drw, strncpy, Atom, Client, Monitor};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
@@ -2260,39 +2260,33 @@ fn wintoclient(w: u64) -> *mut bindgen::Client {
     std::ptr::null_mut()
 }
 
-// fn recttomon(x: i32, y: i32, w: i32, h: i32) -> *mut Monitor {
-//     unsafe {
-//         let mut r = SELMON;
-//         let mut area = 0;
-
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             let a = intersect(x, y, w, h, m);
-//             if a > area {
-//                 area = a;
-//                 r = m;
-//             }
-//             m = (*m).next;
-//         }
-//         r
-//     }
-// }
+fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
+    unsafe {
+        let mut r = bindgen::selmon;
+        let mut area = 0;
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            let a = intersect(x, y, w, h, m);
+            if a > area {
+                area = a;
+                r = m;
+            }
+            m = (*m).next;
+        }
+        r
+    }
+}
 
 // "macros"
 
-// fn intersect(x: i32, y: i32, w: i32, h: i32, m: *mut Monitor) -> i32 {
-//     unsafe {
-//         i32::max(
-//             0,
-//             i32::min((x) + (w), (*m).wx as i32 + (*m).ww as i32)
-//                 - i32::max(x, (*m).wx as i32),
-//         ) * i32::max(
-//             0,
-//             i32::min((y) + (h), (*m).wy as i32 + (*m).wh as i32)
-//                 - i32::max(y, (*m).wy as i32),
-//         )
-//     }
-// }
+#[inline]
+fn intersect(x: c_int, y: c_int, w: c_int, h: c_int, m: *mut Monitor) -> c_int {
+    use std::cmp::{max, min};
+    unsafe {
+        max(0, min((x) + (w), (*m).wx + (*m).ww) - max(x, (*m).wx))
+            * max(0, min((y) + (h), (*m).wy + (*m).wh) - max(y, (*m).wy))
+    }
+}
 
 #[inline]
 fn width(x: *mut bindgen::Client) -> i32 {

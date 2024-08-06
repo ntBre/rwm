@@ -7,9 +7,9 @@ use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
-    manage, resizeclient, restack, setclientstate, setfocus, setfullscreen,
-    seturgent, textw, unfocus, unmanage, updatebars, updategeom, width,
-    wintoclient, wintomon,
+    manage, recttomon, resizeclient, restack, setclientstate, setfocus,
+    setfullscreen, seturgent, textw, unfocus, unmanage, updatebars, updategeom,
+    width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -341,7 +341,7 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
         if ev.window != bindgen::root {
             return;
         }
-        let m = bindgen::recttomon(ev.x_root, ev.y_root, 1, 1);
+        let m = recttomon(ev.x_root, ev.y_root, 1, 1);
         if m != MON && !MON.is_null() {
             unfocus((*selmon).sel, true);
             selmon = m;
