@@ -14,7 +14,7 @@ mod bindgen {
 }
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, CString};
+use std::ffi::{c_char, c_int, c_uint, CStr};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
@@ -2864,14 +2864,14 @@ fn applyrules(c: *mut bindgen::Client) {
         (*c).tags = 0;
         bindgen::XGetClassHint(dpy, (*c).win, &mut ch);
         let class = if !ch.res_class.is_null() {
-            CString::from_raw(ch.res_class)
+            CStr::from_ptr(ch.res_class)
         } else {
-            CString::from_raw(bindgen::broken.as_ptr() as *mut _)
+            CStr::from_ptr(bindgen::broken.as_ptr())
         };
         let instance = if !ch.res_name.is_null() {
-            CString::from_raw(ch.res_name)
+            CStr::from_ptr(ch.res_name)
         } else {
-            CString::from_raw(bindgen::broken.as_ptr() as *mut _)
+            CStr::from_ptr(bindgen::broken.as_ptr())
         };
 
         for i in 0..bindgen::rules.len() {
