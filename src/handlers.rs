@@ -1,14 +1,14 @@
 use std::{
     ffi::c_uint,
-    ptr::{addr_of, null_mut},
+    ptr::{addr_of, addr_of_mut, null_mut},
 };
 
 use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
-    resizeclient, restack, setfocus, setfullscreen, seturgent, textw, unmanage,
-    updatebars, updategeom, width, wintoclient, wintomon,
+    manage, resizeclient, restack, setfocus, setfullscreen, seturgent, textw,
+    unmanage, updatebars, updategeom, width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -284,9 +284,51 @@ pub(crate) fn mappingnotify(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn maprequest(e: *mut XEvent) {
-    unsafe { bindgen::maprequest(e) }
+    use bindgen::XWindowAttributes;
+
+    static mut WA: XWindowAttributes = XWindowAttributes {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        border_width: 0,
+        depth: 0,
+        visual: null_mut(),
+        root: 0,
+        class: 0,
+        bit_gravity: 0,
+        win_gravity: 0,
+        backing_store: 0,
+        backing_planes: 0,
+        backing_pixel: 0,
+        save_under: 0,
+        colormap: 0,
+        map_installed: 0,
+        map_state: 0,
+        all_event_masks: 0,
+        your_event_mask: 0,
+        do_not_propagate_mask: 0,
+        override_redirect: 0,
+        screen: null_mut(),
+    };
+
+    // I don't really see a pratical reason why WA is static except to prevent
+    // re-allocating it on the stack on each call since it is pretty big. The
+    // first call here is always rebuilding it, so I don't think we're using it
+    // in its previous state.
+    unsafe {
+        let ev = &(*e).xmaprequest;
+        let res =
+            bindgen::XGetWindowAttributes(dpy, ev.window, addr_of_mut!(WA));
+        // XGetWindowAttributes returns a zero if the function fails
+        if res == 0 || WA.override_redirect != 0 {
+            return;
+        }
+        if wintoclient(ev.window).is_null() {
+            manage(ev.window, addr_of_mut!(WA));
+        }
+    }
 }
 
 // DUMMY
