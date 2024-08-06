@@ -990,6 +990,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
 
 fn configure(c: *mut bindgen::Client) {
     // TODO this looks like a nice Into impl
+    log::trace!("configure");
     unsafe {
         let mut ce = bindgen::XConfigureEvent {
             type_: bindgen::ConfigureNotify as i32,
@@ -1114,6 +1115,7 @@ fn applysizehints(
 }
 
 fn updatesizehints(c: *mut bindgen::Client) {
+    log::trace!("updatesizehints");
     let mut msize: i64 = 0;
     let mut size = bindgen::XSizeHints {
         flags: Default::default(),
@@ -2241,6 +2243,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
 }
 
 fn wintoclient(w: u64) -> *mut bindgen::Client {
+    log::trace!("wintoclient");
     unsafe {
         let mut m = bindgen::mons;
         while !m.is_null() {
@@ -2635,6 +2638,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         (*c).oldbw = wa.border_width;
 
         updatetitle(c);
+        log::trace!("manage: XGetTransientForHint");
         if bindgen::XGetTransientForHint(dpy, w, &mut trans) != 0 {
             let t = wintoclient(trans);
             if !t.is_null() {
@@ -2659,6 +2663,8 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         (*c).x = max((*c).x, (*(*c).mon).wx as i32);
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
         (*c).bw = bindgen::borderpx as i32;
+
+        log::trace!("manage: XWindowChanges");
         let mut wc = bindgen::XWindowChanges {
             x: 0,
             y: 0,
@@ -2736,6 +2742,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 }
 
 fn updatewmhints(c: *mut bindgen::Client) {
+    log::trace!("updatewmhints");
     const URGENT: i64 = bindgen::XUrgencyHint as i64;
     unsafe {
         let wmh = bindgen::XGetWMHints(dpy, (*c).win);
@@ -2757,6 +2764,7 @@ fn updatewmhints(c: *mut bindgen::Client) {
 }
 
 fn updatewindowtype(c: *mut bindgen::Client) {
+    log::trace!("updatewindowtype");
     use bindgen::{
         netatom, NetWMFullscreen, NetWMState, NetWMWindowType,
         NetWMWindowTypeDialog,
@@ -2860,6 +2868,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
 }
 
 fn applyrules(c: *mut bindgen::Client) {
+    log::trace!("applyrules");
     unsafe {
         let mut ch = bindgen::XClassHint {
             res_name: std::ptr::null_mut(),
@@ -2918,6 +2927,7 @@ fn applyrules(c: *mut bindgen::Client) {
 const TAGMASK: u32 = (1 << 9) - 1;
 
 fn updatetitle(c: *mut bindgen::Client) {
+    log::trace!("updatetitle");
     unsafe {
         if gettextprop(
             (*c).win,
