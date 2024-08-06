@@ -319,13 +319,16 @@ pub(crate) fn maprequest(e: *mut XEvent) {
     // in its previous state.
     unsafe {
         let ev = &(*e).xmaprequest;
+        log::trace!("getting window attributes");
         let res =
             bindgen::XGetWindowAttributes(dpy, ev.window, addr_of_mut!(WA));
         // XGetWindowAttributes returns a zero if the function fails
         if res == 0 || WA.override_redirect != 0 {
             return;
         }
+        log::trace!("wintoclient");
         if wintoclient(ev.window).is_null() {
+            log::trace!("managing new window");
             manage(ev.window, addr_of_mut!(WA));
         }
     }

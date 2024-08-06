@@ -2992,6 +2992,7 @@ fn die(msg: &str) {
 }
 
 fn main() {
+    env_logger::init();
     unsafe {
         dpy = bindgen::XOpenDisplay(std::ptr::null_mut());
         if dpy.is_null() {
