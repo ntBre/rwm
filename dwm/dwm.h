@@ -156,7 +156,7 @@ static Client *nexttiled(Client *c);
 static void pop(Client *c);
 void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
-static Monitor *recttomon(int x, int y, int w, int h);
+Monitor *recttomon(int x, int y, int w, int h);
 void resize(Client *c, int x, int y, int w, int h, int interact);
 void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
