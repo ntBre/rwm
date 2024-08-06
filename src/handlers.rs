@@ -6,7 +6,7 @@ use std::{
 use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
-    cleanmask, configure, drawbar, drw, focus, height, is_visible,
+    cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
     resizeclient, restack, setfocus, setfullscreen, seturgent, textw, unmanage,
     updatebars, updategeom, width, wintoclient, wintomon,
 };
@@ -274,9 +274,14 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe { bindgen::keypress(e) }
 }
 
-// DUMMY
 pub(crate) fn mappingnotify(e: *mut XEvent) {
-    unsafe { bindgen::mappingnotify(e) }
+    unsafe {
+        let ev = &mut (*e).xmapping;
+        bindgen::XRefreshKeyboardMapping(ev);
+        if ev.request == bindgen::MappingKeyboard as i32 {
+            grabkeys();
+        }
+    }
 }
 
 // DUMMY
