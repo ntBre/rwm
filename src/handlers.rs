@@ -7,8 +7,9 @@ use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
-    manage, resizeclient, restack, setfocus, setfullscreen, seturgent, textw,
-    unfocus, unmanage, updatebars, updategeom, width, wintoclient, wintomon,
+    manage, resizeclient, restack, setclientstate, setfocus, setfullscreen,
+    seturgent, textw, unfocus, unmanage, updatebars, updategeom, width,
+    wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -355,7 +356,17 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
     unsafe { bindgen::propertynotify(e) }
 }
 
-// DUMMY
 pub(crate) fn unmapnotify(e: *mut XEvent) {
-    unsafe { bindgen::unmapnotify(e) }
+    log::trace!("unmapnotify");
+    unsafe {
+        let ev = &(*e).xunmap;
+        let c = wintoclient(ev.window);
+        if !c.is_null() {
+            if ev.send_event != 0 {
+                setclientstate(c, bindgen::WithdrawnState as usize);
+            } else {
+                unmanage(c, 0);
+            }
+        }
+    }
 }
