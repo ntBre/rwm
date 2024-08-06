@@ -2621,6 +2621,7 @@ fn scan() {
 }
 
 fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
+    log::trace!("manage");
     let mut trans = 0;
     unsafe {
         let wa = *wa;
