@@ -2668,15 +2668,21 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             sibling: 0,
             stack_mode: 0,
         };
+        log::trace!("manage: XConfigureWindow");
         bindgen::XConfigureWindow(dpy, w, CWBorderWidth as u32, &mut wc);
-        bindgen::XSetWindowBorder(
-            dpy,
-            w,
-            (*(*bindgen::scheme
-                .offset(bindgen::SchemeNorm as isize)
-                .offset(bindgen::ColBorder as isize)))
-            .pixel,
+        log::trace!(
+            "manage: XSetWindowBorder with dpy = {dpy:?} and w = {w:?}"
         );
+        log::trace!("scheme: {:?}", bindgen::scheme);
+        let scheme_norm: *mut bindgen::Clr =
+            *bindgen::scheme.offset(bindgen::SchemeNorm as isize);
+        log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
+        let border: bindgen::Clr =
+            *scheme_norm.offset(bindgen::ColBorder as isize);
+        log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
+        let pixel = border.pixel;
+        log::trace!("pixel = {pixel:?}");
+        bindgen::XSetWindowBorder(dpy, w, pixel);
         configure(c); // propagates border width, if size doesn't change
         updatewindowtype(c);
         updatesizehints(c);
