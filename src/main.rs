@@ -2464,9 +2464,48 @@ fn cleanup() {
     // }
 }
 
-// DUMMY
 fn unmanage(c: *mut Client, destroyed: c_int) {
-    unsafe { bindgen::unmanage(c, destroyed) }
+    log::trace!("unmanage");
+    unsafe {
+        let m = (*c).mon;
+        let mut wc = bindgen::XWindowChanges {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            border_width: 0,
+            sibling: 0,
+            stack_mode: 0,
+        };
+        bindgen::detach(c);
+        bindgen::detachstack(c);
+        if destroyed == 0 {
+            wc.border_width = (*c).oldbw;
+            bindgen::XGrabServer(dpy); /* avoid race conditions */
+            bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
+            bindgen::XSelectInput(dpy, (*c).win, bindgen::NoEventMask as i64);
+            bindgen::XConfigureWindow(
+                dpy,
+                (*c).win,
+                bindgen::CWBorderWidth,
+                &mut wc,
+            ); /* restore border */
+            bindgen::XUngrabButton(
+                dpy,
+                bindgen::AnyButton,
+                bindgen::AnyModifier,
+                (*c).win,
+            );
+            bindgen::setclientstate(c, bindgen::WithdrawnState as i64);
+            bindgen::XSync(dpy, bindgen::False as i32);
+            bindgen::XSetErrorHandler(Some(bindgen::xerror));
+            bindgen::XUngrabServer(dpy);
+        }
+        libc::free(c.cast());
+        focus(null_mut());
+        bindgen::updateclientlist();
+        arrange(m);
+    }
 }
 
 // fn updateclientlist(mdpy: &Display) {
