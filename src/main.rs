@@ -1802,6 +1802,7 @@ fn updatenumlockmask() {
 }
 
 fn seturgent(c: *mut Client, urg: bool) {
+    log::trace!("seturgent");
     unsafe {
         (*c).isurgent = urg as c_int;
         let wmh = bindgen::XGetWMHints(dpy, (*c).win);
@@ -1819,6 +1820,7 @@ fn seturgent(c: *mut Client, urg: bool) {
 }
 
 fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
+    log::trace!("unfocus");
     use bindgen::{
         netatom, root, scheme, ColBorder, NetActiveWindow, SchemeNorm,
     };
@@ -2344,6 +2346,7 @@ fn cleanmask(mask: u32) -> u32 {
 // }
 
 fn attachstack(c: *mut bindgen::Client) {
+    log::trace!("attachstack");
     unsafe {
         (*c).snext = (*(*c).mon).stack;
         (*(*c).mon).stack = c;
@@ -2351,6 +2354,7 @@ fn attachstack(c: *mut bindgen::Client) {
 }
 
 fn attach(c: *mut bindgen::Client) {
+    log::trace!("attach");
     unsafe {
         (*c).next = (*(*c).mon).clients;
         (*(*c).mon).clients = c;
@@ -2358,6 +2362,7 @@ fn attach(c: *mut bindgen::Client) {
 }
 
 fn detachstack(c: *mut Client) {
+    log::trace!("detachstack");
     unsafe {
         let mut tc: *mut *mut Client = &mut (*(*c).mon).stack;
         while !(*tc).is_null() && *tc != c {
@@ -2466,10 +2471,6 @@ fn cleanup() {
     // }
 }
 
-// TODO bug here. open 3 windows, move one to master, close another one, and
-// focus is lost. current trace is unmanage -> unmapnotify -> wintoclient x
-// 3. bisecting showed bad commit is `impl unmanage` and calling
-// bindgen::unmanage here resolves the issue
 fn unmanage(c: *mut Client, destroyed: c_int) {
     log::trace!("unmanage");
     unsafe {
@@ -2508,7 +2509,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             bindgen::XUngrabServer(dpy);
         }
         libc::free(c.cast());
-        bindgen::focus(null_mut());
+        focus(null_mut());
         bindgen::updateclientlist();
         arrange(m);
     }
