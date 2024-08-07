@@ -2511,34 +2511,15 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         }
         libc::free(c.cast());
         focus(null_mut());
-        bindgen::updateclientlist();
+        updateclientlist();
         arrange(m);
     }
 }
 
-// fn updateclientlist(mdpy: &Display) {
-//     unsafe {
-//         XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ClientList as usize]);
-//         let mut m = MONS;
-//         while !m.is_null() {
-//             let mut c = (*m).clients;
-//             while !c.is_null() {
-//                 xchangeproperty(
-//                     mdpy,
-//                     ROOT,
-//                     NETATOM[Net::ClientList as usize],
-//                     XA_WINDOW,
-//                     32,
-//                     PropModeAppend,
-//                     &mut ((*c).win as u8) as *mut _,
-//                     1,
-//                 );
-//                 c = (*c).next;
-//             }
-//             m = (*m).next;
-//         }
-//     }
-// }
+// DUMMY
+fn updateclientlist() {
+    unsafe { bindgen::updateclientlist() }
+}
 
 fn setclientstate(c: *mut bindgen::Client, state: usize) {
     let mut data: [c_long; 2] = [state as c_long, bindgen::None as c_long];
