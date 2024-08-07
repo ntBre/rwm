@@ -1,1 +1,1 @@
-find . -name '*.rs' -exec grep -EnH 'bindgen::[a-z]+\(' {} \;
+find . -name '*.rs' -exec grep -EnH 'bindgen::[a-z_]+\(' {} \;
