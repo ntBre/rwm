@@ -2381,28 +2381,26 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
     }
 }
 
-fn default_handler(_ev: *mut bindgen::XEvent) {}
-
 static HANDLER: LazyLock<
     [fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize],
 > = LazyLock::new(|| {
-    let mut handler = [default_handler as fn(*mut bindgen::XEvent);
-        bindgen::LASTEvent as usize];
-    handler[bindgen::ButtonPress as usize] = handlers::buttonpress;
-    handler[bindgen::ClientMessage as usize] = handlers::clientmessage;
-    handler[bindgen::ConfigureRequest as usize] = handlers::configurerequest;
-    handler[bindgen::ConfigureNotify as usize] = handlers::configurenotify;
-    handler[bindgen::DestroyNotify as usize] = handlers::destroynotify;
-    handler[bindgen::EnterNotify as usize] = handlers::enternotify;
-    handler[bindgen::Expose as usize] = handlers::expose;
-    handler[bindgen::FocusIn as usize] = handlers::focusin;
-    handler[bindgen::KeyPress as usize] = handlers::keypress;
-    handler[bindgen::MappingNotify as usize] = handlers::mappingnotify;
-    handler[bindgen::MapRequest as usize] = handlers::maprequest;
-    handler[bindgen::MotionNotify as usize] = handlers::motionnotify;
-    handler[bindgen::PropertyNotify as usize] = handlers::propertynotify;
-    handler[bindgen::UnmapNotify as usize] = handlers::unmapnotify;
-    handler
+    fn dh(_ev: *mut bindgen::XEvent) {}
+    let mut ret = [dh as fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize];
+    ret[bindgen::ButtonPress as usize] = handlers::buttonpress;
+    ret[bindgen::ClientMessage as usize] = handlers::clientmessage;
+    ret[bindgen::ConfigureRequest as usize] = handlers::configurerequest;
+    ret[bindgen::ConfigureNotify as usize] = handlers::configurenotify;
+    ret[bindgen::DestroyNotify as usize] = handlers::destroynotify;
+    ret[bindgen::EnterNotify as usize] = handlers::enternotify;
+    ret[bindgen::Expose as usize] = handlers::expose;
+    ret[bindgen::FocusIn as usize] = handlers::focusin;
+    ret[bindgen::KeyPress as usize] = handlers::keypress;
+    ret[bindgen::MappingNotify as usize] = handlers::mappingnotify;
+    ret[bindgen::MapRequest as usize] = handlers::maprequest;
+    ret[bindgen::MotionNotify as usize] = handlers::motionnotify;
+    ret[bindgen::PropertyNotify as usize] = handlers::propertynotify;
+    ret[bindgen::UnmapNotify as usize] = handlers::unmapnotify;
+    ret
 });
 
 /// main event loop
