@@ -651,6 +651,7 @@ fn setup() {
 }
 
 fn focus(c: *mut bindgen::Client) {
+    log::trace!("focus");
     use bindgen::{scheme, selmon, ColBorder, SchemeSel};
     unsafe {
         if c.is_null() || !is_visible(c) {
@@ -837,6 +838,7 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
 // }
 
 fn arrange(mut m: *mut bindgen::Monitor) {
+    log::trace!("arrange");
     unsafe {
         if !m.is_null() {
             showhide((*m).stack);
@@ -2506,7 +2508,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             bindgen::XUngrabServer(dpy);
         }
         libc::free(c.cast());
-        focus(null_mut());
+        bindgen::focus(null_mut());
         bindgen::updateclientlist();
         arrange(m);
     }
