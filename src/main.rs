@@ -650,12 +650,12 @@ fn setup() {
     }
 }
 
-fn focus(c: *mut bindgen::Client) {
-    log::trace!("focus");
+fn focus(mut c: *mut bindgen::Client) {
+    log::trace!("focus: c = {c:?}");
     use bindgen::{scheme, selmon, ColBorder, SchemeSel};
     unsafe {
         if c.is_null() || !is_visible(c) {
-            let mut c = (*selmon).stack;
+            c = (*selmon).stack;
             while !c.is_null() && !is_visible(c) {
                 c = (*c).snext;
             }
