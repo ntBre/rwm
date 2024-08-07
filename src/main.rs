@@ -1222,15 +1222,16 @@ fn updatesizehints(c: *mut bindgen::Client) {
 //     }
 // }
 
-// fn detach(c: *mut Client) {
-//     unsafe {
-//         let mut tc = &mut (*(*c).mon).clients;
-//         while !(*tc).is_null() && *tc != c {
-//             tc = &mut (*(*tc)).next;
-//         }
-//         *tc = (*c).next;
-//     }
-// }
+fn detach(c: *mut Client) {
+    log::trace!("detach");
+    unsafe {
+        let mut tc: *mut *mut Client = &mut (*(*c).mon).clients;
+        while !(*tc).is_null() && *tc != c {
+            tc = &mut (*(*tc)).next;
+        }
+        *tc = (*c).next;
+    }
+}
 
 // fn nexttiled(mut c: *mut Client) -> *mut Client {
 //     unsafe {
@@ -2484,8 +2485,8 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             sibling: 0,
             stack_mode: 0,
         };
-        bindgen::detach(c);
-        bindgen::detachstack(c);
+        detach(c);
+        detachstack(c);
         if destroyed == 0 {
             wc.border_width = (*c).oldbw;
             bindgen::XGrabServer(dpy); /* avoid race conditions */
