@@ -123,8 +123,7 @@ pub(crate) fn fontset_create(
         }
 
         for i in 1..=fontcount {
-            let cur =
-                bindgen::xfont_create(drw, fonts[fontcount - i], null_mut());
+            let cur = xfont_create(drw, fonts[fontcount - i], null_mut());
             if !cur.is_null() {
                 (*cur).next = ret;
                 ret = cur;
@@ -133,6 +132,15 @@ pub(crate) fn fontset_create(
         (*drw).fonts = ret;
         ret
     }
+}
+
+// DUMMY
+fn xfont_create(
+    drw: *mut Drw,
+    fontname: *const i8,
+    fontpattern: *mut bindgen::FcPattern,
+) -> *mut Fnt {
+    unsafe { bindgen::xfont_create(drw, fontname, fontpattern) }
 }
 
 // DUMMY
