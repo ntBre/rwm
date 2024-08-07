@@ -2504,7 +2504,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
                 bindgen::AnyModifier,
                 (*c).win,
             );
-            bindgen::setclientstate(c, bindgen::WithdrawnState as i64);
+            setclientstate(c, bindgen::WithdrawnState as usize);
             bindgen::XSync(dpy, bindgen::False as i32);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(dpy);
