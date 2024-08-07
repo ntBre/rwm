@@ -2312,45 +2312,7 @@ fn is_visible(c: *const Client) -> bool {
 
 // DUMMY
 fn cleanup() {
-    unsafe {
-        bindgen::cleanup();
-    }
-    // let a = Arg::Uint(!0);
-    // let l = Box::new(Layout {
-    //     symbol: "",
-    //     arrange: None,
-    // });
-    // let _i = 0;
-
-    // view(mdpy, a);
-    // unsafe {
-    //     (*SELMON).lt[(*SELMON).sellt] = Box::into_raw(l);
-    //     let mut m = MONS;
-    //     while !m.is_null() {
-    //         while !(*m).stack.is_null() {
-    //             unmanage(mdpy, (*m).stack, false);
-    //         }
-    //         m = (*m).next;
-    //     }
-    //     XUngrabKey(mdpy.inner, AnyKey, AnyModifier, ROOT);
-    //     while !MONS.is_null() {
-    //         cleanupmon(MONS, mdpy);
-    //     }
-    //     for i in 0..Cur::Last as usize {
-    //         DRW.as_ref().unwrap().cur_free(CURSOR[i]);
-    //     }
-    //     // shouldn't have to free SCHEME because it's actually a vec
-    //     XDestroyWindow(mdpy.inner, WMCHECKWIN);
-    //     drop(Box::from_raw(DRW));
-    //     XSync(mdpy.inner, False);
-    //     XSetInputFocus(
-    //         mdpy.inner,
-    //         PointerRoot as u64,
-    //         RevertToPointerRoot,
-    //         CurrentTime,
-    //     );
-    //     XDeleteProperty(mdpy.inner, ROOT, NETATOM[Net::ActiveWindow as usize]);
-    // }
+    unsafe { bindgen::cleanup() }
 }
 
 fn unmanage(c: *mut Client, destroyed: c_int) {
