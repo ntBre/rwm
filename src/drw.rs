@@ -1,10 +1,11 @@
-use std::ffi::{c_char, c_int, c_uint};
+use std::ffi::{c_char, c_int, c_uint, CStr};
 use std::ptr::null_mut;
 
-use crate::bindgen;
 use crate::bindgen::Cur;
 use crate::bindgen::Drw;
 use crate::bindgen::Window;
+use crate::util::ecalloc;
+use crate::{bindgen, die};
 use bindgen::{Clr, Display, Fnt};
 
 pub(crate) fn create(
@@ -134,13 +135,59 @@ pub(crate) fn fontset_create(
     }
 }
 
-// DUMMY
 fn xfont_create(
     drw: *mut Drw,
     fontname: *const i8,
     fontpattern: *mut bindgen::FcPattern,
 ) -> *mut Fnt {
-    unsafe { bindgen::xfont_create(drw, fontname, fontpattern) }
+    use bindgen::{FcPattern, XftFont};
+    unsafe {
+        let mut xfont: *mut XftFont = null_mut();
+        let mut pattern: *mut FcPattern = null_mut();
+        if !fontname.is_null() {
+            /* Using the pattern found at font->xfont->pattern does not yield
+             * the same substitution results as using the pattern returned by
+             * FcNameParse; using the latter results in the desired fallback
+             * behaviour whereas the former just results in missing-character
+             * rectangles being drawn, at least with some fonts. */
+            xfont =
+                bindgen::XftFontOpenName((*drw).dpy, (*drw).screen, fontname);
+            if xfont.is_null() {
+                eprintln!(
+                    "error, cannot load font from name: '{:?}'",
+                    CStr::from_ptr(fontname)
+                );
+                return null_mut();
+            }
+            pattern = bindgen::FcNameParse(fontname as *mut bindgen::FcChar8);
+            if pattern.is_null() {
+                eprintln!(
+                    "error, cannot parse font name to pattern: '{:?}'",
+                    CStr::from_ptr(fontname)
+                );
+                bindgen::XftFontClose((*drw).dpy, xfont);
+                return null_mut();
+            }
+        } else if !fontpattern.is_null() {
+            let xfont = bindgen::XftFontOpenPattern((*drw).dpy, fontpattern);
+            if xfont.is_null() {
+                eprintln!("error, cannot load font from pattern");
+                return null_mut();
+            }
+        } else {
+            die("no font specified");
+        }
+
+        // could just Box::into_raw after constructing a Fnt here, I think. the
+        // only field not initialized is the next ptr
+        let font: *mut Fnt = ecalloc(1, size_of::<Fnt>()).cast();
+        (*font).xfont = xfont;
+        (*font).pattern = pattern;
+        (*font).h = (*xfont).ascent as u32 + (*xfont).descent as u32;
+        (*font).dpy = (*drw).dpy;
+
+        font
+    }
 }
 
 // DUMMY
