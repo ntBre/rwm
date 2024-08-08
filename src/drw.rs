@@ -204,7 +204,22 @@ pub(crate) fn map(
     }
 }
 
-// DUMMY
-pub(crate) fn resize(drw: *mut Drw, sw: c_uint, bh: c_uint) {
-    unsafe { bindgen::drw_resize(drw, sw, bh) }
+pub(crate) fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+    unsafe {
+        if drw.is_null() {
+            return;
+        }
+        (*drw).w = w;
+        (*drw).h = h;
+        if (*drw).drawable != 0 {
+            bindgen::XFreePixmap((*drw).dpy, (*drw).drawable);
+        }
+        (*drw).drawable = bindgen::XCreatePixmap(
+            (*drw).dpy,
+            (*drw).root,
+            w,
+            h,
+            bindgen::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
+        );
+    }
 }
