@@ -22,6 +22,7 @@ use std::sync::LazyLock;
 
 use bindgen::{drw, strncpy, Atom, Client, Monitor};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
+use util::die;
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
@@ -2880,18 +2881,18 @@ mod handlers;
 mod util {
     use libc::{c_void, size_t};
 
+    pub(crate) fn die(msg: &str) {
+        eprintln!("{}", msg);
+        std::process::exit(1);
+    }
+
     pub(crate) fn ecalloc(nmemb: size_t, size: size_t) -> *mut c_void {
         let ret = unsafe { libc::calloc(nmemb, size) };
         if ret.is_null() {
-            crate::die("calloc:");
+            die("calloc:");
         }
         ret
     }
-}
-
-fn die(msg: &str) {
-    eprintln!("{}", msg);
-    std::process::exit(1);
 }
 
 fn main() {
