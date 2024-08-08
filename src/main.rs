@@ -2123,9 +2123,26 @@ fn updategeom() -> i32 {
     unsafe { bindgen::updategeom() }
 }
 
-// DUMMY
 fn wintomon(w: Window) -> *mut bindgen::Monitor {
-    unsafe { bindgen::wintomon(w) }
+    unsafe {
+        let mut x = 0;
+        let mut y = 0;
+        if w == bindgen::root && getrootptr(&mut x, &mut y) != 0 {
+            return recttomon(x, y, 1, 1);
+        }
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            if w == (*m).barwin {
+                return m;
+            }
+            m = (*m).next;
+        }
+        let c = wintoclient(w);
+        if !c.is_null() {
+            return (*c).mon;
+        }
+        bindgen::selmon
+    }
 }
 
 fn wintoclient(w: u64) -> *mut bindgen::Client {
@@ -2198,18 +2215,24 @@ fn cleanmask(mask: u32) -> u32 {
     }
 }
 
-// fn getrootptr(mdpy: &Display, x: &mut i32, y: &mut i32) -> bool {
-//     let mut di = 0;
-//     let mut dui = 0;
-//     let mut dummy = 0;
-//     unsafe {
-//         let ret = XQueryPointer(
-//             mdpy.inner, ROOT, &mut dummy, &mut dummy, x, y, &mut di, &mut di,
-//             &mut dui,
-//         );
-//         ret != 0
-//     }
-// }
+fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
+    unsafe {
+        let mut di = 0;
+        let mut dui = 0;
+        let mut dummy = 0;
+        bindgen::XQueryPointer(
+            dpy,
+            bindgen::root,
+            &mut dummy,
+            &mut dummy,
+            x,
+            y,
+            &mut di,
+            &mut di,
+            &mut dui,
+        )
+    }
+}
 
 // fn cleanupmon(mon: *mut Monitor, mdpy: &Display) {
 //     unsafe {
