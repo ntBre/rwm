@@ -2383,9 +2383,32 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
     }
 }
 
-// DUMMY
 fn updateclientlist() {
-    unsafe { bindgen::updateclientlist() }
+    unsafe {
+        bindgen::XDeleteProperty(
+            dpy,
+            bindgen::root,
+            bindgen::netatom[bindgen::NetClientList as usize],
+        );
+        let mut m = bindgen::mons;
+        while !m.is_null() {
+            let mut c = (*m).clients;
+            while !c.is_null() {
+                bindgen::XChangeProperty(
+                    dpy,
+                    bindgen::root,
+                    bindgen::netatom[bindgen::NetClientList as usize],
+                    XA_WINDOW,
+                    32,
+                    PropModeAppend,
+                    &((*c).win) as *const u64 as *const c_uchar,
+                    1,
+                );
+                c = (*c).next;
+            }
+            m = (*m).next;
+        }
+    }
 }
 
 fn setclientstate(c: *mut bindgen::Client, state: usize) {
