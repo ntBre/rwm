@@ -23,14 +23,14 @@ use std::sync::LazyLock;
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
-    ButtonReleaseMask, CWBorderWidth, CurrentTime, EnterWindowMask, False,
-    FocusChangeMask, IsViewable, LeaveWindowMask, PointerMotionMask,
+    ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
+    CWOverrideRedirect, CurrentTime, Display as XDisplay, EnterWindowMask,
+    False, FocusChangeMask, IsViewable, LeaveWindowMask, PointerMotionMask,
     PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
     StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, XFree, XA_ATOM, XA_STRING, XA_WINDOW,
+    Success, XErrorEvent, XFree, XSetErrorHandler, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
-use x11::xlib::{Display as XDisplay, XA_WM_NAME};
-use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use bindgen::{dpy, drw, Atom, Client, Monitor};
 use enums::{Cur, Net, WM};
@@ -630,7 +630,7 @@ fn setup() {
         bindgen::XChangeWindowAttributes(
             dpy,
             root,
-            bindgen::CWEventMask as u64 | bindgen::CWCursor as u64,
+            CWEventMask | CWCursor,
             &mut wa,
         );
         bindgen::XSelectInput(dpy, root, wa.event_mask);
@@ -2087,9 +2087,7 @@ fn updatebars() {
                 bindgen::XDefaultDepth(dpy, bindgen::screen),
                 bindgen::CopyFromParent as c_uint,
                 bindgen::XDefaultVisual(dpy, bindgen::screen),
-                (bindgen::CWOverrideRedirect
-                    | bindgen::CWBackPixmap
-                    | bindgen::CWEventMask) as u64,
+                CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
             );
             bindgen::XDefineCursor(
