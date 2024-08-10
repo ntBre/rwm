@@ -35,10 +35,10 @@ use x11::xlib::{
 
 use bindgen::{
     bh, buttons, colors, cursor, dpy, drw, fonts, layouts, lrpad, mons,
-    netatom, root, scheme, screen, selmon, sh, stext, sw, tags, wmatom,
-    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor, NetActiveWindow,
-    NetWMFullscreen, NetWMState, SchemeNorm, SchemeSel, WMProtocols,
-    XInternAtom,
+    netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor,
+    NetActiveWindow, NetWMFullscreen, NetWMState, SchemeNorm, SchemeSel,
+    WMProtocols, XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -905,7 +905,7 @@ fn applysizehints(
         if *w < bh {
             *w = bh;
         }
-        if bindgen::resizehints != 0
+        if resizehints != 0
             || (*c).isfloating != 0
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
