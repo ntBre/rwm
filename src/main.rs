@@ -573,7 +573,7 @@ fn setfocus(c: *mut Client) {
                 1,
             );
         }
-        sendevent(c, bindgen::wmatom[WM::TakeFocus as usize]);
+        sendevent(c, wmatom[WM::TakeFocus as usize]);
     }
 }
 
@@ -2414,8 +2414,8 @@ fn setclientstate(c: *mut Client, state: usize) {
         bindgen::XChangeProperty(
             dpy,
             (*c).win,
-            bindgen::wmatom[WM::State as usize],
-            bindgen::wmatom[WM::State as usize],
+            wmatom[WM::State as usize],
+            wmatom[WM::State as usize],
             32,
             PropModeReplace,
             ptr,
@@ -2868,11 +2868,11 @@ fn getstate(w: Window) -> c_long {
         let cond = bindgen::XGetWindowProperty(
             dpy,
             w,
-            bindgen::wmatom[WM::State as usize],
+            wmatom[WM::State as usize],
             0,
             2,
             False,
-            bindgen::wmatom[WM::State as usize],
+            wmatom[WM::State as usize],
             &mut real,
             &mut format,
             &mut n,
