@@ -12,7 +12,7 @@ use crate::{
     arrange,
     bindgen::{self, dpy, netatom, root, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drawbars, drw,
-    enums::Net,
+    enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
@@ -20,14 +20,10 @@ use crate::{
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
-    use bindgen::{
-        ClkClientWin, ClkLtSymbol, ClkRootWin, ClkStatusText, ClkTagBar,
-        ClkWinTitle,
-    };
     unsafe {
         let mut arg = Arg { i: 0 };
         let ev = &(*e).xbutton;
-        let mut click = ClkRootWin;
+        let mut click = Clk::RootWin;
         // focus monitor if necessary
         let m = wintomon(ev.window);
         if !m.is_null() && m != selmon {
@@ -51,17 +47,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 }
             }
             if i < tags.len() {
-                click = ClkTagBar;
+                click = Clk::TagBar;
                 arg = Arg { ui: 1 << i };
             } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
             {
-                click = ClkLtSymbol;
+                click = Clk::LtSymbol;
             } else if ev.x
                 > (*selmon).ww - textw(addr_of!(bindgen::stext) as *const _)
             {
-                click = ClkStatusText;
+                click = Clk::StatusText;
             } else {
-                click = ClkWinTitle;
+                click = Clk::WinTitle;
             }
         } else {
             let c = wintoclient(ev.window);
@@ -73,18 +69,18 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                     bindgen::ReplayPointer as i32,
                     CurrentTime,
                 );
-                click = ClkClientWin;
+                click = Clk::ClientWin;
             }
         }
         use bindgen::buttons;
         for i in 0..buttons.len() {
-            if click == buttons[i].click
+            if click as u32 == buttons[i].click
                 && buttons[i].func.is_some()
                 && buttons[i].button == ev.button
                 && cleanmask(buttons[i].mask) == cleanmask(ev.state)
             {
                 let f = buttons[i].func.unwrap();
-                let a = if click == ClkTagBar && buttons[i].arg.i == 0 {
+                let a = if click == Clk::TagBar && buttons[i].arg.i == 0 {
                     &arg
                 } else {
                     &buttons[i].arg

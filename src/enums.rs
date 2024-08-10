@@ -7,7 +7,7 @@ pub enum Cur {
 }
 
 /// Clicks
-#[allow(unused)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Clk {
     TagBar,
     LtSymbol,
@@ -15,6 +15,7 @@ pub enum Clk {
     WinTitle,
     ClientWin,
     RootWin,
+    #[allow(unused)]
     Last,
 }
 
