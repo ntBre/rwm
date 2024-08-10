@@ -243,9 +243,26 @@ pub(crate) fn destroynotify(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn enternotify(e: *mut XEvent) {
-    unsafe { bindgen::enternotify(e) }
+    log::trace!("enternotify");
+    unsafe {
+        let ev = &mut (*e).xcrossing;
+        if (ev.mode != bindgen::NotifyNormal as i32
+            || ev.detail == bindgen::NotifyInferior as i32)
+            && ev.window != bindgen::root
+        {
+            return;
+        }
+        let c = wintoclient(ev.window);
+        let m = if !c.is_null() { (*c).mon } else { wintomon(ev.window) };
+        if m != selmon {
+            unfocus((*selmon).sel, true);
+            selmon = m;
+        } else if c.is_null() || c == (*selmon).sel {
+            return;
+        }
+        focus(c)
+    }
 }
 
 pub(crate) fn expose(e: *mut XEvent) {
