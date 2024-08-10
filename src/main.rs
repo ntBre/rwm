@@ -22,7 +22,7 @@ use std::sync::LazyLock;
 
 use bindgen::{drw, strncpy, Atom, Client, Monitor};
 use libc::{c_long, c_uchar, c_ulong, sigaction};
-use util::die;
+use util::{die, ecalloc};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
@@ -2112,9 +2112,135 @@ fn updatebars() {
     }
 }
 
-// DUMMY
 fn updategeom() -> i32 {
-    unsafe { bindgen::updategeom() }
+    use bindgen::{mons, root, selmon, sh, sw};
+
+    unsafe {
+        let mut dirty = 0;
+        if bindgen::XineramaIsActive(dpy) != 0 {
+            let mut nn = 0;
+            let info = bindgen::XineramaQueryScreens(dpy as *mut _, &mut nn);
+
+            let mut n = 0;
+            let mut m = mons;
+            while !m.is_null() {
+                m = (*m).next;
+                n += 1;
+            }
+
+            // only consider unique geometries as separate screens
+            let unique: *mut bindgen::XineramaScreenInfo =
+                ecalloc(nn as usize, size_of::<bindgen::XineramaScreenInfo>())
+                    .cast();
+            // Safety: we obviously just constructed this with this size. don't
+            // forget to free it later!
+            let unique = std::slice::from_raw_parts_mut(unique, nn as usize);
+            let mut i = 0;
+            let mut j = 0;
+            while i < nn {
+                if bindgen::isuniquegeom(
+                    unique.as_mut_ptr(),
+                    j,
+                    info.offset(i as isize) as *mut _,
+                ) != 0
+                {
+                    libc::memcpy(
+                        (&mut unique[j]) as *mut _ as *mut _,
+                        info.offset(i as isize).cast(),
+                        size_of::<bindgen::XineramaScreenInfo>(),
+                    );
+                    j += 1;
+                }
+                i += 1;
+            }
+            bindgen::XFree(info.cast());
+            nn = j as i32;
+
+            // new monitors if nn > n
+            for _ in n..nn {
+                let mut m = mons;
+                while !m.is_null() && !(*m).next.is_null() {
+                    m = (*m).next;
+                }
+                if !m.is_null() {
+                    (*m).next = bindgen::createmon();
+                } else {
+                    mons = bindgen::createmon();
+                }
+            }
+
+            let mut i = 0;
+            let mut m = mons;
+            while i < nn && !m.is_null() {
+                if i >= n
+                    || unique[i as usize].x_org != (*m).mx as i16
+                    || unique[i as usize].y_org != (*m).my as i16
+                    || unique[i as usize].width != (*m).mw as i16
+                    || unique[i as usize].height != (*m).mh as i16
+                {
+                    dirty = 1;
+                    (*m).num = i;
+
+                    (*m).mx = unique[i as usize].x_org as i32;
+                    (*m).wx = unique[i as usize].x_org as i32;
+
+                    (*m).my = unique[i as usize].y_org as i32;
+                    (*m).wy = unique[i as usize].y_org as i32;
+
+                    (*m).mw = unique[i as usize].width as i32;
+                    (*m).ww = unique[i as usize].width as i32;
+
+                    (*m).mh = unique[i as usize].height as i32;
+                    (*m).wh = unique[i as usize].height as i32;
+
+                    bindgen::updatebarpos(m);
+                }
+                m = (*m).next;
+                i += 1;
+            }
+
+            // removed monitors if n > nn
+            for _ in nn..n {
+                let mut m = mons;
+                while !m.is_null() && !(*m).next.is_null() {
+                    m = (*m).next;
+                }
+                let mut c = (*m).clients;
+                while !c.is_null() {
+                    dirty = 1;
+                    (*m).clients = (*c).next;
+                    detachstack(c);
+                    (*c).mon = mons;
+                    attach(c);
+                    attachstack(c);
+                    c = (*m).clients;
+                }
+                if m == selmon {
+                    selmon = mons;
+                }
+                cleanupmon(m);
+            }
+            libc::free(unique.as_mut_ptr().cast());
+        } else {
+            // default monitor setup
+            if mons.is_null() {
+                mons = bindgen::createmon();
+            }
+            if (*mons).mw != sw || (*mons).mh != sh {
+                dirty = 1;
+                (*mons).mw = sw;
+                (*mons).ww = sw;
+                (*mons).mh = sh;
+                (*mons).wh = sh;
+                bindgen::updatebarpos(mons);
+            }
+        }
+        if dirty != 0 {
+            selmon = mons;
+            selmon = wintomon(root);
+        }
+        dirty
+    }
 }
 
 fn wintomon(w: Window) -> *mut bindgen::Monitor {
