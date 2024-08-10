@@ -69,7 +69,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 crate::focus(c);
                 restack(selmon);
                 bindgen::XAllowEvents(
-                    bindgen::dpy,
+                    dpy,
                     bindgen::ReplayPointer as i32,
                     CurrentTime,
                 );

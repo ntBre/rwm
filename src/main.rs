@@ -984,7 +984,7 @@ fn configure(c: *mut bindgen::Client) {
             type_: bindgen::ConfigureNotify as i32,
             serial: 0,
             send_event: 0,
-            display: bindgen::dpy,
+            display: dpy,
             event: (*c).win,
             window: (*c).win,
             x: (*c).x,
@@ -996,7 +996,7 @@ fn configure(c: *mut bindgen::Client) {
             override_redirect: bindgen::False as i32,
         };
         bindgen::XSendEvent(
-            bindgen::dpy,
+            dpy,
             (*c).win,
             False,
             StructureNotifyMask,
