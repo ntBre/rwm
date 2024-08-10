@@ -11,11 +11,12 @@ use x11::xlib::{
 use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
-    cleanmask, configure, drawbar, drawbars, drw, focus, grabkeys, height,
-    is_visible, manage, recttomon, resizeclient, restack, setclientstate,
-    setfocus, setfullscreen, seturgent, textw, unfocus, unmanage, updatebars,
-    updategeom, updatestatus, updatetitle, updatewindowtype, updatewmhints,
-    width, wintoclient, wintomon,
+    cleanmask, configure, drawbar, drawbars, drw,
+    enums::Net,
+    focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
+    restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
+    unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
+    updatewindowtype, updatewmhints, width, wintoclient, wintomon,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -425,14 +426,14 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
                 _ => {}
             }
             if ev.atom == XA_WM_NAME
-                || ev.atom == bindgen::netatom[bindgen::NetWMName as usize]
+                || ev.atom == bindgen::netatom[Net::WMName as usize]
             {
                 updatetitle(c);
                 if c as *mut _ == (*c.mon).sel {
                     drawbar(c.mon);
                 }
             }
-            if ev.atom == bindgen::netatom[bindgen::NetWMWindowType as usize] {
+            if ev.atom == bindgen::netatom[Net::WMWindowType as usize] {
                 updatewindowtype(c);
             }
         }

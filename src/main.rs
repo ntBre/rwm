@@ -34,7 +34,7 @@ use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use crate::bindgen::{dpy, CurrentTime};
 
-use crate::enums::WM;
+use crate::enums::{Net, WM};
 
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
@@ -528,23 +528,23 @@ fn setup() {
         wmatom[WM::TakeFocus as usize] =
             XInternAtom(dpy, c"WM_TAKE_FOCUS".as_ptr(), False);
 
-        netatom[bindgen::NetActiveWindow as usize] =
+        netatom[Net::ActiveWindow as usize] =
             XInternAtom(dpy, c"_NET_ACTIVE_WINDOW".as_ptr(), False);
-        netatom[bindgen::NetSupported as usize] =
+        netatom[Net::Supported as usize] =
             XInternAtom(dpy, c"_NET_SUPPORTED".as_ptr(), False);
-        netatom[bindgen::NetWMName as usize] =
+        netatom[Net::WMName as usize] =
             XInternAtom(dpy, c"_NET_WM_NAME".as_ptr(), False);
-        netatom[bindgen::NetWMState as usize] =
+        netatom[Net::WMState as usize] =
             XInternAtom(dpy, c"_NET_WM_STATE".as_ptr(), False);
-        netatom[bindgen::NetWMCheck as usize] =
+        netatom[Net::WMCheck as usize] =
             XInternAtom(dpy, c"_NET_SUPPORTING_WM_CHECK".as_ptr(), False);
-        netatom[bindgen::NetWMFullscreen as usize] =
+        netatom[Net::WMFullscreen as usize] =
             XInternAtom(dpy, c"_NET_WM_STATE_FULLSCREEN".as_ptr(), False);
-        netatom[bindgen::NetWMWindowType as usize] =
+        netatom[Net::WMWindowType as usize] =
             XInternAtom(dpy, c"_NET_WM_WINDOW_TYPE".as_ptr(), False);
-        netatom[bindgen::NetWMWindowTypeDialog as usize] =
+        netatom[Net::WMWindowTypeDialog as usize] =
             XInternAtom(dpy, c"_NET_WM_WINDOW_TYPE_DIALOG".as_ptr(), False);
-        netatom[bindgen::NetClientList as usize] =
+        netatom[Net::ClientList as usize] =
             XInternAtom(dpy, c"_NET_CLIENT_LIST".as_ptr(), False);
 
         use bindgen::cursor;
@@ -577,7 +577,7 @@ fn setup() {
         bindgen::XChangeProperty(
             dpy,
             wmcheckwin,
-            netatom[bindgen::NetWMCheck as usize],
+            netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             bindgen::PropModeReplace as i32,
@@ -587,7 +587,7 @@ fn setup() {
         bindgen::XChangeProperty(
             dpy,
             wmcheckwin,
-            netatom[bindgen::NetWMName as usize],
+            netatom[Net::WMName as usize],
             utf8string,
             8,
             bindgen::PropModeReplace as i32,
@@ -597,7 +597,7 @@ fn setup() {
         bindgen::XChangeProperty(
             dpy,
             root,
-            netatom[bindgen::NetWMCheck as usize],
+            netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             bindgen::PropModeReplace as i32,
@@ -608,18 +608,14 @@ fn setup() {
         bindgen::XChangeProperty(
             dpy,
             root,
-            netatom[bindgen::NetSupported as usize],
+            netatom[Net::Supported as usize],
             XA_ATOM,
             32,
             bindgen::PropModeReplace as i32,
             netatom.as_ptr() as *mut c_uchar,
-            bindgen::NetLast as i32,
+            Net::Last as i32,
         );
-        bindgen::XDeleteProperty(
-            dpy,
-            root,
-            netatom[bindgen::NetClientList as usize],
-        );
+        bindgen::XDeleteProperty(dpy, root, netatom[Net::ClientList as usize]);
 
         // /* select events */
         wa.cursor = (*cursor[bindgen::CurNormal as usize]).cursor;
@@ -681,7 +677,7 @@ fn focus(mut c: *mut bindgen::Client) {
             bindgen::XDeleteProperty(
                 dpy,
                 bindgen::root,
-                bindgen::netatom[bindgen::NetActiveWindow as usize],
+                bindgen::netatom[Net::ActiveWindow as usize],
             );
         }
         (*bindgen::selmon).sel = c;
@@ -711,7 +707,7 @@ fn setfocus(c: *mut Client) {
             bindgen::XChangeProperty(
                 dpy,
                 bindgen::root,
-                bindgen::netatom[bindgen::NetActiveWindow as usize],
+                bindgen::netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
                 bindgen::PropModeReplace as i32,
@@ -2518,7 +2514,7 @@ fn cleanup() {
         bindgen::XDeleteProperty(
             dpy,
             root,
-            bindgen::netatom[bindgen::NetActiveWindow as usize],
+            bindgen::netatom[Net::ActiveWindow as usize],
         );
     }
 
@@ -2574,7 +2570,7 @@ fn updateclientlist() {
         bindgen::XDeleteProperty(
             dpy,
             bindgen::root,
-            bindgen::netatom[bindgen::NetClientList as usize],
+            bindgen::netatom[Net::ClientList as usize],
         );
         let mut m = bindgen::mons;
         while !m.is_null() {
@@ -2583,7 +2579,7 @@ fn updateclientlist() {
                 bindgen::XChangeProperty(
                     dpy,
                     bindgen::root,
-                    bindgen::netatom[bindgen::NetClientList as usize],
+                    bindgen::netatom[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
                     PropModeAppend,
@@ -2811,7 +2807,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XChangeProperty(
             dpy,
             bindgen::root,
-            bindgen::netatom[bindgen::NetClientList as usize],
+            bindgen::netatom[Net::ClientList as usize],
             XA_WINDOW,
             32,
             PropModeAppend,
@@ -3028,7 +3024,7 @@ fn updatetitle(c: *mut bindgen::Client) {
     unsafe {
         if gettextprop(
             (*c).win,
-            bindgen::netatom[bindgen::NetWMName as usize],
+            bindgen::netatom[Net::WMName as usize],
             &mut (*c).name as *mut _,
             size_of_val(&(*c).name) as u32,
         ) == 0

@@ -7,3 +7,17 @@ pub enum WM {
     #[allow(unused)]
     Last,
 }
+
+/// EWMH atoms
+pub enum Net {
+    Supported,
+    WMName,
+    WMState,
+    WMCheck,
+    WMFullscreen,
+    ActiveWindow,
+    WMWindowType,
+    WMWindowTypeDialog,
+    ClientList,
+    Last,
+}
