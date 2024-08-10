@@ -4,19 +4,25 @@ use std::{
 };
 
 use x11::xlib::{
-    CurrentTime, False, PropertyDelete, XA_WM_HINTS, XA_WM_NAME,
-    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
+    CWBorderWidth, CWHeight, CWWidth, CurrentTime, False, MappingKeyboard,
+    NotifyInferior, NotifyNormal, PropertyDelete, ReplayPointer, CWX, CWY,
+    XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
 use crate::{
-    arrange,
-    bindgen::{self, dpy, netatom, root, selmon, tags, Arg, XEvent},
-    cleanmask, configure, drawbar, drawbars, drw,
+    arrange, cleanmask, configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon,
+};
+use crate::{
+    bindgen::{
+        self, bh, buttons, dpy, keys, mons, netatom, root, selmon, sh, stext,
+        sw, tags, Arg, Monitor, XEvent,
+    },
+    Window,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -52,9 +58,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
             {
                 click = Clk::LtSymbol;
-            } else if ev.x
-                > (*selmon).ww - textw(addr_of!(bindgen::stext) as *const _)
-            {
+            } else if ev.x > (*selmon).ww - textw(addr_of!(stext) as *const _) {
                 click = Clk::StatusText;
             } else {
                 click = Clk::WinTitle;
@@ -64,15 +68,10 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             if !c.is_null() {
                 crate::focus(c);
                 restack(selmon);
-                bindgen::XAllowEvents(
-                    dpy,
-                    bindgen::ReplayPointer as i32,
-                    CurrentTime,
-                );
+                bindgen::XAllowEvents(dpy, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
-        use bindgen::buttons;
         for i in 0..buttons.len() {
             if click as u32 == buttons[i].click
                 && buttons[i].func.is_some()
@@ -99,10 +98,9 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
         if c.is_null() {
             return;
         }
-        use bindgen::{netatom, NetActiveWindow, NetWMFullscreen, NetWMState};
-        if cme.message_type == netatom[NetWMState as usize] {
-            if cme.data.l[1] == netatom[NetWMFullscreen as usize] as i64
-                || cme.data.l[2] == netatom[NetWMFullscreen as usize] as i64
+        if cme.message_type == netatom[Net::WMState as usize] {
+            if cme.data.l[1] == netatom[Net::WMFullscreen as usize] as i64
+                || cme.data.l[2] == netatom[Net::WMFullscreen as usize] as i64
             {
                 setfullscreen(
                     c,
@@ -111,7 +109,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                             && (*c).isfullscreen == 0),
                 );
             }
-        } else if cme.message_type == netatom[NetActiveWindow as usize]
+        } else if cme.message_type == netatom[Net::ActiveWindow as usize]
             && c != (*selmon).sel
             && (*c).isurgent == 0
         {
@@ -121,7 +119,6 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
 }
 
 pub(crate) fn configurerequest(e: *mut XEvent) {
-    use bindgen::{CWBorderWidth, CWHeight, CWWidth, CWX, CWY};
     unsafe {
         let ev = &(*e).xconfigurerequest;
         let c = wintoclient(ev.window);
@@ -204,13 +201,13 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
         let ev = &mut (*e).xconfigure;
         /* TODO: updategeom handling sucks, needs to be simplified */
         if ev.window == root {
-            let dirty = bindgen::sw != ev.width || bindgen::sh != ev.height;
-            bindgen::sw = ev.width;
-            bindgen::sh = ev.height;
+            let dirty = sw != ev.width || sh != ev.height;
+            sw = ev.width;
+            sh = ev.height;
             if updategeom() != 0 || dirty {
-                drw::resize(drw, bindgen::sw as c_uint, bindgen::bh as c_uint);
+                drw::resize(drw, sw as c_uint, bh as c_uint);
                 updatebars();
-                let mut m = bindgen::mons;
+                let mut m = mons;
                 while !m.is_null() {
                     let mut c = (*m).clients;
                     while !c.is_null() {
@@ -225,7 +222,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
                         (*m).wx,
                         (*m).by,
                         (*m).ww as u32,
-                        bindgen::bh as u32,
+                        bh as u32,
                     );
                     m = (*m).next;
                 }
@@ -250,8 +247,7 @@ pub(crate) fn enternotify(e: *mut XEvent) {
     log::trace!("enternotify");
     unsafe {
         let ev = &mut (*e).xcrossing;
-        if (ev.mode != bindgen::NotifyNormal as i32
-            || ev.detail == bindgen::NotifyInferior as i32)
+        if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
             && ev.window != root
         {
             return;
@@ -291,8 +287,6 @@ pub(crate) fn focusin(e: *mut XEvent) {
 }
 
 pub(crate) fn keypress(e: *mut XEvent) {
-    use bindgen::keys;
-
     unsafe {
         let ev = &mut (*e).xkey;
         let keysym =
@@ -312,7 +306,7 @@ pub(crate) fn mappingnotify(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xmapping;
         bindgen::XRefreshKeyboardMapping(ev);
-        if ev.request == bindgen::MappingKeyboard as i32 {
+        if ev.request == MappingKeyboard {
             grabkeys();
         }
     }
@@ -368,7 +362,7 @@ pub(crate) fn maprequest(e: *mut XEvent) {
 
 pub(crate) fn motionnotify(e: *mut XEvent) {
     log::trace!("motionnotify");
-    static mut MON: *mut bindgen::Monitor = null_mut();
+    static mut MON: *mut Monitor = null_mut();
     unsafe {
         let ev = &(*e).xmotion;
         if ev.window != root {
@@ -387,7 +381,7 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
 pub(crate) fn propertynotify(e: *mut XEvent) {
     log::trace!("propertynotify");
     unsafe {
-        let mut trans: bindgen::Window = 0;
+        let mut trans: Window = 0;
         let ev = &mut (*e).xproperty;
         if ev.window == root && ev.atom == XA_WM_NAME {
             updatestatus();
