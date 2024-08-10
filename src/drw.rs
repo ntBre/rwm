@@ -1,4 +1,5 @@
 use std::ffi::{c_char, c_int, c_long, c_uint, CStr};
+use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
 use fontconfig_sys::FcMatchPattern;
@@ -553,7 +554,6 @@ pub(crate) fn text(
     }
 }
 
-// DUMMY
 fn font_getexts(
     font: *mut Fnt,
     text: *const i8,
@@ -561,7 +561,26 @@ fn font_getexts(
     w: *mut c_uint,
     h: *mut c_uint,
 ) {
-    unsafe { bindgen::drw_font_getexts(font, text, len, w, h) }
+    unsafe {
+        if font.is_null() || text.is_null() {
+            return;
+        }
+        let mut ext = MaybeUninit::uninit();
+        bindgen::XftTextExtentsUtf8(
+            (*font).dpy,
+            (*font).xfont,
+            text as *const bindgen::XftChar8,
+            len as i32,
+            ext.as_mut_ptr(),
+        );
+        let ext = ext.assume_init();
+        if !w.is_null() {
+            *w = ext.xOff as u32;
+        }
+        if !h.is_null() {
+            *h = (*font).h;
+        }
+    }
 }
 
 pub(crate) fn map(
