@@ -20,9 +20,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
-use bindgen::{drw, Atom, Client, Monitor};
 use libc::{c_long, c_uchar, sigaction};
-use util::{die, ecalloc};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth, CurrentTime,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
@@ -33,9 +31,9 @@ use x11::xlib::{
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
-use crate::bindgen::dpy;
-
-use crate::enums::{Cur, Net, WM};
+use bindgen::{dpy, drw, Atom, Client, Monitor};
+use enums::{Cur, Net, WM};
+use util::{die, ecalloc};
 
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
