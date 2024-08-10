@@ -34,7 +34,7 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    buttons, dpy, drw, mons, root, selmon, Arg, Atom, Client, Clr, Monitor,
+    buttons, dpy, drw, mons, root, selmon, sw, Arg, Atom, Client, Clr, Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -970,8 +970,8 @@ fn applysizehints(
         *w = 1.max(*w);
         *h = 1.max(*h);
         if interact {
-            if *x > bindgen::sw {
-                *x = bindgen::sw - width(c);
+            if *x > sw {
+                *x = sw - width(c);
             }
             if *y > bindgen::sh {
                 *y = bindgen::sh - height(c);
@@ -2745,7 +2745,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XMoveResizeWindow(
             dpy,
             (*c).win,
-            (*c).x + 2 * bindgen::sw,
+            (*c).x + 2 * sw,
             (*c).y,
             (*c).w as u32,
             (*c).h as u32,
