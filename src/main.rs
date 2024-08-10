@@ -822,7 +822,7 @@ fn configure(c: *mut Client) {
     log::trace!("configure");
     unsafe {
         let mut ce = bindgen::XConfigureEvent {
-            type_: bindgen::ConfigureNotify as i32,
+            type_: x11::xlib::ConfigureNotify,
             serial: 0,
             send_event: 0,
             display: dpy,
