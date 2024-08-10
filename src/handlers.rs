@@ -10,7 +10,7 @@ use x11::xlib::{
 
 use crate::{
     arrange,
-    bindgen::{self, dpy, root, selmon, tags, Arg, XEvent},
+    bindgen::{self, dpy, netatom, root, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drawbars, drw,
     enums::Net,
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -425,15 +425,14 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
                 }
                 _ => {}
             }
-            if ev.atom == XA_WM_NAME
-                || ev.atom == bindgen::netatom[Net::WMName as usize]
+            if ev.atom == XA_WM_NAME || ev.atom == netatom[Net::WMName as usize]
             {
                 updatetitle(c);
                 if c as *mut _ == (*c.mon).sel {
                     drawbar(c.mon);
                 }
             }
-            if ev.atom == bindgen::netatom[Net::WMWindowType as usize] {
+            if ev.atom == netatom[Net::WMWindowType as usize] {
                 updatewindowtype(c);
             }
         }
