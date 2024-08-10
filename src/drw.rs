@@ -256,8 +256,7 @@ pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
     self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
 }
 
-// DUMMY
-#[allow(clippy::too_many_arguments, unused)]
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn text(
     drw: *mut Drw,
     mut x: c_int,
