@@ -22,12 +22,12 @@ use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
-    AnyButton, BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
-    ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
-    CWHeight, CWOverrideRedirect, CWWidth, ClientMessage, CurrentTime,
-    Display as XDisplay, EnterWindowMask, False, FocusChangeMask, IsViewable,
-    LeaveWindowMask, LockMask, NoEventMask, PointerMotionMask, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow,
+    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor,
+    CWEventMask, CWHeight, CWOverrideRedirect, CWWidth, ClientMessage,
+    CurrentTime, Display as XDisplay, EnterWindowMask, False, FocusChangeMask,
+    IsViewable, LeaveWindowMask, LockMask, NoEventMask, PointerMotionMask,
+    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
     StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
     Success, XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM,
     XA_STRING, XA_WINDOW, XA_WM_NAME,
@@ -607,18 +607,13 @@ fn grabbuttons(c: *mut Client, focused: bool) {
     unsafe {
         updatenumlockmask();
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
-        bindgen::XUngrabButton(
-            dpy,
-            AnyButton as u32,
-            bindgen::AnyModifier,
-            (*c).win,
-        );
+        bindgen::XUngrabButton(dpy, AnyButton as u32, AnyModifier, (*c).win);
         const BUTTONMASK: u32 = (ButtonPressMask | ButtonReleaseMask) as u32;
         if !focused {
             bindgen::XGrabButton(
                 dpy,
                 AnyButton as u32,
-                bindgen::AnyModifier,
+                AnyModifier,
                 (*c).win,
                 False,
                 BUTTONMASK,
@@ -1561,12 +1556,7 @@ fn grabkeys() {
         updatenumlockmask();
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        bindgen::XUngrabKey(
-            dpy,
-            bindgen::AnyKey as i32,
-            bindgen::AnyModifier,
-            root,
-        );
+        bindgen::XUngrabKey(dpy, bindgen::AnyKey as i32, AnyModifier, root);
         bindgen::XDisplayKeycodes(dpy, &mut start, &mut end);
         let syms = bindgen::XGetKeyboardMapping(
             dpy,
@@ -2282,12 +2272,7 @@ fn cleanup() {
             m = (*m).next;
         }
 
-        bindgen::XUngrabKey(
-            dpy,
-            bindgen::AnyKey as i32,
-            bindgen::AnyModifier,
-            root,
-        );
+        bindgen::XUngrabKey(dpy, bindgen::AnyKey as i32, AnyModifier, root);
 
         while !mons.is_null() {
             cleanupmon(mons);
@@ -2352,7 +2337,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             bindgen::XUngrabButton(
                 dpy,
                 AnyButton as u32,
-                bindgen::AnyModifier,
+                AnyModifier,
                 (*c).win,
             );
             setclientstate(c, bindgen::WithdrawnState as usize);
