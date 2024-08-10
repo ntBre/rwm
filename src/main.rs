@@ -32,7 +32,9 @@ use x11::xlib::{
     XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
-use bindgen::{dpy, drw, mons, root, selmon, Arg, Atom, Client, Monitor};
+use bindgen::{
+    buttons, dpy, drw, mons, root, selmon, Arg, Atom, Client, Monitor,
+};
 use enums::{Cur, Net, WM};
 use util::{die, ecalloc};
 
@@ -782,13 +784,13 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 bindgen::None as u64,
             );
         }
-        for i in 0..bindgen::buttons.len() {
-            if bindgen::buttons[i].click == bindgen::ClkClientWin {
+        for i in 0..buttons.len() {
+            if buttons[i].click == bindgen::ClkClientWin {
                 for j in 0..modifiers.len() {
                     bindgen::XGrabButton(
                         dpy,
-                        bindgen::buttons[i].button,
-                        bindgen::buttons[i].mask | modifiers[j],
+                        buttons[i].button,
+                        buttons[i].mask | modifiers[j],
                         (*c).win,
                         False,
                         BUTTONMASK,
