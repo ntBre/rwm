@@ -26,11 +26,11 @@ use x11::xlib::{
     ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
     CWHeight, CWOverrideRedirect, CWWidth, ClientMessage, CurrentTime,
     Display as XDisplay, EnterWindowMask, False, FocusChangeMask, IsViewable,
-    LeaveWindowMask, PointerMotionMask, PropModeAppend, PropModeReplace,
-    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, XErrorEvent,
-    XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
-    XA_WM_NAME,
+    LeaveWindowMask, LockMask, PointerMotionMask, PropModeAppend,
+    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM,
+    XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
 use bindgen::{
@@ -613,12 +613,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
 fn grabbuttons(c: *mut Client, focused: bool) {
     unsafe {
         updatenumlockmask();
-        let modifiers = [
-            0,
-            bindgen::LockMask,
-            numlockmask,
-            numlockmask | bindgen::LockMask,
-        ];
+        let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         bindgen::XUngrabButton(
             dpy,
             bindgen::AnyButton,
@@ -1571,12 +1566,7 @@ fn view(arg: *const Arg) {
 fn grabkeys() {
     unsafe {
         updatenumlockmask();
-        let modifiers = [
-            0,
-            bindgen::LockMask,
-            numlockmask,
-            numlockmask | bindgen::LockMask,
-        ];
+        let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         bindgen::XUngrabKey(
             dpy,
@@ -2158,7 +2148,7 @@ fn height(x: *mut Client) -> i32 {
 #[inline]
 fn cleanmask(mask: u32) -> u32 {
     unsafe {
-        mask & !(numlockmask | bindgen::LockMask)
+        mask & !(numlockmask | LockMask)
             & (bindgen::ShiftMask
                 | bindgen::ControlMask
                 | bindgen::Mod1Mask
