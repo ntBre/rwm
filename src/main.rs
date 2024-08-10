@@ -752,7 +752,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
     }
 }
 
-fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
+fn grabbuttons(c: *mut Client, focused: bool) {
     unsafe {
         updatenumlockmask();
         let modifiers = [
@@ -976,7 +976,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
     }
 }
 
-fn configure(c: *mut bindgen::Client) {
+fn configure(c: *mut Client) {
     log::trace!("configure");
     unsafe {
         let mut ce = bindgen::XConfigureEvent {
@@ -1101,7 +1101,7 @@ fn applysizehints(
     }
 }
 
-fn updatesizehints(c: *mut bindgen::Client) {
+fn updatesizehints(c: *mut Client) {
     log::trace!("updatesizehints");
     let mut msize: i64 = 0;
     let mut size = bindgen::XSizeHints {
@@ -1804,7 +1804,7 @@ fn seturgent(c: *mut Client, urg: bool) {
     }
 }
 
-fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
+fn unfocus(c: *mut Client, setfocus: bool) {
     log::trace!("unfocus");
     use bindgen::{
         netatom, root, scheme, ColBorder, NetActiveWindow, SchemeNorm,
@@ -2258,7 +2258,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
     }
 }
 
-fn wintoclient(w: u64) -> *mut bindgen::Client {
+fn wintoclient(w: u64) -> *mut Client {
     log::trace!("wintoclient");
     unsafe {
         let mut m = mons;
@@ -2305,12 +2305,12 @@ fn intersect(x: c_int, y: c_int, w: c_int, h: c_int, m: *mut Monitor) -> c_int {
 }
 
 #[inline]
-fn width(x: *mut bindgen::Client) -> i32 {
+fn width(x: *mut Client) -> i32 {
     unsafe { (*x).w + 2 * (*x).bw }
 }
 
 #[inline]
-fn height(x: *mut bindgen::Client) -> i32 {
+fn height(x: *mut Client) -> i32 {
     unsafe { (*x).h + 2 * (*x).bw }
 }
 
@@ -2359,7 +2359,7 @@ fn cleanupmon(mon: *mut Monitor) {
     }
 }
 
-fn attachstack(c: *mut bindgen::Client) {
+fn attachstack(c: *mut Client) {
     log::trace!("attachstack");
     unsafe {
         (*c).snext = (*(*c).mon).stack;
@@ -2367,7 +2367,7 @@ fn attachstack(c: *mut bindgen::Client) {
     }
 }
 
-fn attach(c: *mut bindgen::Client) {
+fn attach(c: *mut Client) {
     log::trace!("attach");
     unsafe {
         (*c).next = (*(*c).mon).clients;
@@ -2577,7 +2577,7 @@ fn updateclientlist() {
     }
 }
 
-fn setclientstate(c: *mut bindgen::Client, state: usize) {
+fn setclientstate(c: *mut Client, state: usize) {
     let mut data: [c_long; 2] = [state as c_long, bindgen::None as c_long];
     let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
@@ -2701,8 +2701,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
     let mut trans = 0;
     unsafe {
         let wa = *wa;
-        let c: *mut bindgen::Client =
-            util::ecalloc(1, size_of::<bindgen::Client>()) as *mut _;
+        let c: *mut Client = util::ecalloc(1, size_of::<Client>()) as *mut _;
         (*c).win = w;
         (*c).x = wa.x;
         (*c).oldx = wa.x;
@@ -2818,7 +2817,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
     }
 }
 
-fn updatewmhints(c: *mut bindgen::Client) {
+fn updatewmhints(c: *mut Client) {
     log::trace!("updatewmhints");
     const URGENT: i64 = bindgen::XUrgencyHint as i64;
     unsafe {
@@ -2840,7 +2839,7 @@ fn updatewmhints(c: *mut bindgen::Client) {
     }
 }
 
-fn updatewindowtype(c: *mut bindgen::Client) {
+fn updatewindowtype(c: *mut Client) {
     log::trace!("updatewindowtype");
     use bindgen::{
         netatom, NetWMFullscreen, NetWMState, NetWMWindowType,
@@ -2944,7 +2943,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
     atom
 }
 
-fn applyrules(c: *mut bindgen::Client) {
+fn applyrules(c: *mut Client) {
     log::trace!("applyrules");
     unsafe {
         let mut ch = bindgen::XClassHint {
@@ -3003,7 +3002,7 @@ fn applyrules(c: *mut bindgen::Client) {
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 const TAGMASK: u32 = (1 << 9) - 1;
 
-fn updatetitle(c: *mut bindgen::Client) {
+fn updatetitle(c: *mut Client) {
     log::trace!("updatetitle");
     unsafe {
         if gettextprop(
