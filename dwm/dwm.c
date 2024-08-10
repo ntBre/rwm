@@ -770,7 +770,7 @@ incnmaster(const Arg *arg)
 	arrange(selmon);
 }
 
-static int
+int
 isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info)
 {
 	while (n--)

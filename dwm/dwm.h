@@ -127,7 +127,7 @@ void clientmessage(XEvent *e);
 void configure(Client *c);
 void configurenotify(XEvent *e);
 void configurerequest(XEvent *e);
-static Monitor *createmon(void);
+Monitor *createmon(void);
 void destroynotify(XEvent *e);
 void detach(Client *c);
 void detachstack(Client *c);
@@ -180,7 +180,7 @@ static void toggleview(const Arg *arg);
 void unfocus(Client *c, int setfocus);
 void unmanage(Client *c, int destroyed);
 void unmapnotify(XEvent *e);
-static void updatebarpos(Monitor *m);
+void updatebarpos(Monitor *m);
 void updatebars(void);
 void updateclientlist(void);
 int updategeom(void);
@@ -197,6 +197,7 @@ int xerror(Display *dpy, XErrorEvent *ee);
 int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
+int isuniquegeom(XineramaScreenInfo *unique, size_t n, XineramaScreenInfo *info);
 
 Monitor *mons, *selmon;
 
