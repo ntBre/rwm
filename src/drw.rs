@@ -271,6 +271,10 @@ pub(crate) fn text(
     // with Rust's native utf8 handling. For now, I'm declaring all of the
     // variables at the top to match C as much as possible.
     unsafe {
+        log::trace!(
+            "text: {drw:?}, {x}, {y}, {w}, {h}, {lpad}, {:?}, {invert}",
+            std::ffi::CStr::from_ptr(text)
+        );
         let mut ty: c_int;
         let mut ellipsis_x: c_int = 0;
 
