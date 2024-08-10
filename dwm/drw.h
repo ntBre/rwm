@@ -59,3 +59,7 @@ int drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned in
 void drw_map(Drw *drw, Window win, int x, int y, unsigned int w, unsigned int h);
 
 Fnt *xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern);
+
+
+/* UTF-8 functions */
+size_t utf8decode(const char *c, long *u, size_t clen);

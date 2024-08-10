@@ -35,7 +35,7 @@ utf8validate(long *u, size_t i)
 	return i;
 }
 
-static size_t
+size_t
 utf8decode(const char *c, long *u, size_t clen)
 {
 	size_t i, j, len, type;
