@@ -823,7 +823,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
 //     }
 // }
 
-fn arrange(mut m: *mut bindgen::Monitor) {
+fn arrange(mut m: *mut Monitor) {
     log::trace!("arrange");
     unsafe {
         if !m.is_null() {
@@ -848,7 +848,7 @@ fn arrange(mut m: *mut bindgen::Monitor) {
     }
 }
 
-fn arrangemon(m: *mut bindgen::Monitor) {
+fn arrangemon(m: *mut Monitor) {
     unsafe {
         libc::strncpy(
             (*m).ltsymbol.as_mut_ptr(),
@@ -863,7 +863,7 @@ fn arrangemon(m: *mut bindgen::Monitor) {
     }
 }
 
-fn restack(m: *mut bindgen::Monitor) {
+fn restack(m: *mut Monitor) {
     drawbar(m);
     unsafe {
         if (*m).sel.is_null() {
@@ -1861,7 +1861,7 @@ fn textw(x: *const c_char) -> c_int {
     unsafe { drw::fontset_getwidth(drw, x) as c_int + bindgen::lrpad }
 }
 
-fn drawbar(m: *mut bindgen::Monitor) {
+fn drawbar(m: *mut Monitor) {
     unsafe {
         let mut tw = 0;
         let boxs = (*(*drw).fonts).h / 9;
@@ -2236,7 +2236,7 @@ fn updategeom() -> i32 {
     }
 }
 
-fn wintomon(w: Window) -> *mut bindgen::Monitor {
+fn wintomon(w: Window) -> *mut Monitor {
     unsafe {
         let mut x = 0;
         let mut y = 0;
