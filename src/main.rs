@@ -34,7 +34,7 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    buttons, dpy, drw, mons, root, selmon, sh, sw, Arg, Atom, Client, Clr,
+    bh, buttons, dpy, drw, mons, root, selmon, sh, sw, Arg, Atom, Client, Clr,
     Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
@@ -454,7 +454,7 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        use bindgen::{bh, fonts, lrpad, screen};
+        use bindgen::{fonts, lrpad, screen};
 
         screen = bindgen::XDefaultScreen(dpy);
         sw = bindgen::XDisplayWidth(dpy, screen);
@@ -997,11 +997,11 @@ fn applysizehints(
                 *y = (*m).wy;
             }
         }
-        if *h < bindgen::bh {
-            *h = bindgen::bh;
+        if *h < bh {
+            *h = bh;
         }
-        if *w < bindgen::bh {
-            *w = bindgen::bh;
+        if *w < bh {
+            *w = bh;
         }
         if bindgen::resizehints != 0
             || (*c).isfloating != 0
@@ -1824,7 +1824,7 @@ fn drawbar(m: *mut Monitor) {
             return;
         }
 
-        use bindgen::{bh, scheme, stext, tags, SchemeNorm, SchemeSel};
+        use bindgen::{scheme, stext, tags, SchemeNorm, SchemeSel};
 
         // draw status first so it can be overdrawn by tags later
         if m == selmon {
@@ -1836,7 +1836,7 @@ fn drawbar(m: *mut Monitor) {
                 (*m).ww - tw,
                 0,
                 tw as u32,
-                bindgen::bh as u32,
+                bh as u32,
                 0,
                 addr_of!(stext) as *const _,
                 0,
@@ -1871,7 +1871,7 @@ fn drawbar(m: *mut Monitor) {
                 x,
                 0,
                 w as u32,
-                bindgen::bh as u32,
+                bh as u32,
                 bindgen::lrpad as u32 / 2,
                 text,
                 (urg as i32) & 1 << i,
@@ -2026,7 +2026,7 @@ fn updatebars() {
                 (*m).wx as c_int,
                 (*m).by as c_int,
                 (*m).ww as c_uint,
-                bindgen::bh as c_uint,
+                bh as c_uint,
                 0,
                 bindgen::XDefaultDepth(dpy, bindgen::screen),
                 bindgen::CopyFromParent as c_uint,
@@ -2351,8 +2351,6 @@ fn is_visible(c: *const Client) -> bool {
 
 fn updatebarpos(m: *mut Monitor) {
     log::trace!("updatebarpos");
-
-    use bindgen::bh;
 
     unsafe {
         (*m).wy = (*m).my;
