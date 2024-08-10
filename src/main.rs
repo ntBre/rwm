@@ -2447,9 +2447,23 @@ fn is_visible(c: *const Client) -> bool {
     }
 }
 
-// DUMMY
 fn updatebarpos(m: *mut Monitor) {
-    unsafe { bindgen::updatebarpos(m) }
+    log::trace!("updatebarpos");
+
+    use bindgen::bh;
+
+    unsafe {
+        (*m).wy = (*m).my;
+        (*m).wh = (*m).mh;
+        if (*m).showbar != 0 {
+            (*m).wh -= bh;
+            (*m).by =
+                if (*m).topbar != 0 { (*m).wy } else { (*m).wy + (*m).wh };
+            (*m).wy = if (*m).topbar != 0 { (*m).wy + bh } else { (*m).wy };
+        } else {
+            (*m).by = -bh;
+        }
+    }
 }
 
 fn isuniquegeom(
