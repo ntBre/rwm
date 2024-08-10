@@ -34,8 +34,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, dpy, drw, lrpad, mons, root, selmon, sh, sw, Arg, Atom,
-    Client, Clr, Monitor,
+    bh, buttons, cursor, dpy, drw, layouts, lrpad, mons, root, selmon, sh, sw,
+    wmcheckwin, Arg, Atom, Client, Clr, Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -381,7 +381,6 @@ impl Rule {
 }
 
 fn createmon() -> *mut Monitor {
-    use bindgen::layouts;
     use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
 
     // I thought about trying to create a Monitor directly, followed by
@@ -503,7 +502,6 @@ fn setup() {
         netatom[Net::ClientList as usize] =
             XInternAtom(dpy, c"_NET_CLIENT_LIST".as_ptr(), False);
 
-        use bindgen::cursor;
         /* init cursors */
         cursor[Cur::Normal as usize] =
             drw::cur_create(drw, bindgen::XC_left_ptr as i32);
@@ -524,8 +522,6 @@ fn setup() {
         /* init bars */
         updatebars();
         updatestatus();
-
-        use bindgen::wmcheckwin;
 
         /* supporting window for NetWMCheck */
         wmcheckwin =
@@ -1891,8 +1887,6 @@ fn drawbar(m: *mut Monitor) {
             }
             x += w as i32;
         }
-
-        use bindgen::lrpad;
 
         let w = textw((*m).ltsymbol.as_ptr());
         drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
