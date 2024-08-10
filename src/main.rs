@@ -535,7 +535,7 @@ fn focus(mut c: *mut Client) {
             bindgen::XDeleteProperty(
                 dpy,
                 root,
-                bindgen::netatom[Net::ActiveWindow as usize],
+                netatom[Net::ActiveWindow as usize],
             );
         }
         (*selmon).sel = c;
@@ -565,7 +565,7 @@ fn setfocus(c: *mut Client) {
             bindgen::XChangeProperty(
                 dpy,
                 root,
-                bindgen::netatom[Net::ActiveWindow as usize],
+                netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
                 PropModeReplace,
@@ -2332,7 +2332,7 @@ fn cleanup() {
         bindgen::XDeleteProperty(
             dpy,
             root,
-            bindgen::netatom[Net::ActiveWindow as usize],
+            netatom[Net::ActiveWindow as usize],
         );
     }
 
@@ -2385,11 +2385,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 
 fn updateclientlist() {
     unsafe {
-        bindgen::XDeleteProperty(
-            dpy,
-            root,
-            bindgen::netatom[Net::ClientList as usize],
-        );
+        bindgen::XDeleteProperty(dpy, root, netatom[Net::ClientList as usize]);
         let mut m = mons;
         while !m.is_null() {
             let mut c = (*m).clients;
@@ -2397,7 +2393,7 @@ fn updateclientlist() {
                 bindgen::XChangeProperty(
                     dpy,
                     root,
-                    bindgen::netatom[Net::ClientList as usize],
+                    netatom[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
                     PropModeAppend,
@@ -2623,7 +2619,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XChangeProperty(
             dpy,
             root,
-            bindgen::netatom[Net::ClientList as usize],
+            netatom[Net::ClientList as usize],
             XA_WINDOW,
             32,
             PropModeAppend,
@@ -2839,7 +2835,7 @@ fn updatetitle(c: *mut Client) {
     unsafe {
         if gettextprop(
             (*c).win,
-            bindgen::netatom[Net::WMName as usize],
+            netatom[Net::WMName as usize],
             &mut (*c).name as *mut _,
             size_of_val(&(*c).name) as u32,
         ) == 0
