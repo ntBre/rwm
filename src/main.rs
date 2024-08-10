@@ -2117,6 +2117,8 @@ fn updategeom() -> i32 {
     unsafe {
         let mut dirty = 0;
         if bindgen::XineramaIsActive(dpy) != 0 {
+            log::trace!("updategeom: xinerama active");
+
             let mut nn = 0;
             let info = bindgen::XineramaQueryScreens(dpy as *mut _, &mut nn);
 
@@ -2156,6 +2158,9 @@ fn updategeom() -> i32 {
             nn = j as i32;
 
             // new monitors if nn > n
+            if nn > n {
+                log::trace!("updategeom: adding monitors");
+            }
             for _ in n..nn {
                 let mut m = mons;
                 while !m.is_null() && !(*m).next.is_null() {
@@ -2199,6 +2204,9 @@ fn updategeom() -> i32 {
             }
 
             // removed monitors if n > nn
+            if n > nn {
+                log::trace!("updategeom: removing monitors");
+            }
             for _ in nn..n {
                 let mut m = mons;
                 while !m.is_null() && !(*m).next.is_null() {
@@ -2221,6 +2229,8 @@ fn updategeom() -> i32 {
             }
             libc::free(unique.as_mut_ptr().cast());
         } else {
+            log::trace!("updategeom: default monitor setup");
+
             // default monitor setup
             if mons.is_null() {
                 mons = bindgen::createmon();
