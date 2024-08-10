@@ -3111,22 +3111,7 @@ fn getstate(w: Window) -> c_long {
 // mod layouts;
 mod drw;
 mod handlers;
-mod util {
-    use libc::{c_void, size_t};
-
-    pub(crate) fn die(msg: &str) {
-        eprintln!("{}", msg);
-        std::process::exit(1);
-    }
-
-    pub(crate) fn ecalloc(nmemb: size_t, size: size_t) -> *mut c_void {
-        let ret = unsafe { libc::calloc(nmemb, size) };
-        if ret.is_null() {
-            die("calloc:");
-        }
-        ret
-    }
-}
+mod util;
 
 fn main() {
     env_logger::init();
