@@ -1,5 +1,5 @@
 use std::ffi::{c_char, c_int, c_long, c_uint, CStr};
-use std::ptr::{null, null_mut};
+use std::ptr::null_mut;
 
 use fontconfig_sys::FcMatchPattern;
 
@@ -271,31 +271,31 @@ pub(crate) fn text(
     // with Rust's native utf8 handling. For now, I'm declaring all of the
     // variables at the top to match C as much as possible.
     unsafe {
-        let mut ty: c_int = 0;
+        let mut ty: c_int;
         let mut ellipsis_x: c_int = 0;
 
         let mut tmpw: c_uint = 0;
-        let mut ew: c_uint = 0;
+        let mut ew: c_uint;
         let mut ellipsis_w: c_uint = 0;
-        let mut ellipsis_len: c_uint = 0;
+        let mut ellipsis_len: c_uint;
 
         let mut d: *mut bindgen::XftDraw = null_mut();
 
-        let mut usedfont: *mut Fnt = null_mut();
-        let mut curfont: *mut Fnt = null_mut();
-        let mut nextfont: *mut Fnt = null_mut();
+        let mut usedfont: *mut Fnt;
+        let mut curfont: *mut Fnt;
+        let mut nextfont: *mut Fnt;
 
-        let mut utf8strlen: c_int = 0;
-        let mut utf8charlen: c_int = 0;
+        let mut utf8strlen: c_int;
+        let mut utf8charlen: c_int;
         let render: c_int = (x != 0 || y != 0 || w != 0 || h != 0) as c_int;
 
         let mut utf8codepoint: c_long = 0;
 
-        let mut utf8str: *const c_char = null();
+        let mut utf8str: *const c_char;
 
-        let mut fccharset: *mut bindgen::FcCharSet = null_mut();
-        let mut fcpattern: *mut bindgen::FcPattern = null_mut();
-        let mut match_: *mut bindgen::FcPattern = null_mut();
+        let mut fccharset: *mut bindgen::FcCharSet;
+        let mut fcpattern: *mut bindgen::FcPattern;
+        let mut match_: *mut bindgen::FcPattern;
 
         let mut result: bindgen::XftResult = 0;
 
