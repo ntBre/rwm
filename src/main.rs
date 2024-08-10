@@ -1872,11 +1872,7 @@ fn drawbar(m: *mut Monitor) {
             return;
         }
 
-        use bindgen::bh;
-        use bindgen::scheme;
-        use bindgen::stext;
-        use bindgen::tags;
-        use bindgen::{SchemeNorm, SchemeSel};
+        use bindgen::{bh, scheme, stext, tags, SchemeNorm, SchemeSel};
 
         // draw status first so it can be overdrawn by tags later
         if m == selmon {
