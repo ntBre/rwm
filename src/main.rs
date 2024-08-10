@@ -20,8 +20,8 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
-use bindgen::{drw, strncpy, Atom, Client, Monitor};
-use libc::{c_long, c_uchar, c_ulong, sigaction};
+use bindgen::{drw, Atom, Client, Monitor};
+use libc::{c_long, c_uchar, sigaction};
 use util::{die, ecalloc};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
@@ -880,10 +880,10 @@ fn arrange(mut m: *mut bindgen::Monitor) {
 
 fn arrangemon(m: *mut bindgen::Monitor) {
     unsafe {
-        strncpy(
+        libc::strncpy(
             (*m).ltsymbol.as_mut_ptr(),
             (*(*m).lt[(*m).sellt as usize]).symbol,
-            size_of_val(&(*m).ltsymbol) as c_ulong,
+            size_of_val(&(*m).ltsymbol),
         );
         // how did bindgen make this an Option??
         let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
