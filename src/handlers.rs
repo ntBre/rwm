@@ -1,14 +1,20 @@
 use std::{
-    ffi::c_uint,
+    ffi::{c_int, c_uint},
     ptr::{addr_of, addr_of_mut, null_mut},
+};
+
+use x11::xlib::{
+    PropertyDelete, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 
 use crate::{
     arrange,
     bindgen::{self, dpy, selmon, tags, Arg, XEvent},
-    cleanmask, configure, drawbar, drw, focus, grabkeys, height, is_visible,
-    manage, recttomon, resizeclient, restack, setclientstate, setfocus,
-    setfullscreen, seturgent, textw, unfocus, unmanage, updatebars, updategeom,
+    cleanmask, configure, drawbar, drawbars, drw, focus, grabkeys, height,
+    is_visible, manage, recttomon, resizeclient, restack, setclientstate,
+    setfocus, setfullscreen, seturgent, textw, unfocus, unmanage, updatebars,
+    updategeom, updatestatus, updatetitle, updatewindowtype, updatewmhints,
     width, wintoclient, wintomon,
 };
 
@@ -381,9 +387,56 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn propertynotify(e: *mut XEvent) {
-    unsafe { bindgen::propertynotify(e) }
+    log::trace!("propertynotify");
+    unsafe {
+        let mut trans: bindgen::Window = 0;
+        let ev = &mut (*e).xproperty;
+        if ev.window == bindgen::root && ev.atom == XA_WM_NAME {
+            updatestatus();
+        } else if ev.state == PropertyDelete {
+            return; // ignore
+        } else {
+            let c = wintoclient(ev.window);
+            if c.is_null() {
+                return;
+            }
+            let c = &mut *c;
+            match ev.atom {
+                XA_WM_TRANSIENT_FOR => {
+                    if c.isfloating == 0
+                        && (bindgen::XGetTransientForHint(
+                            dpy, c.win, &mut trans,
+                        ) != 0)
+                    {
+                        c.isfloating = !wintoclient(trans).is_null() as c_int;
+                        if c.isfloating != 0 {
+                            arrange(c.mon);
+                        }
+                    }
+                }
+                XA_WM_NORMAL_HINTS => {
+                    c.hintsvalid = 0;
+                }
+                XA_WM_HINTS => {
+                    updatewmhints(c);
+                    drawbars();
+                }
+                _ => {}
+            }
+            if ev.atom == XA_WM_NAME
+                || ev.atom == bindgen::netatom[bindgen::NetWMName as usize]
+            {
+                updatetitle(c);
+                if c as *mut _ == (*c.mon).sel {
+                    drawbar(c.mon);
+                }
+            }
+            if ev.atom == bindgen::netatom[bindgen::NetWMWindowType as usize] {
+                updatewindowtype(c);
+            }
+        }
+    }
 }
 
 pub(crate) fn unmapnotify(e: *mut XEvent) {
