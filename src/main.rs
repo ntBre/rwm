@@ -32,7 +32,7 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
-use bindgen::{dpy, drw, root, Atom, Client, Monitor};
+use bindgen::{dpy, drw, root, selmon, Atom, Client, Monitor};
 use enums::{Cur, Net, WM};
 use util::{die, ecalloc};
 
@@ -641,7 +641,7 @@ fn setup() {
 
 fn focus(mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
-    use bindgen::{scheme, selmon, ColBorder, SchemeSel};
+    use bindgen::{scheme, ColBorder, SchemeSel};
     unsafe {
         if c.is_null() || !is_visible(c) {
             c = (*selmon).stack;
@@ -680,7 +680,7 @@ fn focus(mut c: *mut Client) {
                 bindgen::netatom[Net::ActiveWindow as usize],
             );
         }
-        (*bindgen::selmon).sel = c;
+        (*selmon).sel = c;
         drawbars();
     }
 }
@@ -1490,8 +1490,6 @@ fn detach(c: *mut Client) {
 // }
 
 fn view(arg: *const bindgen::Arg) {
-    use bindgen::selmon;
-
     unsafe {
         if (*arg).ui & TAGMASK == (*selmon).tagset[(*selmon).seltags as usize] {
             return;
@@ -1856,7 +1854,7 @@ fn updatestatus() {
                 c"rwm-1.0".as_ptr(),
             );
         }
-        drawbar(bindgen::selmon);
+        drawbar(selmon);
     }
 }
 
@@ -1877,7 +1875,6 @@ fn drawbar(m: *mut bindgen::Monitor) {
 
         use bindgen::bh;
         use bindgen::scheme;
-        use bindgen::selmon;
         use bindgen::stext;
         use bindgen::tags;
         use bindgen::{SchemeNorm, SchemeSel};
@@ -2103,7 +2100,7 @@ fn updatebars() {
 }
 
 fn updategeom() -> i32 {
-    use bindgen::{mons, root, selmon, sh, sw};
+    use bindgen::{mons, sh, sw};
 
     unsafe {
         let mut dirty = 0;
@@ -2258,7 +2255,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
         if !c.is_null() {
             return (*c).mon;
         }
-        bindgen::selmon
+        selmon
     }
 }
 
@@ -2282,7 +2279,7 @@ fn wintoclient(w: u64) -> *mut bindgen::Client {
 
 fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
     unsafe {
-        let mut r = bindgen::selmon;
+        let mut r = selmon;
         let mut area = 0;
         let mut m = bindgen::mons;
         while !m.is_null() {
@@ -2452,7 +2449,7 @@ fn isuniquegeom(
 fn cleanup() {
     log::trace!("entering cleanup");
 
-    use bindgen::{colors, cursor, mons, root, scheme, selmon, wmcheckwin};
+    use bindgen::{colors, cursor, mons, scheme, wmcheckwin};
 
     unsafe {
         let a = bindgen::Arg { ui: !0 };
@@ -2726,13 +2723,13 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
                 (*c).mon = (*t).mon;
                 (*c).tags = (*t).tags;
             } else {
-                (*c).mon = bindgen::selmon;
+                (*c).mon = selmon;
                 applyrules(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
-            (*c).mon = bindgen::selmon;
+            (*c).mon = selmon;
             applyrules(c);
         }
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
@@ -2812,8 +2809,8 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             (*c).h as u32,
         );
         setclientstate(c, NORMAL_STATE);
-        if (*c).mon == bindgen::selmon {
-            unfocus((*bindgen::selmon).sel, false);
+        if (*c).mon == selmon {
+            unfocus((*selmon).sel, false);
         }
         (*(*c).mon).sel = c;
         arrange((*c).mon);
@@ -2828,7 +2825,7 @@ fn updatewmhints(c: *mut bindgen::Client) {
     unsafe {
         let wmh = bindgen::XGetWMHints(dpy, (*c).win);
         if !wmh.is_null() {
-            if c == (*bindgen::selmon).sel && (*wmh).flags & URGENT != 0 {
+            if c == (*selmon).sel && (*wmh).flags & URGENT != 0 {
                 (*wmh).flags &= !URGENT;
                 bindgen::XSetWMHints(dpy, (*c).win, wmh);
             } else {
