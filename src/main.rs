@@ -375,7 +375,8 @@ impl Rule {
 }
 
 fn createmon() -> *mut Monitor {
-    use bindgen::{layouts, mfact, nmaster, showbar, topbar};
+    use bindgen::layouts;
+    use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
 
     // I thought about trying to create a Monitor directly, followed by
     // Box::into_raw(Box::new(m)), but we use libc::free to free the Monitors
@@ -386,10 +387,10 @@ fn createmon() -> *mut Monitor {
     unsafe {
         (*m).tagset[0] = 1;
         (*m).tagset[1] = 1;
-        (*m).mfact = mfact;
-        (*m).nmaster = nmaster;
-        (*m).showbar = showbar;
-        (*m).topbar = topbar;
+        (*m).mfact = MFACT;
+        (*m).nmaster = NMASTER;
+        (*m).showbar = SHOWBAR;
+        (*m).topbar = TOPBAR;
         (*m).lt[0] = &layouts[0];
         (*m).lt[1] = &layouts[1 % layouts.len()];
         libc::strncpy(
@@ -2766,7 +2767,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         }
         (*c).x = max((*c).x, (*(*c).mon).wx as i32);
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
-        (*c).bw = bindgen::borderpx as i32;
+        (*c).bw = config::BORDERPX as i32;
 
         log::trace!("manage: XWindowChanges");
         let mut wc = bindgen::XWindowChanges {
@@ -3090,7 +3091,7 @@ fn getstate(w: Window) -> c_long {
     }
 }
 
-// mod config;
+mod config;
 // mod layouts;
 mod drw;
 mod handlers;
