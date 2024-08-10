@@ -32,7 +32,7 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
-use bindgen::{dpy, drw, root, selmon, Atom, Client, Monitor};
+use bindgen::{dpy, drw, mons, root, selmon, Atom, Client, Monitor};
 use enums::{Cur, Net, WM};
 use util::{die, ecalloc};
 
@@ -498,7 +498,7 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        use bindgen::{bh, fonts, lrpad, root, screen, sh, sw};
+        use bindgen::{bh, fonts, lrpad, screen, sh, sw};
 
         screen = bindgen::XDefaultScreen(dpy);
         sw = bindgen::XDisplayWidth(dpy, screen);
@@ -687,7 +687,7 @@ fn focus(mut c: *mut Client) {
 
 fn drawbars() {
     unsafe {
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             drawbar(m);
             m = (*m).next;
@@ -830,7 +830,7 @@ fn arrange(mut m: *mut bindgen::Monitor) {
         if !m.is_null() {
             showhide((*m).stack);
         } else {
-            m = bindgen::mons;
+            m = mons;
             while !m.is_null() {
                 showhide((*m).stack);
                 m = (*m).next;
@@ -841,7 +841,7 @@ fn arrange(mut m: *mut bindgen::Monitor) {
             arrangemon(m);
             restack(m);
         } else {
-            m = bindgen::mons;
+            m = mons;
             while !m.is_null() {
                 arrangemon(m);
             }
@@ -2068,7 +2068,7 @@ fn updatebars() {
     };
 
     unsafe {
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             if (*m).barwin != 0 {
                 continue;
@@ -2244,7 +2244,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
         if w == root && getrootptr(&mut x, &mut y) != 0 {
             return recttomon(x, y, 1, 1);
         }
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             if w == (*m).barwin {
                 return m;
@@ -2262,7 +2262,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
 fn wintoclient(w: u64) -> *mut bindgen::Client {
     log::trace!("wintoclient");
     unsafe {
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -2281,7 +2281,7 @@ fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
     unsafe {
         let mut r = selmon;
         let mut area = 0;
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             let a = intersect(x, y, w, h, m);
             if a > area {
@@ -2557,7 +2557,7 @@ fn updateclientlist() {
             root,
             bindgen::netatom[Net::ClientList as usize],
         );
-        let mut m = bindgen::mons;
+        let mut m = mons;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -2978,7 +2978,7 @@ fn applyrules(c: *mut bindgen::Client) {
             {
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
-                let mut m = bindgen::mons;
+                let mut m = mons;
                 while !m.is_null() && (*m).num != r.monitor {
                     m = (*m).next;
                 }
