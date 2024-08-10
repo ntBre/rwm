@@ -33,23 +33,6 @@ use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use crate::bindgen::{dpy, CurrentTime};
-// use crate::config::{
-//     BORDERPX, BUTTONS, DMENUCMD, LOCKFULLSCREEN, RESIZEHINTS, RULES, SNAP, TAGS,
-// };
-
-// pub struct Display {
-//     inner: *mut XDisplay,
-// }
-
-// impl Display {
-// fn open() -> Self {
-//     let inner = unsafe { XOpenDisplay(std::ptr::null()) };
-//     if inner.is_null() {
-//         panic!("cannot open display");
-//     }
-//     Display { inner }
-// }
-// }
 
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
