@@ -22,11 +22,11 @@ use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
-    BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
+    AnyButton, BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
     ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
     CWHeight, CWOverrideRedirect, CWWidth, ClientMessage, CurrentTime,
     Display as XDisplay, EnterWindowMask, False, FocusChangeMask, IsViewable,
-    LeaveWindowMask, LockMask, PointerMotionMask, PropModeAppend,
+    LeaveWindowMask, LockMask, NoEventMask, PointerMotionMask, PropModeAppend,
     PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
     StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
     Success, XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM,
@@ -598,13 +598,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
             ev.xclient.format = 32;
             ev.xclient.data.l[0] = proto as c_long;
             ev.xclient.data.l[1] = CurrentTime as c_long;
-            bindgen::XSendEvent(
-                dpy,
-                (*c).win,
-                False,
-                bindgen::NoEventMask as i64,
-                &mut ev,
-            );
+            bindgen::XSendEvent(dpy, (*c).win, False, NoEventMask, &mut ev);
         }
         exists
     }
@@ -616,7 +610,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         bindgen::XUngrabButton(
             dpy,
-            bindgen::AnyButton,
+            AnyButton as u32,
             bindgen::AnyModifier,
             (*c).win,
         );
@@ -624,7 +618,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
         if !focused {
             bindgen::XGrabButton(
                 dpy,
-                bindgen::AnyButton,
+                AnyButton as u32,
                 bindgen::AnyModifier,
                 (*c).win,
                 False,
@@ -2349,7 +2343,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             wc.border_width = (*c).oldbw;
             bindgen::XGrabServer(dpy); /* avoid race conditions */
             bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
-            bindgen::XSelectInput(dpy, (*c).win, bindgen::NoEventMask as i64);
+            bindgen::XSelectInput(dpy, (*c).win, NoEventMask);
             bindgen::XConfigureWindow(
                 dpy,
                 (*c).win,
@@ -2358,7 +2352,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             ); /* restore border */
             bindgen::XUngrabButton(
                 dpy,
-                bindgen::AnyButton,
+                AnyButton as u32,
                 bindgen::AnyModifier,
                 (*c).win,
             );
