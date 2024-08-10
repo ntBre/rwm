@@ -2228,8 +2228,24 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
     }
 }
 
+/// remove `mon` from the linked list of `Monitor`s in `mons` and free it.
 fn cleanupmon(mon: *mut Monitor) {
-    unsafe { bindgen::cleanupmon(mon) }
+    use bindgen::mons;
+
+    unsafe {
+        if mon == mons {
+            mons = (*mons).next;
+        } else {
+            let mut m = mons;
+            while !m.is_null() && (*m).next != mon {
+                m = (*m).next;
+            }
+            (*m).next = (*mon).next;
+        }
+        bindgen::XUnmapWindow(dpy, (*mon).barwin);
+        bindgen::XDestroyWindow(dpy, (*mon).barwin);
+        libc::free(mon.cast());
+    }
 }
 
 fn attachstack(c: *mut bindgen::Client) {
