@@ -984,7 +984,6 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
 }
 
 fn configure(c: *mut bindgen::Client) {
-    // TODO this looks like a nice Into impl
     log::trace!("configure");
     unsafe {
         let mut ce = bindgen::XConfigureEvent {
