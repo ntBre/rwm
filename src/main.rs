@@ -70,6 +70,7 @@ const X_COPY_AREA: u8 = 62;
 
 // from X.h
 // const BUTTON_RELEASE: i32 = 5;
+const XNONE: c_long = 0;
 
 // from Xutil.h
 /// for windows that are not mapped
@@ -635,8 +636,8 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 BUTTONMASK,
                 bindgen::GrabModeSync as i32,
                 bindgen::GrabModeSync as i32,
-                bindgen::None as u64,
-                bindgen::None as u64,
+                XNONE as u64,
+                XNONE as u64,
             );
         }
         for i in 0..buttons.len() {
@@ -651,8 +652,8 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                         BUTTONMASK,
                         bindgen::GrabModeAsync as i32,
                         bindgen::GrabModeSync as i32,
-                        bindgen::None as u64,
-                        bindgen::None as u64,
+                        XNONE as u64,
+                        XNONE as u64,
                     );
                 }
             }
@@ -844,7 +845,7 @@ fn configure(c: *mut Client) {
             width: (*c).w,
             height: (*c).h,
             border_width: (*c).bw,
-            above: bindgen::None as u64,
+            above: XNONE as u64,
             override_redirect: bindgen::False as i32,
         };
         bindgen::XSendEvent(
@@ -2408,7 +2409,7 @@ fn updateclientlist() {
 }
 
 fn setclientstate(c: *mut Client, state: usize) {
-    let mut data: [c_long; 2] = [state as c_long, bindgen::None as c_long];
+    let mut data: [c_long; 2] = [state as c_long, XNONE as c_long];
     let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
         bindgen::XChangeProperty(
