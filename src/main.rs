@@ -36,9 +36,8 @@ use x11::xlib::{
 use bindgen::{
     bh, buttons, colors, cursor, dpy, drw, fonts, layouts, lrpad, mons,
     netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor,
-    NetActiveWindow, NetWMFullscreen, NetWMState, SchemeNorm, SchemeSel,
-    WMProtocols, XInternAtom,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor, SchemeNorm,
+    SchemeSel, WMProtocols, XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -1664,7 +1663,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
             bindgen::XDeleteProperty(
                 dpy,
                 root,
-                netatom[NetActiveWindow as usize],
+                netatom[Net::ActiveWindow as usize],
             );
         }
     }
@@ -2655,17 +2654,13 @@ fn updatewmhints(c: *mut Client) {
 
 fn updatewindowtype(c: *mut Client) {
     log::trace!("updatewindowtype");
-    use bindgen::{
-        netatom, NetWMFullscreen, NetWMState, NetWMWindowType,
-        NetWMWindowTypeDialog,
-    };
     unsafe {
-        let state = getatomprop(c, netatom[NetWMState as usize]);
-        let wtype = getatomprop(c, netatom[NetWMWindowType as usize]);
-        if state == netatom[NetWMFullscreen as usize] {
+        let state = getatomprop(c, netatom[Net::WMState as usize]);
+        let wtype = getatomprop(c, netatom[Net::WMWindowType as usize]);
+        if state == netatom[Net::WMFullscreen as usize] {
             setfullscreen(c, true);
         }
-        if wtype == netatom[NetWMWindowTypeDialog as usize] {
+        if wtype == netatom[Net::WMWindowTypeDialog as usize] {
             (*c).isfloating = 1;
         }
     }
@@ -2677,13 +2672,13 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             bindgen::XChangeProperty(
                 dpy,
                 (*c).win,
-                netatom[NetWMState as usize],
+                netatom[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
                 // trying to emulate (unsigned char*)&netatom[NetWMFullscreen],
                 // so take a reference and then cast
-                &mut netatom[NetWMFullscreen as usize] as *mut u64
+                &mut netatom[Net::WMFullscreen as usize] as *mut u64
                     as *mut c_uchar,
                 1,
             );
@@ -2704,7 +2699,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             bindgen::XChangeProperty(
                 dpy,
                 (*c).win,
-                netatom[NetWMState as usize],
+                netatom[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
