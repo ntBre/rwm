@@ -45,6 +45,15 @@ pub(crate) fn create(
     }
 }
 
+pub(crate) fn free(drw: *mut Drw) {
+    unsafe {
+        bindgen::XFreePixmap((*drw).dpy, (*drw).drawable);
+        bindgen::XFreeGC((*drw).dpy, (*drw).gc);
+        fontset_free((*drw).fonts);
+        libc::free(drw.cast());
+    }
+}
+
 pub(crate) fn rect(
     drw: *mut Drw,
     x: c_int,
@@ -135,6 +144,16 @@ pub(crate) fn fontset_create(
         }
         (*drw).fonts = ret;
         ret
+    }
+}
+
+fn fontset_free(font: *mut Fnt) {
+    if font.is_null() {
+        return;
+    }
+    unsafe {
+        fontset_free((*font).next);
+        xfont_free(font);
     }
 }
 

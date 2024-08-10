@@ -2369,7 +2369,7 @@ fn cleanup() {
         libc::free(scheme.cast());
 
         bindgen::XDestroyWindow(dpy, wmcheckwin);
-        bindgen::drw_free(drw);
+        drw::free(drw);
         bindgen::XSync(dpy, False);
         bindgen::XSetInputFocus(
             dpy,
