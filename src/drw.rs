@@ -313,10 +313,8 @@ pub(crate) fn text(
             codepoint: [c_long; NOMATCHES_LEN],
             idx: usize,
         }
-        static mut NOMATCHES: NoMatches = NoMatches {
-            codepoint: [0; NOMATCHES_LEN],
-            idx: 0,
-        };
+        static mut NOMATCHES: NoMatches =
+            NoMatches { codepoint: [0; NOMATCHES_LEN], idx: 0 };
         static mut ELLIPSIS_WIDTH: c_uint = 0;
 
         if drw.is_null()

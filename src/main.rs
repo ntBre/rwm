@@ -387,14 +387,7 @@ impl Rule {
         isfloating: bool,
         monitor: isize,
     ) -> Self {
-        Self {
-            class,
-            instance,
-            title,
-            tags,
-            isfloating,
-            monitor,
-        }
+        Self { class, instance, title, tags, isfloating, monitor }
     }
 }
 
@@ -746,9 +739,8 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
         }
         use bindgen::{wmatom, WMProtocols};
         if exists != 0 {
-            let mut ev = bindgen::XEvent {
-                type_: bindgen::ClientMessage as i32,
-            };
+            let mut ev =
+                bindgen::XEvent { type_: bindgen::ClientMessage as i32 };
             ev.xclient.window = (*c).win;
             ev.xclient.message_type = wmatom[WMProtocols as usize];
             ev.xclient.format = 32;

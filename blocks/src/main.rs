@@ -24,10 +24,7 @@ struct Globals<const N: usize> {
 impl<const N: usize> Globals<N> {
     const fn new() -> Self {
         const S: String = String::new();
-        Self {
-            statusbar: [S; N],
-            statusstr: [S; 2],
-        }
+        Self { statusbar: [S; N], statusstr: [S; 2] }
     }
 
     fn getcmds(&mut self, time: c_int) {
