@@ -2228,21 +2228,9 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
     }
 }
 
-// fn cleanupmon(mon: *mut Monitor, mdpy: &Display) {
-//     unsafe {
-//         if mon == MONS {
-//             MONS = (*MONS).next;
-//         } else {
-//             let mut m = MONS;
-//             while !m.is_null() && (*m).next != mon {
-//                 m = (*m).next;
-//             }
-//         }
-//         XUnmapWindow(mdpy.inner, (*mon).barwin);
-//         XDestroyWindow(mdpy.inner, (*mon).barwin);
-//         drop(Box::from_raw(mon)); // free mon
-//     }
-// }
+fn cleanupmon(mon: *mut Monitor) {
+    unsafe { bindgen::cleanupmon(mon) }
+}
 
 fn attachstack(c: *mut bindgen::Client) {
     log::trace!("attachstack");
@@ -2354,7 +2342,7 @@ fn cleanup() {
         );
 
         while !mons.is_null() {
-            bindgen::cleanupmon(mons);
+            cleanupmon(mons);
         }
 
         for i in 0..bindgen::CurLast {
