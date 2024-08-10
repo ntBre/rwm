@@ -4,8 +4,8 @@ use std::{
 };
 
 use x11::xlib::{
-    CurrentTime, PropertyDelete, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    CurrentTime, False, PropertyDelete, XA_WM_HINTS, XA_WM_NAME,
+    XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
 use crate::{
@@ -199,7 +199,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 &mut wc,
             );
         }
-        bindgen::XSync(dpy, bindgen::False as i32);
+        bindgen::XSync(dpy, False as i32);
     }
 }
 

@@ -3,6 +3,7 @@ use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
 use fontconfig_sys::FcMatchPattern;
+use x11::xlib::False;
 
 use crate::bindgen::{self, Clr, Cur, Display, Drw, Fnt, Window};
 use crate::die;
@@ -635,7 +636,7 @@ pub(crate) fn map(
             x,
             y,
         );
-        bindgen::XSync((*drw).dpy, bindgen::False as i32);
+        bindgen::XSync((*drw).dpy, False as i32);
     }
 }
 
