@@ -71,7 +71,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 bindgen::XAllowEvents(
                     bindgen::dpy,
                     bindgen::ReplayPointer as i32,
-                    CurrentTime as u64,
+                    CurrentTime,
                 );
                 click = ClkClientWin;
             }

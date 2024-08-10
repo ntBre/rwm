@@ -672,7 +672,7 @@ fn focus(mut c: *mut bindgen::Client) {
                 dpy,
                 bindgen::root,
                 RevertToPointerRoot,
-                CurrentTime as u64,
+                CurrentTime,
             );
             bindgen::XDeleteProperty(
                 dpy,
@@ -702,7 +702,7 @@ fn setfocus(c: *mut Client) {
                 dpy,
                 (*c).win,
                 RevertToPointerRoot,
-                CurrentTime as u64,
+                CurrentTime,
             );
             bindgen::XChangeProperty(
                 dpy,
@@ -1828,7 +1828,7 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
                 dpy,
                 root,
                 RevertToPointerRoot,
-                CurrentTime as u64,
+                CurrentTime,
             );
             bindgen::XDeleteProperty(
                 dpy,
@@ -2509,7 +2509,7 @@ fn cleanup() {
             dpy,
             bindgen::PointerRoot as u64,
             RevertToPointerRoot,
-            CurrentTime as u64,
+            CurrentTime,
         );
         bindgen::XDeleteProperty(
             dpy,
