@@ -1496,20 +1496,21 @@ fn detach(c: *mut Client) {
 //     }
 // }
 
-// pub fn view(mdpy: &Display, arg: Arg) {
-//     unsafe {
-//         let Arg::Uint(ui) = arg else { return };
-//         if (ui & TAGMASK) == (*SELMON).tagset[(*SELMON).seltags] {
-//             return;
-//         }
-//         (*SELMON).seltags ^= 1; /* toggle sel tagset */
-//         if (ui & TAGMASK) != 0 {
-//             (*SELMON).tagset[(*SELMON).seltags] = ui & TAGMASK;
-//         }
-//         focus(mdpy, null_mut());
-//         arrange(mdpy, SELMON);
-//     }
-// }
+fn view(arg: *const bindgen::Arg) {
+    use bindgen::selmon;
+
+    unsafe {
+        if (*arg).ui & TAGMASK == (*selmon).tagset[(*selmon).seltags as usize] {
+            return;
+        }
+        (*selmon).seltags ^= 1; // toggle sel tagset
+        if ((*arg).ui & TAGMASK) != 0 {
+            (*selmon).tagset[(*selmon).seltags as usize] = (*arg).ui & TAGMASK;
+        }
+        focus(null_mut());
+        arrange(selmon);
+    }
+}
 
 // pub fn toggleview(mdpy: &Display, arg: Arg) {
 //     unsafe {
@@ -2333,7 +2334,7 @@ fn cleanup() {
 
     unsafe {
         let a = bindgen::Arg { ui: !0 };
-        bindgen::view(&a);
+        view(&a);
         (*selmon).lt[(*selmon).sellt as usize] =
             &bindgen::Layout { symbol: c"".as_ptr(), arrange: None };
 
