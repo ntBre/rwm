@@ -2358,7 +2358,7 @@ fn cleanup() {
         }
 
         for i in 0..bindgen::CurLast {
-            bindgen::drw_cur_free(drw, cursor[i as usize]);
+            drw::cur_free(drw, cursor[i as usize]);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself

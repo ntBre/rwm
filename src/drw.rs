@@ -114,6 +114,17 @@ pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
     }
 }
 
+pub(crate) fn cur_free(drw: *mut Drw, cursor: *mut Cur) {
+    if cursor.is_null() {
+        return;
+    }
+
+    unsafe {
+        bindgen::XFreeCursor((*drw).dpy, (*cursor).cursor);
+        libc::free(cursor.cast());
+    }
+}
+
 pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     if !drw.is_null() {
         unsafe {
