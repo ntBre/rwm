@@ -3136,9 +3136,9 @@ fn main() {
             die("rwm: cannot open display");
         }
     }
-    checkotherwm(); // DONE
-    setup(); // Scary - drawing code
-    scan(); // DONE except trivial impls from manage
+    checkotherwm();
+    setup();
+    scan();
     run();
     cleanup();
     unsafe {
