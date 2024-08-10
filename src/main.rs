@@ -26,8 +26,9 @@ use util::{die, ecalloc};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth, CurrentTime,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
-    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureRedirectMask, Success, XFree, XA_ATOM, XA_STRING, XA_WINDOW,
+    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureRedirectMask, Success, XFree, XA_ATOM,
+    XA_STRING, XA_WINDOW,
 };
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
@@ -580,7 +581,7 @@ fn setup() {
             netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
-            bindgen::PropModeReplace as i32,
+            PropModeReplace,
             addr_of_mut!(wmcheckwin) as *mut c_uchar,
             1,
         );
@@ -590,7 +591,7 @@ fn setup() {
             netatom[Net::WMName as usize],
             utf8string,
             8,
-            bindgen::PropModeReplace as i32,
+            PropModeReplace,
             c"dwm".as_ptr() as *mut c_uchar,
             3,
         );
@@ -600,7 +601,7 @@ fn setup() {
             netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
-            bindgen::PropModeReplace as i32,
+            PropModeReplace,
             addr_of_mut!(wmcheckwin) as *mut c_uchar,
             1,
         );
@@ -611,7 +612,7 @@ fn setup() {
             netatom[Net::Supported as usize],
             XA_ATOM,
             32,
-            bindgen::PropModeReplace as i32,
+            PropModeReplace,
             netatom.as_ptr() as *mut c_uchar,
             Net::Last as i32,
         );
@@ -710,7 +711,7 @@ fn setfocus(c: *mut Client) {
                 bindgen::netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
-                bindgen::PropModeReplace as i32,
+                PropModeReplace,
                 (&mut (*c).win) as *mut u64 as *mut c_uchar,
                 1,
             );
@@ -2603,7 +2604,7 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
             bindgen::wmatom[WM::State as usize],
             bindgen::wmatom[WM::State as usize],
             32,
-            bindgen::PropModeReplace as i32,
+            PropModeReplace,
             ptr,
             2,
         );
@@ -2884,7 +2885,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 netatom[NetWMState as usize],
                 XA_ATOM,
                 32,
-                bindgen::PropModeReplace as i32,
+                PropModeReplace,
                 // trying to emulate (unsigned char*)&netatom[NetWMFullscreen],
                 // so take a reference and then cast
                 &mut netatom[NetWMFullscreen as usize] as *mut u64
@@ -2911,7 +2912,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 netatom[NetWMState as usize],
                 XA_ATOM,
                 32,
-                bindgen::PropModeReplace as i32,
+                PropModeReplace,
                 std::ptr::null_mut::<c_uchar>(),
                 0,
             );
