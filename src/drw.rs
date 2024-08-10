@@ -385,7 +385,7 @@ pub(crate) fn text(
                             utf8codepoint as u32,
                         ) != 0) as c_int;
                     if charexists != 0 {
-                        bindgen::drw_font_getexts(
+                        font_getexts(
                             curfont,
                             text,
                             utf8charlen as u32,
@@ -551,6 +551,17 @@ pub(crate) fn text(
 
         x + if render != 0 { w } else { 0 } as i32
     }
+}
+
+// DUMMY
+fn font_getexts(
+    font: *mut Fnt,
+    text: *const i8,
+    len: u32,
+    w: *mut c_uint,
+    h: *mut c_uint,
+) {
+    unsafe { bindgen::drw_font_getexts(font, text, len, w, h) }
 }
 
 pub(crate) fn map(
