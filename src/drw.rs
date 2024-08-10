@@ -190,13 +190,46 @@ fn xfont_create(
     }
 }
 
-// DUMMY
+fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
+    if drw.is_null() || dest.is_null() || clrname.is_null() {
+        return;
+    }
+    unsafe {
+        if bindgen::XftColorAllocName(
+            (*drw).dpy,
+            bindgen::XDefaultVisual((*drw).dpy, (*drw).screen),
+            bindgen::XDefaultColormap((*drw).dpy, (*drw).screen),
+            clrname,
+            dest,
+        ) == 0
+        {
+            die(&format!(
+                "error, cannot allocate color '{:?}'",
+                CStr::from_ptr(clrname)
+            ));
+        }
+    }
+}
+
 pub(crate) fn scm_create(
     drw: *mut Drw,
     clrnames: &mut [*const c_char],
     clrcount: usize,
 ) -> *mut Clr {
-    unsafe { bindgen::drw_scm_create(drw, clrnames.as_mut_ptr(), clrcount) }
+    if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
+        return null_mut();
+    }
+    let ret: *mut Clr =
+        ecalloc(clrcount, size_of::<bindgen::XftColor>()).cast();
+    if ret.is_null() {
+        return null_mut();
+    }
+    for i in 0..clrcount {
+        unsafe {
+            clr_create(drw, ret.add(i), clrnames[i]);
+        }
+    }
+    ret
 }
 
 pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
