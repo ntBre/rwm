@@ -32,7 +32,7 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
-use bindgen::{dpy, drw, Atom, Client, Monitor};
+use bindgen::{dpy, drw, root, Atom, Client, Monitor};
 use enums::{Cur, Net, WM};
 use util::{die, ecalloc};
 
@@ -670,13 +670,13 @@ fn focus(mut c: *mut Client) {
         } else {
             bindgen::XSetInputFocus(
                 dpy,
-                bindgen::root,
+                root,
                 RevertToPointerRoot,
                 CurrentTime,
             );
             bindgen::XDeleteProperty(
                 dpy,
-                bindgen::root,
+                root,
                 bindgen::netatom[Net::ActiveWindow as usize],
             );
         }
@@ -706,7 +706,7 @@ fn setfocus(c: *mut Client) {
             );
             bindgen::XChangeProperty(
                 dpy,
-                bindgen::root,
+                root,
                 bindgen::netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
@@ -1731,7 +1731,7 @@ fn grabkeys() {
             dpy,
             bindgen::AnyKey as i32,
             bindgen::AnyModifier,
-            bindgen::root,
+            root,
         );
         bindgen::XDisplayKeycodes(dpy, &mut start, &mut end);
         let syms = bindgen::XGetKeyboardMapping(
@@ -1754,7 +1754,7 @@ fn grabkeys() {
                             dpy,
                             k,
                             bindgen::keys[i].mod_ | modifiers[j],
-                            bindgen::root,
+                            root,
                             bindgen::True as i32,
                             bindgen::GrabModeAsync as i32,
                             bindgen::GrabModeAsync as i32,
@@ -1841,7 +1841,7 @@ fn unfocus(c: *mut bindgen::Client, setfocus: bool) {
 fn updatestatus() {
     unsafe {
         if gettextprop(
-            bindgen::root,
+            root,
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
@@ -2078,7 +2078,7 @@ fn updatebars() {
             }
             (*m).barwin = bindgen::XCreateWindow(
                 dpy,
-                bindgen::root,
+                root,
                 (*m).wx as c_int,
                 (*m).by as c_int,
                 (*m).ww as c_uint,
@@ -2244,7 +2244,7 @@ fn wintomon(w: Window) -> *mut bindgen::Monitor {
     unsafe {
         let mut x = 0;
         let mut y = 0;
-        if w == bindgen::root && getrootptr(&mut x, &mut y) != 0 {
+        if w == root && getrootptr(&mut x, &mut y) != 0 {
             return recttomon(x, y, 1, 1);
         }
         let mut m = bindgen::mons;
@@ -2338,15 +2338,7 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
         let mut dui = 0;
         let mut dummy = 0;
         bindgen::XQueryPointer(
-            dpy,
-            bindgen::root,
-            &mut dummy,
-            &mut dummy,
-            x,
-            y,
-            &mut di,
-            &mut di,
-            &mut dui,
+            dpy, root, &mut dummy, &mut dummy, x, y, &mut di, &mut di, &mut dui,
         )
     }
 }
@@ -2565,7 +2557,7 @@ fn updateclientlist() {
     unsafe {
         bindgen::XDeleteProperty(
             dpy,
-            bindgen::root,
+            root,
             bindgen::netatom[Net::ClientList as usize],
         );
         let mut m = bindgen::mons;
@@ -2574,7 +2566,7 @@ fn updateclientlist() {
             while !c.is_null() {
                 bindgen::XChangeProperty(
                     dpy,
-                    bindgen::root,
+                    root,
                     bindgen::netatom[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
@@ -2651,7 +2643,7 @@ fn scan() {
     unsafe {
         if bindgen::XQueryTree(
             dpy,
-            bindgen::root,
+            root,
             &mut d1,
             &mut d2,
             &mut wins as *mut _,
@@ -2802,7 +2794,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         attachstack(c);
         bindgen::XChangeProperty(
             dpy,
-            bindgen::root,
+            root,
             bindgen::netatom[Net::ClientList as usize],
             XA_WINDOW,
             32,
