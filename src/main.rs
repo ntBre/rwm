@@ -32,7 +32,7 @@ use x11::xlib::{
     XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
-use bindgen::{dpy, drw, mons, root, selmon, Atom, Client, Monitor};
+use bindgen::{dpy, drw, mons, root, selmon, Arg, Atom, Client, Monitor};
 use enums::{Cur, Net, WM};
 use util::{die, ecalloc};
 
@@ -1488,7 +1488,7 @@ fn detach(c: *mut Client) {
 //     }
 // }
 
-fn view(arg: *const bindgen::Arg) {
+fn view(arg: *const Arg) {
     unsafe {
         if (*arg).ui & TAGMASK == (*selmon).tagset[(*selmon).seltags as usize] {
             return;
@@ -2451,7 +2451,7 @@ fn cleanup() {
     use bindgen::{colors, cursor, mons, scheme, wmcheckwin};
 
     unsafe {
-        let a = bindgen::Arg { ui: !0 };
+        let a = Arg { ui: !0 };
         view(&a);
         (*selmon).lt[(*selmon).sellt as usize] =
             &bindgen::Layout { symbol: c"".as_ptr(), arrange: None };
