@@ -2220,7 +2220,7 @@ fn updategeom() -> i32 {
                     (*m).mh = unique[i as usize].height as i32;
                     (*m).wh = unique[i as usize].height as i32;
 
-                    bindgen::updatebarpos(m);
+                    updatebarpos(m);
                 }
                 m = (*m).next;
                 i += 1;
@@ -2264,7 +2264,7 @@ fn updategeom() -> i32 {
                 (*mons).ww = sw;
                 (*mons).mh = sh;
                 (*mons).wh = sh;
-                bindgen::updatebarpos(mons);
+                updatebarpos(mons);
             }
         }
         if dirty != 0 {
@@ -2450,23 +2450,10 @@ fn is_visible(c: *const Client) -> bool {
     }
 }
 
-// fn updatebarpos(m: *mut Monitor) {
-//     unsafe {
-//         (*m).wy = (*m).my;
-//         (*m).wh = (*m).mh;
-//         if (*m).showbar {
-//             (*m).wh -= BH;
-//             (*m).by = if (*m).topbar {
-//                 (*m).wy
-//             } else {
-//                 (*m).wy + (*m).wh
-//             };
-//             (*m).wy = if (*m).topbar { (*m).wy + BH } else { (*m).wy };
-//         } else {
-//             (*m).by = -BH;
-//         }
-//     }
-// }
+// DUMMY
+fn updatebarpos(m: *mut Monitor) {
+    unsafe { bindgen::updatebarpos(m) }
+}
 
 // fn isuniquegeom(
 //     unique: *mut XineramaScreenInfo,
