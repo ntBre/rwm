@@ -2162,11 +2162,8 @@ fn updategeom() -> i32 {
             let mut i = 0;
             let mut j = 0;
             while i < nn {
-                if isuniquegeom(
-                    unique.as_mut_ptr(),
-                    j,
-                    info.offset(i as isize) as *mut _,
-                ) != 0
+                if isuniquegeom(unique, j, info.offset(i as isize) as *mut _)
+                    != 0
                 {
                     libc::memcpy(
                         (&mut unique[j]) as *mut _ as *mut _,
@@ -2455,13 +2452,27 @@ fn updatebarpos(m: *mut Monitor) {
     unsafe { bindgen::updatebarpos(m) }
 }
 
-// DUMMY
 fn isuniquegeom(
-    unique: *mut bindgen::XineramaScreenInfo,
-    n: usize,
+    unique: &mut [bindgen::XineramaScreenInfo],
+    mut n: usize,
     info: *mut bindgen::XineramaScreenInfo,
 ) -> c_int {
-    unsafe { bindgen::isuniquegeom(unique, n, info) }
+    unsafe {
+        assert!(!info.is_null());
+        let info = &*info;
+        while n > 0 {
+            n -= 1; // pretty sure this happens immediately in `while (n--)`
+
+            if unique[n].x_org == info.x_org
+                && unique[n].y_org == info.y_org
+                && unique[n].width == info.width
+                && unique[n].height == info.height
+            {
+                return 0;
+            }
+        }
+        1
+    }
 }
 
 fn cleanup() {
