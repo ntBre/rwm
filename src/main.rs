@@ -33,7 +33,7 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    buttons, dpy, drw, mons, root, selmon, Arg, Atom, Client, Monitor,
+    buttons, dpy, drw, mons, root, selmon, Arg, Atom, Client, Clr, Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -2049,7 +2049,7 @@ fn updatebars() {
 }
 
 fn updategeom() -> i32 {
-    use bindgen::{mons, sh, sw};
+    use bindgen::{sh, sw};
 
     unsafe {
         let mut dirty = 0;
@@ -2291,8 +2291,6 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
 
 /// remove `mon` from the linked list of `Monitor`s in `mons` and free it.
 fn cleanupmon(mon: *mut Monitor) {
-    use bindgen::mons;
-
     unsafe {
         if mon == mons {
             mons = (*mons).next;
@@ -2398,7 +2396,7 @@ fn isuniquegeom(
 fn cleanup() {
     log::trace!("entering cleanup");
 
-    use bindgen::{colors, cursor, mons, scheme, wmcheckwin};
+    use bindgen::{colors, cursor, scheme, wmcheckwin};
 
     unsafe {
         let a = Arg { ui: !0 };
@@ -2431,7 +2429,7 @@ fn cleanup() {
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..colors.len() {
-            let tmp: *mut bindgen::Clr = *scheme.add(i);
+            let tmp: *mut Clr = *scheme.add(i);
             libc::free(tmp.cast());
         }
         libc::free(scheme.cast());
@@ -2706,11 +2704,10 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             "manage: XSetWindowBorder with dpy = {dpy:?} and w = {w:?}"
         );
         log::trace!("scheme: {:?}", bindgen::scheme);
-        let scheme_norm: *mut bindgen::Clr =
+        let scheme_norm: *mut Clr =
             *bindgen::scheme.offset(bindgen::SchemeNorm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
-        let border: bindgen::Clr =
-            *scheme_norm.offset(bindgen::ColBorder as isize);
+        let border: Clr = *scheme_norm.offset(bindgen::ColBorder as isize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
         let pixel = border.pixel;
         log::trace!("pixel = {pixel:?}");
