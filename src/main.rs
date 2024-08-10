@@ -2326,9 +2326,64 @@ fn is_visible(c: *const Client) -> bool {
 //     true
 // }
 
-// DUMMY
 fn cleanup() {
-    unsafe { bindgen::cleanup() }
+    log::trace!("entering cleanup");
+
+    use bindgen::{colors, cursor, mons, root, scheme, selmon, wmcheckwin};
+
+    unsafe {
+        let a = bindgen::Arg { ui: !0 };
+        bindgen::view(&a);
+        (*selmon).lt[(*selmon).sellt as usize] =
+            &bindgen::Layout { symbol: c"".as_ptr(), arrange: None };
+
+        let mut m = mons;
+        while !m.is_null() {
+            while !(*m).stack.is_null() {
+                unmanage((*m).stack, 0);
+            }
+            m = (*m).next;
+        }
+
+        bindgen::XUngrabKey(
+            dpy,
+            bindgen::AnyKey as i32,
+            bindgen::AnyModifier,
+            root,
+        );
+
+        while !mons.is_null() {
+            bindgen::cleanupmon(mons);
+        }
+
+        for i in 0..bindgen::CurLast {
+            bindgen::drw_cur_free(drw, cursor[i as usize]);
+        }
+
+        // free each element in scheme (*mut *mut Clr), then free scheme itself
+        for i in 0..colors.len() {
+            let tmp: *mut bindgen::Clr = *scheme.add(i);
+            libc::free(tmp.cast());
+        }
+        libc::free(scheme.cast());
+
+        bindgen::XDestroyWindow(dpy, wmcheckwin);
+        bindgen::drw_free(drw);
+        bindgen::XSync(dpy, False);
+        bindgen::XSetInputFocus(
+            dpy,
+            bindgen::PointerRoot as u64,
+            RevertToPointerRoot,
+            bindgen::CurrentTime as u64,
+        );
+        bindgen::XDeleteProperty(
+            dpy,
+            root,
+            bindgen::netatom[bindgen::NetActiveWindow as usize],
+        );
+    }
+
+    log::trace!("finished cleanup");
 }
 
 fn unmanage(c: *mut Client, destroyed: c_int) {
