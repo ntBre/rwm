@@ -24,12 +24,12 @@ use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
     ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
-    CWOverrideRedirect, CurrentTime, Display as XDisplay, EnterWindowMask,
-    False, FocusChangeMask, IsViewable, LeaveWindowMask, PointerMotionMask,
-    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, XErrorEvent, XFree, XSetErrorHandler, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    CWOverrideRedirect, ClientMessage, CurrentTime, Display as XDisplay,
+    EnterWindowMask, False, FocusChangeMask, IsViewable, LeaveWindowMask,
+    PointerMotionMask, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, XErrorEvent, XFree, XSetErrorHandler,
+    XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
 use bindgen::{dpy, drw, mons, root, selmon, Atom, Client, Monitor};
@@ -734,8 +734,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
         }
         use bindgen::{wmatom, WMProtocols};
         if exists != 0 {
-            let mut ev =
-                bindgen::XEvent { type_: bindgen::ClientMessage as i32 };
+            let mut ev = bindgen::XEvent { type_: ClientMessage };
             ev.xclient.window = (*c).win;
             ev.xclient.message_type = wmatom[WMProtocols as usize];
             ev.xclient.format = 32;
