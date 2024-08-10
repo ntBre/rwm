@@ -24,7 +24,7 @@ use bindgen::{drw, Atom, Client, Monitor};
 use libc::{c_long, c_uchar, sigaction};
 use util::{die, ecalloc};
 use x11::xlib::{
-    BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth,
+    BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth, CurrentTime,
     EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
     PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
     SubstructureRedirectMask, Success, XFree, XA_ATOM, XA_STRING, XA_WINDOW,
@@ -32,7 +32,7 @@ use x11::xlib::{
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
-use crate::bindgen::{dpy, CurrentTime};
+use crate::bindgen::dpy;
 
 use crate::enums::{Cur, Net, WM};
 
@@ -702,7 +702,7 @@ fn setfocus(c: *mut Client) {
                 dpy,
                 (*c).win,
                 RevertToPointerRoot,
-                bindgen::CurrentTime as u64,
+                CurrentTime as u64,
             );
             bindgen::XChangeProperty(
                 dpy,
@@ -2509,7 +2509,7 @@ fn cleanup() {
             dpy,
             bindgen::PointerRoot as u64,
             RevertToPointerRoot,
-            bindgen::CurrentTime as u64,
+            CurrentTime as u64,
         );
         bindgen::XDeleteProperty(
             dpy,

@@ -4,7 +4,7 @@ use std::{
 };
 
 use x11::xlib::{
-    PropertyDelete, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    CurrentTime, PropertyDelete, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
     XA_WM_TRANSIENT_FOR,
 };
 
@@ -71,7 +71,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 bindgen::XAllowEvents(
                     bindgen::dpy,
                     bindgen::ReplayPointer as i32,
-                    bindgen::CurrentTime as u64,
+                    CurrentTime as u64,
                 );
                 click = ClkClientWin;
             }
