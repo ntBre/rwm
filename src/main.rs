@@ -34,7 +34,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    buttons, dpy, drw, mons, root, selmon, sw, Arg, Atom, Client, Clr, Monitor,
+    buttons, dpy, drw, mons, root, selmon, sh, sw, Arg, Atom, Client, Clr,
+    Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -453,7 +454,7 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        use bindgen::{bh, fonts, lrpad, screen, sh, sw};
+        use bindgen::{bh, fonts, lrpad, screen};
 
         screen = bindgen::XDefaultScreen(dpy);
         sw = bindgen::XDisplayWidth(dpy, screen);
@@ -973,8 +974,8 @@ fn applysizehints(
             if *x > sw {
                 *x = sw - width(c);
             }
-            if *y > bindgen::sh {
-                *y = bindgen::sh - height(c);
+            if *y > sh {
+                *y = sh - height(c);
             }
             if *x + *w + 2 * (*c).bw < 0 {
                 *x = 0;
