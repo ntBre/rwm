@@ -6,6 +6,18 @@ pub enum Cur {
     Last,
 }
 
+/// Clicks
+#[allow(unused)]
+pub enum Clk {
+    TagBar,
+    LtSymbol,
+    StatusText,
+    WinTitle,
+    ClientWin,
+    RootWin,
+    Last,
+}
+
 /// Default atoms
 pub enum WM {
     Protocols,

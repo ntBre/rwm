@@ -35,7 +35,7 @@ use x11::xlib::{
 use bindgen::{
     buttons, dpy, drw, mons, root, selmon, Arg, Atom, Client, Monitor,
 };
-use enums::{Cur, Net, WM};
+use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
 
 /// function to be called on a startup error
@@ -420,54 +420,6 @@ fn checkotherwm() {
     }
 }
 
-// #[repr(C)]
-// enum Net {
-//     Supported,
-//     WMName,
-//     WMState,
-//     WMCheck,
-//     WMFullscreen,
-//     ActiveWindow,
-//     WMWindowType,
-//     WMWindowTypeDialog,
-//     ClientList,
-//     Last,
-// }
-
-// #[repr(C)]
-// enum Cur {
-//     Normal,
-//     Resize,
-//     Move,
-//     Last,
-// }
-
-// #[repr(C)]
-// enum Scheme {
-//     Norm,
-//     Sel,
-// }
-
-/// Color scheme index
-// #[repr(C)]
-// enum Col {
-//     Fg,
-//     Bg,
-//     Border,
-// }
-
-#[derive(Debug, PartialEq)]
-#[repr(C)]
-pub enum Clk {
-    TagBar,
-    LtSymbol,
-    StatusText,
-    WinTitle,
-    ClientWin,
-    RootWin,
-    Last,
-}
-
 fn setup() {
     unsafe {
         let mut wa = bindgen::XSetWindowAttributes {
@@ -785,7 +737,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
             );
         }
         for i in 0..buttons.len() {
-            if buttons[i].click == bindgen::ClkClientWin {
+            if buttons[i].click == Clk::ClientWin as u32 {
                 for j in 0..modifiers.len() {
                     bindgen::XGrabButton(
                         dpy,
