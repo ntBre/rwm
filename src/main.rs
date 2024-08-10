@@ -391,10 +391,33 @@ impl Rule {
     }
 }
 
-// fn createmon() -> *mut Monitor {
-//     let mon = Monitor::new();
-//     Box::into_raw(Box::new(mon))
-// }
+fn createmon() -> *mut Monitor {
+    use bindgen::{layouts, mfact, nmaster, showbar, topbar};
+
+    // I thought about trying to create a Monitor directly, followed by
+    // Box::into_raw(Box::new(m)), but we use libc::free to free the Monitors
+    // later. I'd have to replace that with Box::from_raw and allow it to drop
+    // for that to work I think.
+    let m: *mut Monitor = ecalloc(1, size_of::<Monitor>()).cast();
+
+    unsafe {
+        (*m).tagset[0] = 1;
+        (*m).tagset[1] = 1;
+        (*m).mfact = mfact;
+        (*m).nmaster = nmaster;
+        (*m).showbar = showbar;
+        (*m).topbar = topbar;
+        (*m).lt[0] = &layouts[0];
+        (*m).lt[1] = &layouts[1 % layouts.len()];
+        libc::strncpy(
+            &mut (*m).ltsymbol as *mut _,
+            layouts[0].symbol,
+            size_of_val(&(*m).ltsymbol),
+        );
+    }
+
+    m
+}
 
 fn checkotherwm() {
     unsafe {
@@ -2167,9 +2190,9 @@ fn updategeom() -> i32 {
                     m = (*m).next;
                 }
                 if !m.is_null() {
-                    (*m).next = bindgen::createmon();
+                    (*m).next = createmon();
                 } else {
-                    mons = bindgen::createmon();
+                    mons = createmon();
                 }
             }
 
@@ -2233,7 +2256,7 @@ fn updategeom() -> i32 {
 
             // default monitor setup
             if mons.is_null() {
-                mons = bindgen::createmon();
+                mons = createmon();
             }
             if (*mons).mw != sw || (*mons).mh != sh {
                 dirty = 1;
