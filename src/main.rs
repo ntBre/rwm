@@ -34,6 +34,8 @@ use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use crate::bindgen::{dpy, CurrentTime};
 
+use crate::enums::WM;
+
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
     panic!("another window manager is already running")
@@ -416,16 +418,6 @@ fn checkotherwm() {
     }
 }
 
-// #[derive(Debug)]
-// #[repr(C)]
-// enum WM {
-//     Protocols,
-//     Delete,
-//     State,
-//     TakeFocus,
-//     Last,
-// }
-
 // #[repr(C)]
 // enum Net {
 //     Supported,
@@ -527,13 +519,13 @@ fn setup() {
         /* init atoms */
         let utf8string =
             bindgen::XInternAtom(dpy, c"UTF8_STRING".as_ptr(), False);
-        wmatom[bindgen::WMProtocols as usize] =
+        wmatom[WM::Protocols as usize] =
             XInternAtom(dpy, c"WM_PROTOCOLS".as_ptr(), False);
-        wmatom[bindgen::WMDelete as usize] =
+        wmatom[WM::Delete as usize] =
             XInternAtom(dpy, c"WM_DELETE_WINDOW".as_ptr(), False);
-        wmatom[bindgen::WMState as usize] =
+        wmatom[WM::State as usize] =
             XInternAtom(dpy, c"WM_STATE".as_ptr(), False);
-        wmatom[bindgen::WMTakeFocus as usize] =
+        wmatom[WM::TakeFocus as usize] =
             XInternAtom(dpy, c"WM_TAKE_FOCUS".as_ptr(), False);
 
         netatom[bindgen::NetActiveWindow as usize] =
@@ -727,7 +719,7 @@ fn setfocus(c: *mut Client) {
                 1,
             );
         }
-        sendevent(c, bindgen::wmatom[bindgen::WMTakeFocus as usize]);
+        sendevent(c, bindgen::wmatom[WM::TakeFocus as usize]);
     }
 }
 
@@ -2612,8 +2604,8 @@ fn setclientstate(c: *mut bindgen::Client, state: usize) {
         bindgen::XChangeProperty(
             dpy,
             (*c).win,
-            bindgen::wmatom[bindgen::WMState as usize],
-            bindgen::wmatom[bindgen::WMState as usize],
+            bindgen::wmatom[WM::State as usize],
+            bindgen::wmatom[WM::State as usize],
             32,
             bindgen::PropModeReplace as i32,
             ptr,
@@ -3069,11 +3061,11 @@ fn getstate(w: Window) -> c_long {
         let cond = bindgen::XGetWindowProperty(
             dpy,
             w,
-            bindgen::wmatom[bindgen::WMState as usize],
+            bindgen::wmatom[WM::State as usize],
             0,
             2,
             False,
-            bindgen::wmatom[bindgen::WMState as usize],
+            bindgen::wmatom[WM::State as usize],
             &mut real,
             &mut format,
             &mut n,
@@ -3094,6 +3086,7 @@ fn getstate(w: Window) -> c_long {
 mod config;
 // mod layouts;
 mod drw;
+mod enums;
 mod handlers;
 mod util;
 
