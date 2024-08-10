@@ -315,7 +315,7 @@ pub(crate) fn text(
         static mut ELLIPSIS_WIDTH: c_uint = 0;
 
         if drw.is_null()
-            || (render != 0 && (*drw).scheme.is_null() || w == 0)
+            || (render != 0 && ((*drw).scheme.is_null() || w == 0))
             || text.is_null()
             || (*drw).fonts.is_null()
         {
