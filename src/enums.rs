@@ -1,3 +1,11 @@
+/// Cursor
+pub enum Cur {
+    Normal,
+    Resize,
+    Move,
+    Last,
+}
+
 /// Default atoms
 pub enum WM {
     Protocols,

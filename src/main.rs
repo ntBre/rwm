@@ -34,7 +34,7 @@ use x11::xlib::{XErrorEvent, XSetErrorHandler};
 
 use crate::bindgen::{dpy, CurrentTime};
 
-use crate::enums::{Net, WM};
+use crate::enums::{Cur, Net, WM};
 
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
@@ -549,11 +549,11 @@ fn setup() {
 
         use bindgen::cursor;
         /* init cursors */
-        cursor[bindgen::CurNormal as usize] =
+        cursor[Cur::Normal as usize] =
             drw::cur_create(drw, bindgen::XC_left_ptr as i32);
-        cursor[bindgen::CurResize as usize] =
+        cursor[Cur::Resize as usize] =
             drw::cur_create(drw, bindgen::XC_sizing as i32);
-        cursor[bindgen::CurMove as usize] =
+        cursor[Cur::Move as usize] =
             drw::cur_create(drw, bindgen::XC_fleur as i32);
 
         use bindgen::{colors, scheme, Clr};
@@ -618,7 +618,7 @@ fn setup() {
         bindgen::XDeleteProperty(dpy, root, netatom[Net::ClientList as usize]);
 
         // /* select events */
-        wa.cursor = (*cursor[bindgen::CurNormal as usize]).cursor;
+        wa.cursor = (*cursor[Cur::Normal as usize]).cursor;
         wa.event_mask = SubstructureRedirectMask
             | bindgen::SubstructureNotifyMask as i64
             | bindgen::ButtonPressMask as i64
@@ -2097,7 +2097,7 @@ fn updatebars() {
             bindgen::XDefineCursor(
                 dpy,
                 (*m).barwin,
-                (*bindgen::cursor[bindgen::CurNormal as usize]).cursor,
+                (*bindgen::cursor[Cur::Normal as usize]).cursor,
             );
             bindgen::XMapRaised(dpy, (*m).barwin);
             bindgen::XSetClassHint(dpy, (*m).barwin, &mut ch);
@@ -2491,8 +2491,8 @@ fn cleanup() {
             cleanupmon(mons);
         }
 
-        for i in 0..bindgen::CurLast {
-            drw::cur_free(drw, cursor[i as usize]);
+        for i in 0..Cur::Last as usize {
+            drw::cur_free(drw, cursor[i]);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
