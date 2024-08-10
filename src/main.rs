@@ -22,11 +22,12 @@ use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
-    BadAccess, BadDrawable, BadMatch, BadWindow, CWBorderWidth, CurrentTime,
-    EnterWindowMask, False, FocusChangeMask, IsViewable, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureRedirectMask, Success, XFree, XA_ATOM,
-    XA_STRING, XA_WINDOW,
+    BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
+    ButtonReleaseMask, CWBorderWidth, CurrentTime, EnterWindowMask, False,
+    FocusChangeMask, IsViewable, LeaveWindowMask, PointerMotionMask,
+    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, XFree, XA_ATOM, XA_STRING, XA_WINDOW,
 };
 use x11::xlib::{Display as XDisplay, XA_WM_NAME};
 use x11::xlib::{XErrorEvent, XSetErrorHandler};
@@ -619,11 +620,11 @@ fn setup() {
         // /* select events */
         wa.cursor = (*cursor[Cur::Normal as usize]).cursor;
         wa.event_mask = SubstructureRedirectMask
-            | bindgen::SubstructureNotifyMask as i64
-            | bindgen::ButtonPressMask as i64
-            | bindgen::PointerMotionMask as i64
+            | SubstructureNotifyMask
+            | ButtonPressMask
+            | PointerMotionMask
             | EnterWindowMask
-            | bindgen::LeaveWindowMask as i64
+            | LeaveWindowMask
             | StructureNotifyMask
             | PropertyChangeMask;
         bindgen::XChangeWindowAttributes(
@@ -767,8 +768,7 @@ fn grabbuttons(c: *mut bindgen::Client, focused: bool) {
             bindgen::AnyModifier,
             (*c).win,
         );
-        const BUTTONMASK: u32 =
-            bindgen::ButtonPressMask | bindgen::ButtonReleaseMask;
+        const BUTTONMASK: u32 = (ButtonPressMask | ButtonReleaseMask) as u32;
         if !focused {
             bindgen::XGrabButton(
                 dpy,
@@ -2050,8 +2050,7 @@ fn updatebars() {
     let mut wa = bindgen::XSetWindowAttributes {
         override_redirect: bindgen::True as i32,
         background_pixmap: bindgen::ParentRelative as u64,
-        event_mask: bindgen::ButtonPressMask as i64
-            | bindgen::ExposureMask as i64,
+        event_mask: ButtonPressMask | bindgen::ExposureMask as i64,
         // everything else should be uninit I guess
         background_pixel: 0,
         border_pixmap: 0,
