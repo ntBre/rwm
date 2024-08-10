@@ -34,8 +34,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, dpy, drw, mons, root, selmon, sh, sw, Arg, Atom, Client, Clr,
-    Monitor,
+    bh, buttons, dpy, drw, lrpad, mons, root, selmon, sh, sw, Arg, Atom,
+    Client, Clr, Monitor,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -1758,9 +1758,7 @@ fn seturgent(c: *mut Client, urg: bool) {
 
 fn unfocus(c: *mut Client, setfocus: bool) {
     log::trace!("unfocus");
-    use bindgen::{
-        netatom, root, scheme, ColBorder, NetActiveWindow, SchemeNorm,
-    };
+    use bindgen::{netatom, scheme, ColBorder, NetActiveWindow, SchemeNorm};
     if c.is_null() {
         return;
     }
@@ -1810,7 +1808,7 @@ fn updatestatus() {
 }
 
 fn textw(x: *const c_char) -> c_int {
-    unsafe { drw::fontset_getwidth(drw, x) as c_int + bindgen::lrpad }
+    unsafe { drw::fontset_getwidth(drw, x) as c_int + lrpad }
 }
 
 fn drawbar(m: *mut Monitor) {
@@ -1830,7 +1828,7 @@ fn drawbar(m: *mut Monitor) {
         if m == selmon {
             // status is only drawn on selected monitor
             drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
-            tw = textw(addr_of!(stext) as *const _) - bindgen::lrpad + 2; // 2px right padding
+            tw = textw(addr_of!(stext) as *const _) - lrpad + 2; // 2px right padding
             drw::text(
                 drw,
                 (*m).ww - tw,
@@ -1872,7 +1870,7 @@ fn drawbar(m: *mut Monitor) {
                 0,
                 w as u32,
                 bh as u32,
-                bindgen::lrpad as u32 / 2,
+                lrpad as u32 / 2,
                 text,
                 (urg as i32) & 1 << i,
             );
