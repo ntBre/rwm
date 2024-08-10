@@ -846,7 +846,7 @@ fn configure(c: *mut Client) {
             height: (*c).h,
             border_width: (*c).bw,
             above: XNONE as u64,
-            override_redirect: False as i32,
+            override_redirect: False,
         };
         bindgen::XSendEvent(
             dpy,
@@ -2373,7 +2373,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
                 (*c).win,
             );
             setclientstate(c, bindgen::WithdrawnState as usize);
-            bindgen::XSync(dpy, False as i32);
+            bindgen::XSync(dpy, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(dpy);
         }
@@ -2450,7 +2450,7 @@ static HANDLER: LazyLock<
 /// main event loop
 fn run() {
     unsafe {
-        bindgen::XSync(dpy, False as i32);
+        bindgen::XSync(dpy, False);
         let mut ev: MaybeUninit<bindgen::XEvent> = MaybeUninit::uninit();
         while running != 0 && bindgen::XNextEvent(dpy, ev.as_mut_ptr()) == 0 {
             let mut ev: bindgen::XEvent = ev.assume_init();

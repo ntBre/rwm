@@ -199,7 +199,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 &mut wc,
             );
         }
-        bindgen::XSync(dpy, False as i32);
+        bindgen::XSync(dpy, False);
     }
 }
 

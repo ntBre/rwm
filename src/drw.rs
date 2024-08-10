@@ -636,7 +636,7 @@ pub(crate) fn map(
             x,
             y,
         );
-        bindgen::XSync((*drw).dpy, False as i32);
+        bindgen::XSync((*drw).dpy, False);
     }
 }
 
