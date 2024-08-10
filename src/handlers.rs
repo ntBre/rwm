@@ -287,9 +287,22 @@ pub(crate) fn focusin(e: *mut XEvent) {
     }
 }
 
-// DUMMY
 pub(crate) fn keypress(e: *mut XEvent) {
-    unsafe { bindgen::keypress(e) }
+    use bindgen::keys;
+
+    unsafe {
+        let ev = &mut (*e).xkey;
+        let keysym =
+            bindgen::XKeycodeToKeysym(dpy, ev.keycode as bindgen::KeyCode, 0);
+        for i in 0..keys.len() {
+            if keysym == keys[i].keysym
+                && cleanmask(keys[i].mod_) == cleanmask(ev.state)
+                && keys[i].func.is_some()
+            {
+                keys[i].func.unwrap()(&(keys[i].arg));
+            }
+        }
+    }
 }
 
 pub(crate) fn mappingnotify(e: *mut XEvent) {
