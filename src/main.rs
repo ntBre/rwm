@@ -2613,20 +2613,20 @@ static HANDLER: LazyLock<
 > = LazyLock::new(|| {
     fn dh(_ev: *mut bindgen::XEvent) {}
     let mut ret = [dh as fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize];
-    ret[bindgen::ButtonPress as usize] = handlers::buttonpress;
-    ret[bindgen::ClientMessage as usize] = handlers::clientmessage;
-    ret[bindgen::ConfigureRequest as usize] = handlers::configurerequest;
-    ret[bindgen::ConfigureNotify as usize] = handlers::configurenotify;
-    ret[bindgen::DestroyNotify as usize] = handlers::destroynotify;
-    ret[bindgen::EnterNotify as usize] = handlers::enternotify;
-    ret[bindgen::Expose as usize] = handlers::expose;
-    ret[bindgen::FocusIn as usize] = handlers::focusin;
-    ret[bindgen::KeyPress as usize] = handlers::keypress;
-    ret[bindgen::MappingNotify as usize] = handlers::mappingnotify;
-    ret[bindgen::MapRequest as usize] = handlers::maprequest;
-    ret[bindgen::MotionNotify as usize] = handlers::motionnotify;
-    ret[bindgen::PropertyNotify as usize] = handlers::propertynotify;
-    ret[bindgen::UnmapNotify as usize] = handlers::unmapnotify;
+    ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
+    ret[x11::xlib::ClientMessage as usize] = handlers::clientmessage;
+    ret[x11::xlib::ConfigureRequest as usize] = handlers::configurerequest;
+    ret[x11::xlib::ConfigureNotify as usize] = handlers::configurenotify;
+    ret[x11::xlib::DestroyNotify as usize] = handlers::destroynotify;
+    ret[x11::xlib::EnterNotify as usize] = handlers::enternotify;
+    ret[x11::xlib::Expose as usize] = handlers::expose;
+    ret[x11::xlib::FocusIn as usize] = handlers::focusin;
+    ret[x11::xlib::KeyPress as usize] = handlers::keypress;
+    ret[x11::xlib::MappingNotify as usize] = handlers::mappingnotify;
+    ret[x11::xlib::MapRequest as usize] = handlers::maprequest;
+    ret[x11::xlib::MotionNotify as usize] = handlers::motionnotify;
+    ret[x11::xlib::PropertyNotify as usize] = handlers::propertynotify;
+    ret[x11::xlib::UnmapNotify as usize] = handlers::unmapnotify;
     ret
 });
 
