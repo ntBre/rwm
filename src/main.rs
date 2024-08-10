@@ -2162,7 +2162,7 @@ fn updategeom() -> i32 {
             let mut i = 0;
             let mut j = 0;
             while i < nn {
-                if bindgen::isuniquegeom(
+                if isuniquegeom(
                     unique.as_mut_ptr(),
                     j,
                     info.offset(i as isize) as *mut _,
@@ -2455,26 +2455,14 @@ fn updatebarpos(m: *mut Monitor) {
     unsafe { bindgen::updatebarpos(m) }
 }
 
-// fn isuniquegeom(
-//     unique: *mut XineramaScreenInfo,
-//     mut n: isize,
-//     info: *const XineramaScreenInfo,
-// ) -> bool {
-//     while n > 0 {
-//         unsafe {
-//             let u = unique.offset(n);
-//             if (*u).x_org == (*info).x_org
-//                 && (*u).y_org == (*info).y_org
-//                 && (*u).width == (*info).width
-//                 && (*u).height == (*info).height
-//             {
-//                 return false;
-//             }
-//         }
-//         n -= 1;
-//     }
-//     true
-// }
+// DUMMY
+fn isuniquegeom(
+    unique: *mut bindgen::XineramaScreenInfo,
+    n: usize,
+    info: *mut bindgen::XineramaScreenInfo,
+) -> c_int {
+    unsafe { bindgen::isuniquegeom(unique, n, info) }
+}
 
 fn cleanup() {
     log::trace!("entering cleanup");
