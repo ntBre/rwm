@@ -498,7 +498,7 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        use bindgen::{bh, drw, fonts, lrpad, root, screen, sh, sw};
+        use bindgen::{bh, fonts, lrpad, root, screen, sh, sw};
 
         screen = bindgen::XDefaultScreen(dpy);
         sw = bindgen::XDisplayWidth(dpy, screen);
@@ -639,7 +639,7 @@ fn setup() {
     }
 }
 
-fn focus(mut c: *mut bindgen::Client) {
+fn focus(mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     use bindgen::{scheme, selmon, ColBorder, SchemeSel};
     unsafe {

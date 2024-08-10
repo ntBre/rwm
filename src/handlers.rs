@@ -10,7 +10,7 @@ use x11::xlib::{
 
 use crate::{
     arrange,
-    bindgen::{self, dpy, selmon, tags, Arg, XEvent},
+    bindgen::{self, dpy, root, selmon, tags, Arg, XEvent},
     cleanmask, configure, drawbar, drawbars, drw,
     enums::Net,
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -207,7 +207,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xconfigure;
         /* TODO: updategeom handling sucks, needs to be simplified */
-        if ev.window == bindgen::root {
+        if ev.window == root {
             let dirty = bindgen::sw != ev.width || bindgen::sh != ev.height;
             bindgen::sw = ev.width;
             bindgen::sh = ev.height;
@@ -256,7 +256,7 @@ pub(crate) fn enternotify(e: *mut XEvent) {
         let ev = &mut (*e).xcrossing;
         if (ev.mode != bindgen::NotifyNormal as i32
             || ev.detail == bindgen::NotifyInferior as i32)
-            && ev.window != bindgen::root
+            && ev.window != root
         {
             return;
         }
@@ -375,7 +375,7 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
     static mut MON: *mut bindgen::Monitor = null_mut();
     unsafe {
         let ev = &(*e).xmotion;
-        if ev.window != bindgen::root {
+        if ev.window != root {
             return;
         }
         let m = recttomon(ev.x_root, ev.y_root, 1, 1);
@@ -393,7 +393,7 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
     unsafe {
         let mut trans: bindgen::Window = 0;
         let ev = &mut (*e).xproperty;
-        if ev.window == bindgen::root && ev.atom == XA_WM_NAME {
+        if ev.window == root && ev.atom == XA_WM_NAME {
             updatestatus();
         } else if ev.state == PropertyDelete {
             return; // ignore
