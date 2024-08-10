@@ -24,12 +24,13 @@ use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     BadAccess, BadDrawable, BadMatch, BadWindow, ButtonPressMask,
     ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask,
-    CWOverrideRedirect, ClientMessage, CurrentTime, Display as XDisplay,
-    EnterWindowMask, False, FocusChangeMask, IsViewable, LeaveWindowMask,
-    PointerMotionMask, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    RevertToPointerRoot, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, XErrorEvent, XFree, XSetErrorHandler,
-    XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    CWHeight, CWOverrideRedirect, CWWidth, ClientMessage, CurrentTime,
+    Display as XDisplay, EnterWindowMask, False, FocusChangeMask, IsViewable,
+    LeaveWindowMask, PointerMotionMask, PropModeAppend, PropModeReplace,
+    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, XErrorEvent,
+    XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
+    XA_WM_NAME,
 };
 
 use bindgen::{
@@ -918,11 +919,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
         bindgen::XConfigureWindow(
             dpy,
             (*c).win,
-            bindgen::CWX
-                | bindgen::CWY
-                | bindgen::CWWidth
-                | bindgen::CWHeight
-                | bindgen::CWBorderWidth,
+            (CWX | CWY | CWWidth | CWHeight | CWBorderWidth) as u32,
             &mut wc,
         );
         configure(c);
