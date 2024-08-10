@@ -34,8 +34,11 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, cursor, dpy, drw, layouts, lrpad, mons, root, selmon, sh, sw,
-    wmcheckwin, Arg, Atom, Client, Clr, Monitor,
+    bh, buttons, colors, cursor, dpy, drw, fonts, layouts, lrpad, mons,
+    netatom, root, scheme, screen, selmon, sh, stext, sw, tags, wmatom,
+    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor, NetActiveWindow,
+    NetWMFullscreen, NetWMState, SchemeNorm, SchemeSel, WMProtocols,
+    XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -290,96 +293,6 @@ type Window = u64;
 //     }
 // }
 
-#[derive(PartialEq)]
-// pub struct Layout {
-//     symbol: &'static str,
-//     arrange: Option<fn(mdpy: &Display, mon: *mut Monitor)>,
-// }
-
-// pub struct Monitor {
-//     ltsymbol: String,
-//     mfact: f64,
-//     nmaster: i32,
-//     num: i32,
-//     /// bar geometry
-//     by: i16,
-//     /// screen size
-//     mx: i16,
-//     my: i16,
-//     mw: i16,
-//     mh: i16,
-//     /// window area
-//     wx: i16,
-//     wy: i16,
-//     ww: i16,
-//     wh: i16,
-//     seltags: usize,
-//     sellt: usize,
-//     tagset: [usize; 2],
-//     showbar: bool,
-//     topbar: bool,
-//     clients: *mut Client,
-//     /// index into clients vec, pointer in C
-//     sel: *mut Client,
-//     stack: *mut Client,
-//     next: *mut Monitor,
-//     barwin: Window,
-//     lt: [*const Layout; 2],
-// }
-
-// impl Monitor {
-// fn new() -> Self {
-//     Self {
-//         ltsymbol: LAYOUTS[0].symbol.to_owned(),
-//         mfact: MFACT,
-//         nmaster: NMASTER,
-//         num: 0,
-//         by: 0,
-//         mx: 0,
-//         my: 0,
-//         mw: 0,
-//         mh: 0,
-//         wx: 0,
-//         wy: 0,
-//         ww: 0,
-//         wh: 0,
-//         seltags: 0,
-//         sellt: 0,
-//         tagset: [1, 1],
-//         showbar: SHOWBAR,
-//         topbar: TOPBAR,
-//         clients: std::ptr::null_mut(),
-//         sel: std::ptr::null_mut(),
-//         stack: std::ptr::null_mut(),
-//         next: std::ptr::null_mut(),
-//         barwin: 0,
-//         lt: [&LAYOUTS[0], &LAYOUTS[1 % LAYOUTS.len()]],
-//     }
-// }
-// }
-
-pub struct Rule {
-    pub class: Option<&'static str>,
-    pub instance: Option<&'static str>,
-    pub title: Option<&'static str>,
-    pub tags: usize,
-    pub isfloating: bool,
-    pub monitor: isize,
-}
-
-impl Rule {
-    pub const fn new(
-        class: Option<&'static str>,
-        instance: Option<&'static str>,
-        title: Option<&'static str>,
-        tags: usize,
-        isfloating: bool,
-        monitor: isize,
-    ) -> Self {
-        Self { class, instance, title, tags, isfloating, monitor }
-    }
-}
-
 fn createmon() -> *mut Monitor {
     use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
 
@@ -453,8 +366,6 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        use bindgen::{fonts, lrpad, screen};
-
         screen = bindgen::XDefaultScreen(dpy);
         sw = bindgen::XDisplayWidth(dpy, screen);
         sh = bindgen::XDisplayHeight(dpy, screen);
@@ -468,8 +379,6 @@ fn setup() {
         lrpad = (*(*drw).fonts).h as i32;
         bh = (*(*drw).fonts).h as i32 + 2;
         updategeom();
-
-        use bindgen::{netatom, wmatom, XInternAtom};
 
         /* init atoms */
         let utf8string =
@@ -509,8 +418,6 @@ fn setup() {
             drw::cur_create(drw, bindgen::XC_sizing as i32);
         cursor[Cur::Move as usize] =
             drw::cur_create(drw, bindgen::XC_fleur as i32);
-
-        use bindgen::{colors, scheme, Clr};
 
         /* init appearance */
         scheme = util::ecalloc(colors.len(), size_of::<*mut Clr>()).cast();
@@ -593,7 +500,6 @@ fn setup() {
 
 fn focus(mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
-    use bindgen::{scheme, ColBorder, SchemeSel};
     unsafe {
         if c.is_null() || !is_visible(c) {
             c = (*selmon).stack;
@@ -684,7 +590,6 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
             }
             XFree(protocols.cast());
         }
-        use bindgen::{wmatom, WMProtocols};
         if exists != 0 {
             let mut ev = bindgen::XEvent { type_: ClientMessage };
             ev.xclient.window = (*c).win;
@@ -1754,7 +1659,6 @@ fn seturgent(c: *mut Client, urg: bool) {
 
 fn unfocus(c: *mut Client, setfocus: bool) {
     log::trace!("unfocus");
-    use bindgen::{netatom, scheme, ColBorder, NetActiveWindow, SchemeNorm};
     if c.is_null() {
         return;
     }
@@ -1817,8 +1721,6 @@ fn drawbar(m: *mut Monitor) {
         if (*m).showbar == 0 {
             return;
         }
-
-        use bindgen::{scheme, stext, tags, SchemeNorm, SchemeSel};
 
         // draw status first so it can be overdrawn by tags later
         if m == selmon {
@@ -2039,8 +1941,6 @@ fn updatebars() {
 }
 
 fn updategeom() -> i32 {
-    use bindgen::{sh, sw};
-
     unsafe {
         let mut dirty = 0;
         if bindgen::XineramaIsActive(dpy) != 0 {
@@ -2383,8 +2283,6 @@ fn isuniquegeom(
 
 fn cleanup() {
     log::trace!("entering cleanup");
-
-    use bindgen::{colors, cursor, scheme, wmcheckwin};
 
     unsafe {
         let a = Arg { ui: !0 };
@@ -2793,7 +2691,6 @@ fn updatewindowtype(c: *mut Client) {
 }
 
 fn setfullscreen(c: *mut Client, fullscreen: bool) {
-    use bindgen::{netatom, NetWMFullscreen, NetWMState};
     unsafe {
         if fullscreen && (*c).isfullscreen == 0 {
             bindgen::XChangeProperty(
