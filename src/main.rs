@@ -29,9 +29,9 @@ use x11::xlib::{
     FocusChangeMask, GrabModeAsync, GrabModeSync, IsViewable, LeaveWindowMask,
     LockMask, NoEventMask, PointerMotionMask, PropModeAppend, PropModeReplace,
     PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, XErrorEvent,
-    XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
-    XA_WM_NAME,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 
 use bindgen::{
@@ -1580,7 +1580,7 @@ fn grabkeys() {
                             k,
                             keys[i].mod_ | modifiers[j],
                             root,
-                            bindgen::True as i32,
+                            True as i32,
                             GrabModeAsync,
                             GrabModeAsync,
                         );
@@ -1861,7 +1861,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
 
 fn updatebars() {
     let mut wa = bindgen::XSetWindowAttributes {
-        override_redirect: bindgen::True as i32,
+        override_redirect: True as i32,
         background_pixmap: bindgen::ParentRelative as u64,
         event_mask: ButtonPressMask | bindgen::ExposureMask as i64,
         // everything else should be uninit I guess
