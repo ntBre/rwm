@@ -5,7 +5,10 @@ use std::ptr::null_mut;
 use fontconfig_sys::FcMatchPattern;
 use x11::xlib::False;
 
-use crate::bindgen::{self, Clr, Cur, Display, Drw, Fnt, Window};
+use crate::bindgen::{
+    self, Clr, Cur, Display, Drw, FcChar8, FcCharSet, FcPattern, Fnt, Window,
+    XftFont,
+};
 use crate::die;
 use crate::util::ecalloc;
 
@@ -172,9 +175,8 @@ fn fontset_free(font: *mut Fnt) {
 fn xfont_create(
     drw: *mut Drw,
     fontname: *const i8,
-    fontpattern: *mut bindgen::FcPattern,
+    fontpattern: *mut FcPattern,
 ) -> *mut Fnt {
-    use bindgen::{FcPattern, XftFont};
     unsafe {
         let mut xfont: *mut XftFont = null_mut();
         let mut pattern: *mut FcPattern = null_mut();
@@ -193,7 +195,7 @@ fn xfont_create(
                 );
                 return null_mut();
             }
-            pattern = bindgen::FcNameParse(fontname as *mut bindgen::FcChar8);
+            pattern = bindgen::FcNameParse(fontname as *mut FcChar8);
             if pattern.is_null() {
                 eprintln!(
                     "error, cannot parse font name to pattern: '{:?}'",
@@ -329,9 +331,9 @@ pub(crate) fn text(
 
         let mut utf8str: *const c_char;
 
-        let mut fccharset: *mut bindgen::FcCharSet;
-        let mut fcpattern: *mut bindgen::FcPattern;
-        let mut match_: *mut bindgen::FcPattern;
+        let mut fccharset: *mut FcCharSet;
+        let mut fcpattern: *mut FcPattern;
+        let mut match_: *mut FcPattern;
 
         let mut result: bindgen::XftResult = 0;
 
