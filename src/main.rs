@@ -2392,10 +2392,11 @@ fn setclientstate(c: *mut Client, state: usize) {
 }
 
 static HANDLER: LazyLock<
-    [fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize],
+    [fn(*mut bindgen::XEvent); x11::xlib::LASTEvent as usize],
 > = LazyLock::new(|| {
     fn dh(_ev: *mut bindgen::XEvent) {}
-    let mut ret = [dh as fn(*mut bindgen::XEvent); bindgen::LASTEvent as usize];
+    let mut ret =
+        [dh as fn(*mut bindgen::XEvent); x11::xlib::LASTEvent as usize];
     ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
     ret[x11::xlib::ClientMessage as usize] = handlers::clientmessage;
     ret[x11::xlib::ConfigureRequest as usize] = handlers::configurerequest;
