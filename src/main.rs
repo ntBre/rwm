@@ -35,9 +35,9 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
-    netatom, resizehints, root, rules, scheme, screen, selmon, sh, stext, sw,
-    tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
+    bh, broken, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad,
+    mons, netatom, resizehints, root, rules, scheme, screen, selmon, sh, stext,
+    sw, tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
     Monitor, SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
@@ -2749,12 +2749,12 @@ fn applyrules(c: *mut Client) {
         let class = if !ch.res_class.is_null() {
             CStr::from_ptr(ch.res_class)
         } else {
-            CStr::from_ptr(bindgen::broken.as_ptr())
+            CStr::from_ptr(broken.as_ptr())
         };
         let instance = if !ch.res_name.is_null() {
             CStr::from_ptr(ch.res_name)
         } else {
-            CStr::from_ptr(bindgen::broken.as_ptr())
+            CStr::from_ptr(broken.as_ptr())
         };
 
         for i in 0..rules.len() {
@@ -2815,7 +2815,7 @@ fn updatetitle(c: *mut Client) {
             /* hack to mark broken clients */
             libc::strcpy(
                 &mut (*c).name as *mut _,
-                bindgen::broken.as_ptr() as *const c_char,
+                broken.as_ptr() as *const c_char,
             );
         }
     }
