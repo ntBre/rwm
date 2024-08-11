@@ -22,12 +22,12 @@ use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
-    AnyButton, AnyModifier, BadAccess, BadDrawable, BadMatch, BadWindow,
-    ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor,
-    CWEventMask, CWHeight, CWOverrideRedirect, CWWidth, ClientMessage,
-    CurrentTime, Display as XDisplay, EnterWindowMask, False, FocusChangeMask,
-    GrabModeAsync, GrabModeSync, IsViewable, LeaveWindowMask, LockMask,
-    NoEventMask, PointerMotionMask, PropModeAppend, PropModeReplace,
+    AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
+    BadWindow, ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth,
+    CWCursor, CWEventMask, CWHeight, CWOverrideRedirect, CWWidth,
+    ClientMessage, CurrentTime, Display as XDisplay, EnterWindowMask, False,
+    FocusChangeMask, GrabModeAsync, GrabModeSync, IsViewable, LeaveWindowMask,
+    LockMask, NoEventMask, PointerMotionMask, PropModeAppend, PropModeReplace,
     PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
     SubstructureNotifyMask, SubstructureRedirectMask, Success, XErrorEvent,
     XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
@@ -1557,7 +1557,7 @@ fn grabkeys() {
         updatenumlockmask();
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        bindgen::XUngrabKey(dpy, bindgen::AnyKey as i32, AnyModifier, root);
+        bindgen::XUngrabKey(dpy, AnyKey as i32, AnyModifier, root);
         bindgen::XDisplayKeycodes(dpy, &mut start, &mut end);
         let syms = bindgen::XGetKeyboardMapping(
             dpy,
@@ -2273,7 +2273,7 @@ fn cleanup() {
             m = (*m).next;
         }
 
-        bindgen::XUngrabKey(dpy, bindgen::AnyKey as i32, AnyModifier, root);
+        bindgen::XUngrabKey(dpy, AnyKey as i32, AnyModifier, root);
 
         while !mons.is_null() {
             cleanupmon(mons);
