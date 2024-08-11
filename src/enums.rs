@@ -42,3 +42,10 @@ pub enum Net {
     ClientList,
     Last,
 }
+
+/// Clr scheme index
+pub enum Col {
+    Fg,
+    Bg,
+    Border,
+}

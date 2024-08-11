@@ -10,6 +10,7 @@ use crate::bindgen::{
     XftFont,
 };
 use crate::die;
+use crate::enums::Col;
 use crate::util::ecalloc;
 
 // defined in drw.c
@@ -84,9 +85,9 @@ pub(crate) fn rect(
             (*drw).dpy,
             (*drw).gc,
             if invert != 0 {
-                (*(*drw).scheme.offset(bindgen::ColBg as isize)).pixel
+                (*(*drw).scheme.offset(Col::Bg as isize)).pixel
             } else {
-                (*(*drw).scheme.offset(bindgen::ColFg as isize)).pixel
+                (*(*drw).scheme.offset(Col::Fg as isize)).pixel
             },
         );
         if filled != 0 {
@@ -374,11 +375,9 @@ pub(crate) fn text(
             bindgen::XSetForeground(
                 drw.dpy,
                 drw.gc,
-                (*drw.scheme.add(if invert != 0 {
-                    bindgen::ColFg
-                } else {
-                    bindgen::ColBg
-                } as usize))
+                (*drw
+                    .scheme
+                    .add(if invert != 0 { Col::Fg } else { Col::Bg } as usize))
                 .pixel,
             );
             bindgen::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
@@ -475,9 +474,9 @@ pub(crate) fn text(
                     bindgen::XftDrawStringUtf8(
                         d,
                         drw.scheme.add(if invert != 0 {
-                            bindgen::ColBg
+                            Col::Bg
                         } else {
-                            bindgen::ColFg
+                            Col::Fg
                         } as usize),
                         (*usedfont).xfont,
                         x,

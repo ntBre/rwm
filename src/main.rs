@@ -40,7 +40,7 @@ use bindgen::{
     sw, tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
     Monitor, SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
 };
-use enums::{Clk, Cur, Net, WM};
+use enums::{Clk, Col, Cur, Net, WM};
 use util::{die, ecalloc};
 
 /// function to be called on a startup error
@@ -2557,7 +2557,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         let scheme_norm: *mut Clr =
             *bindgen::scheme.offset(bindgen::SchemeNorm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
-        let border: Clr = *scheme_norm.offset(bindgen::ColBorder as isize);
+        let border: Clr = *scheme_norm.offset(Col::Border as isize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
         let pixel = border.pixel;
         log::trace!("pixel = {pixel:?}");
