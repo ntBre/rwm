@@ -37,8 +37,8 @@ use x11::xlib::{
 use bindgen::{
     bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
     netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor, SchemeNorm,
-    SchemeSel, WMProtocols, XInternAtom,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
+    SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -2260,7 +2260,7 @@ fn cleanup() {
         let a = Arg { ui: !0 };
         view(&a);
         (*selmon).lt[(*selmon).sellt as usize] =
-            &bindgen::Layout { symbol: c"".as_ptr(), arrange: None };
+            &Layout { symbol: c"".as_ptr(), arrange: None };
 
         let mut m = mons;
         while !m.is_null() {
