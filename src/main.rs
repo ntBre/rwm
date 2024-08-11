@@ -35,7 +35,7 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, colors, cursor, dpy, drw, fonts, layouts, lrpad, mons,
+    bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
     netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
     wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Monitor, SchemeNorm,
     SchemeSel, WMProtocols, XInternAtom,
@@ -1569,16 +1569,16 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for i in 0..bindgen::keys.len() {
+            for i in 0..keys.len() {
                 // skip modifier codes, we do that ourselves
-                if bindgen::keys[i].keysym
+                if keys[i].keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
                 {
                     for j in 0..modifiers.len() {
                         bindgen::XGrabKey(
                             dpy,
                             k,
-                            bindgen::keys[i].mod_ | modifiers[j],
+                            keys[i].mod_ | modifiers[j],
                             root,
                             bindgen::True as i32,
                             GrabModeAsync,
