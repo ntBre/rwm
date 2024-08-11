@@ -1894,16 +1894,16 @@ fn updatebars() {
                 (*m).ww as c_uint,
                 bh as c_uint,
                 0,
-                bindgen::XDefaultDepth(dpy, bindgen::screen),
+                bindgen::XDefaultDepth(dpy, screen),
                 bindgen::CopyFromParent as c_uint,
-                bindgen::XDefaultVisual(dpy, bindgen::screen),
+                bindgen::XDefaultVisual(dpy, screen),
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
             );
             bindgen::XDefineCursor(
                 dpy,
                 (*m).barwin,
-                (*bindgen::cursor[Cur::Normal as usize]).cursor,
+                (*cursor[Cur::Normal as usize]).cursor,
             );
             bindgen::XMapRaised(dpy, (*m).barwin);
             bindgen::XSetClassHint(dpy, (*m).barwin, &mut ch);
