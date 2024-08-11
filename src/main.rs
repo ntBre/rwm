@@ -36,9 +36,9 @@ use x11::xlib::{
 
 use bindgen::{
     bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
-    netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
-    SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
+    netatom, resizehints, root, rules, scheme, screen, selmon, sh, stext, sw,
+    tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
+    Monitor, SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
 };
 use enums::{Clk, Cur, Net, WM};
 use util::{die, ecalloc};
@@ -2757,8 +2757,8 @@ fn applyrules(c: *mut Client) {
             CStr::from_ptr(bindgen::broken.as_ptr())
         };
 
-        for i in 0..bindgen::rules.len() {
-            let r = &bindgen::rules[i];
+        for i in 0..rules.len() {
+            let r = &rules[i];
             if (r.title.is_null()
                 || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
