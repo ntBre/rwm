@@ -15,6 +15,15 @@ use crate::util::ecalloc;
 // defined in drw.c
 const UTF_SIZ: usize = 4;
 
+// DUMMY
+fn utf8decode(
+    text: *const i8,
+    utf8codepoint: *mut c_long,
+    utf_siz: usize,
+) -> usize {
+    unsafe { bindgen::utf8decode(text, utf8codepoint, utf_siz) }
+}
+
 pub(crate) fn create(
     dpy: *mut Display,
     screen: c_int,
@@ -406,8 +415,7 @@ pub(crate) fn text(
             // if text is a null pointer
             while *text != b'\0' as i8 {
                 utf8charlen =
-                    bindgen::utf8decode(text, &mut utf8codepoint, UTF_SIZ)
-                        as c_int;
+                    utf8decode(text, &mut utf8codepoint, UTF_SIZ) as c_int;
                 curfont = drw.fonts;
                 while !curfont.is_null() {
                     charexists = (charexists != 0
