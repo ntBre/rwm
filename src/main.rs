@@ -26,11 +26,12 @@ use x11::xlib::{
     ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth, CWCursor,
     CWEventMask, CWHeight, CWOverrideRedirect, CWWidth, ClientMessage,
     CurrentTime, Display as XDisplay, EnterWindowMask, False, FocusChangeMask,
-    IsViewable, LeaveWindowMask, LockMask, NoEventMask, PointerMotionMask,
-    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM,
-    XA_STRING, XA_WINDOW, XA_WM_NAME,
+    GrabModeAsync, GrabModeSync, IsViewable, LeaveWindowMask, LockMask,
+    NoEventMask, PointerMotionMask, PropModeAppend, PropModeReplace,
+    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, XErrorEvent,
+    XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW,
+    XA_WM_NAME,
 };
 
 use bindgen::{
@@ -617,8 +618,8 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 (*c).win,
                 False,
                 BUTTONMASK,
-                bindgen::GrabModeSync as i32,
-                bindgen::GrabModeSync as i32,
+                GrabModeSync,
+                GrabModeSync,
                 XNONE as u64,
                 XNONE as u64,
             );
@@ -633,8 +634,8 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                         (*c).win,
                         False,
                         BUTTONMASK,
-                        bindgen::GrabModeAsync as i32,
-                        bindgen::GrabModeSync as i32,
+                        GrabModeAsync,
+                        GrabModeSync,
                         XNONE as u64,
                         XNONE as u64,
                     );
@@ -1580,8 +1581,8 @@ fn grabkeys() {
                             bindgen::keys[i].mod_ | modifiers[j],
                             root,
                             bindgen::True as i32,
-                            bindgen::GrabModeAsync as i32,
-                            bindgen::GrabModeAsync as i32,
+                            GrabModeAsync,
+                            GrabModeAsync,
                         );
                     }
                 }
