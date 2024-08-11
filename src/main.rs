@@ -2553,7 +2553,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         log::trace!(
             "manage: XSetWindowBorder with dpy = {dpy:?} and w = {w:?}"
         );
-        log::trace!("scheme: {:?}", bindgen::scheme);
+        log::trace!("scheme: {:?}", scheme);
         let scheme_norm: *mut Clr =
             *bindgen::scheme.offset(bindgen::SchemeNorm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
