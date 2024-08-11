@@ -1667,16 +1667,13 @@ fn updatestatus() {
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
-            addr_of_mut!(bindgen::stext) as *mut _,
-            // the lint leading to this instead of simply &bindgen::stext is
-            // very scary, but hopefully it's fine
-            size_of_val(&*addr_of!(bindgen::stext)) as u32,
+            addr_of_mut!(stext) as *mut _,
+            // the lint leading to this instead of simply &stext is very scary,
+            // but hopefully it's fine
+            size_of_val(&*addr_of!(stext)) as u32,
         ) == 0
         {
-            libc::strcpy(
-                addr_of_mut!(bindgen::stext) as *mut _,
-                c"rwm-1.0".as_ptr(),
-            );
+            libc::strcpy(addr_of_mut!(stext) as *mut _, c"rwm-1.0".as_ptr());
         }
         drawbar(selmon);
     }
