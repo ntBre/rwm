@@ -1557,7 +1557,7 @@ fn grabkeys() {
         updatenumlockmask();
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        bindgen::XUngrabKey(dpy, AnyKey as i32, AnyModifier, root);
+        bindgen::XUngrabKey(dpy, AnyKey, AnyModifier, root);
         bindgen::XDisplayKeycodes(dpy, &mut start, &mut end);
         let syms = bindgen::XGetKeyboardMapping(
             dpy,
@@ -1580,7 +1580,7 @@ fn grabkeys() {
                             k,
                             keys[i].mod_ | modifiers[j],
                             root,
-                            True as i32,
+                            True,
                             GrabModeAsync,
                             GrabModeAsync,
                         );
@@ -1858,7 +1858,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
 
 fn updatebars() {
     let mut wa = bindgen::XSetWindowAttributes {
-        override_redirect: True as i32,
+        override_redirect: True,
         background_pixmap: bindgen::ParentRelative as u64,
         event_mask: ButtonPressMask | bindgen::ExposureMask as i64,
         // everything else should be uninit I guess
@@ -2270,7 +2270,7 @@ fn cleanup() {
             m = (*m).next;
         }
 
-        bindgen::XUngrabKey(dpy, AnyKey as i32, AnyModifier, root);
+        bindgen::XUngrabKey(dpy, AnyKey, AnyModifier, root);
 
         while !mons.is_null() {
             cleanupmon(mons);
