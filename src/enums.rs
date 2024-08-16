@@ -6,6 +6,12 @@ pub enum Cur {
     Last,
 }
 
+/// Color schemes
+pub enum Scheme {
+    Norm,
+    Sel,
+}
+
 /// Clicks
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Clk {
