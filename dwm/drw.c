@@ -41,6 +41,9 @@ utf8decode(const char *c, long *u, size_t clen)
 	size_t i, j, len, type;
 	long udecoded;
 
+#ifdef RWM_DEBUG
+	fprintf(stderr, "calling utf8decode on %s\n", c);
+#endif
 	*u = UTF_INVALID;
 	if (!clen)
 		return 0;
@@ -57,6 +60,9 @@ utf8decode(const char *c, long *u, size_t clen)
 	*u = udecoded;
 	utf8validate(u, len);
 
+#ifdef RWM_DEBUG
+	fprintf(stderr, "\tu = %lu, ret = %lu\n", *u, len);
+#endif
 	return len;
 }
 
