@@ -40,10 +40,10 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, broken, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad,
-    mons, netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw,
-    tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
-    Monitor, WMProtocols, XInternAtom,
+    bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
+    netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
+    WMProtocols, XInternAtom,
 };
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -131,7 +131,7 @@ static mut XERRORXLIB: Option<
 
 // static mut SCREEN: i32 = 0;
 
-// const BROKEN: &str = "broken";
+const BROKEN: &CStr = c"broken";
 // static mut STEXT: String = String::new();
 
 /// bar height
@@ -2760,12 +2760,12 @@ fn applyrules(c: *mut Client) {
         let class = if !ch.res_class.is_null() {
             CStr::from_ptr(ch.res_class)
         } else {
-            CStr::from_ptr(broken.as_ptr())
+            BROKEN
         };
         let instance = if !ch.res_name.is_null() {
             CStr::from_ptr(ch.res_name)
         } else {
-            CStr::from_ptr(broken.as_ptr())
+            BROKEN
         };
 
         for i in 0..RULES.len() {
@@ -2826,7 +2826,7 @@ fn updatetitle(c: *mut Client) {
             /* hack to mark broken clients */
             libc::strcpy(
                 &mut (*c).name as *mut _,
-                broken.as_ptr() as *const c_char,
+                BROKEN.as_ptr() as *const c_char,
             );
         }
     }
