@@ -2,7 +2,7 @@
 
 use std::ptr::null_mut;
 
-use crate::bindgen::selmon;
+use crate::bindgen::{self, selmon};
 
 use crate::{arrange, focus, Arg, TAGMASK};
 
@@ -10,8 +10,26 @@ pub fn setlayout(arg: &Arg) {
     log::trace!("setlayout: {arg:?}");
 }
 
+/// Toggles the master and top of the stack, bound to middle click on the title
+/// bar by default
 pub fn zoom(arg: &Arg) {
     log::trace!("zoom: {arg:?}");
+    unsafe {
+        let mut c = (*selmon).sel;
+        if (*(*selmon).lt[(*selmon).sellt as usize]).arrange.is_none()
+            || c.is_null()
+            || (*c).isfloating != 0
+        {
+            return;
+        }
+        if c == bindgen::nexttiled((*selmon).clients) {
+            c = bindgen::nexttiled((*c).next);
+            if c.is_null() {
+                return;
+            }
+        }
+        bindgen::pop(c);
+    }
 }
 
 pub fn spawn(arg: &Arg) {
