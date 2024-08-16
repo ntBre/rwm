@@ -668,3 +668,22 @@ pub(crate) fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_utf8decode() {
+        let tests = [
+            (c"GNU Emacs at omsf", 71, 1),
+            (c"NU Emacs at omsf", 78, 1),
+            (c"U Emacs at omsf", 85, 1),
+        ];
+
+        for (inp, want_u, ret) in tests {
+            let mut u = 0;
+            let got = super::utf8decode(inp.as_ptr(), &mut u, super::UTF_SIZ);
+            assert_eq!(got, ret);
+            assert_eq!(u, want_u);
+        }
+    }
+}
