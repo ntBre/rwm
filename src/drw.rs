@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_long, c_uint, CStr};
+use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
@@ -16,8 +16,37 @@ use crate::util::{between, ecalloc};
 // defined in drw.c
 const UTF_SIZ: usize = 4;
 const UTF_INVALID: usize = 0xFFFD;
+const UTFBYTE: [c_uchar; UTF_SIZ + 1] = [0x80, 0, 0xC0, 0xE0, 0xF0];
+const UTFMASK: [c_uchar; UTF_SIZ + 1] = [0xC0, 0x80, 0xE0, 0xF0, 0xF8];
+const UTFMIN: [c_long; UTF_SIZ + 1] = [0, 0, 0x80, 0x800, 0x10000];
+const UTFMAX: [c_long; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
 
-// DUMMY
+fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
+    unsafe {
+        *i = 0;
+        while *i < UTF_SIZ + 1 {
+            if c as c_uchar & UTFMASK[*i] == UTFBYTE[*i] {
+                return (c as c_uchar & !UTFMASK[*i]) as c_long;
+            }
+            *i += 1;
+        }
+        0
+    }
+}
+
+fn utf8validate(u: *mut c_long, i: usize) -> usize {
+    unsafe {
+        if !between(*u, UTFMIN[i], UTFMAX[i]) || between(*u, 0xD800, 0xDFFF) {
+            *u = UTF_INVALID as c_long;
+        }
+        let mut i = 1;
+        while *u > UTFMAX[i] {
+            i += 1;
+        }
+        i
+    }
+}
+
 fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
     unsafe {
         *u = UTF_INVALID as c_long;
@@ -25,7 +54,7 @@ fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
             return 0;
         }
         let mut len = 0;
-        let mut udecoded = bindgen::utf8decodebyte(*c, &mut len);
+        let mut udecoded = utf8decodebyte(*c, &mut len);
         if !between(len, 1, UTF_SIZ) {
             return 1;
         }
@@ -33,8 +62,7 @@ fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
         let mut j = 1;
         let mut type_ = 0;
         while i < clen && j < len {
-            udecoded = (udecoded << 6)
-                | bindgen::utf8decodebyte(*c.add(i), &mut type_);
+            udecoded = (udecoded << 6) | utf8decodebyte(*c.add(i), &mut type_);
             if type_ != 0 {
                 return j;
             }
@@ -45,7 +73,7 @@ fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
             return 0;
         }
         *u = udecoded;
-        bindgen::utf8validate(u, len);
+        utf8validate(u, len);
 
         len
     }
