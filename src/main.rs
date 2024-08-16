@@ -23,15 +23,18 @@ use std::sync::LazyLock;
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
-    BadWindow, ButtonPressMask, ButtonReleaseMask, CWBackPixmap, CWBorderWidth,
-    CWCursor, CWEventMask, CWHeight, CWOverrideRedirect, CWWidth,
-    ClientMessage, CurrentTime, Display as XDisplay, EnterWindowMask, False,
-    FocusChangeMask, GrabModeAsync, GrabModeSync, IsViewable, LeaveWindowMask,
-    LockMask, NoEventMask, PointerMotionMask, PropModeAppend, PropModeReplace,
-    PropertyChangeMask, RevertToPointerRoot, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
+    CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
+    CWSibling, CWStackMode, CWWidth, ClientMessage, ControlMask,
+    CopyFromParent, CurrentTime, Display as XDisplay, EnterWindowMask,
+    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
+    IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask, Mod3Mask,
+    Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize,
+    PResizeInc, PSize, ParentRelative, PointerMotionMask, PointerRoot,
+    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
+    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
+    SubstructureRedirectMask, Success, True, XErrorEvent, XFree,
+    XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
 use bindgen::{
@@ -74,7 +77,7 @@ const XNONE: c_long = 0;
 
 // from Xutil.h
 /// for windows that are not mapped
-// const WITHDRAWN_STATE: usize = 0;
+const WITHDRAWN_STATE: usize = 0;
 /// most applications want to start this way
 const NORMAL_STATE: usize = 1;
 /// application wants to start as an icon
@@ -718,7 +721,7 @@ fn restack(m: *mut Monitor) {
         }
         if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
             let mut wc = bindgen::XWindowChanges {
-                stack_mode: bindgen::Below as i32,
+                stack_mode: Below as i32,
                 sibling: (*m).barwin,
                 x: Default::default(),
                 y: Default::default(),
@@ -732,7 +735,7 @@ fn restack(m: *mut Monitor) {
                     bindgen::XConfigureWindow(
                         dpy,
                         (*c).win,
-                        bindgen::CWSibling | bindgen::CWStackMode,
+                        (CWSibling | CWStackMode) as c_uint,
                         &mut wc as *mut _,
                     );
                     wc.sibling = (*c).win;
@@ -964,12 +967,12 @@ fn updatesizehints(c: *mut Client) {
         if bindgen::XGetWMNormalHints(dpy, (*c).win, &mut size, &mut msize) == 0
         {
             /* size is uninitialized, ensure that size.flags aren't used */
-            size.flags = bindgen::PSize as i64;
+            size.flags = PSize as i64;
         }
-        if size.flags & bindgen::PBaseSize as i64 != 0 {
+        if size.flags & PBaseSize as i64 != 0 {
             (*c).basew = size.base_width;
             (*c).baseh = size.base_height;
-        } else if size.flags & bindgen::PMinSize as i64 != 0 {
+        } else if size.flags & PMinSize as i64 != 0 {
             (*c).basew = size.min_width;
             (*c).baseh = size.min_height;
         } else {
@@ -977,7 +980,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).baseh = 0;
         }
 
-        if size.flags & bindgen::PResizeInc as i64 != 0 {
+        if size.flags & PResizeInc as i64 != 0 {
             (*c).incw = size.width_inc;
             (*c).inch = size.height_inc;
         } else {
@@ -985,7 +988,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).inch = 0;
         }
 
-        if size.flags & bindgen::PMaxSize as i64 != 0 {
+        if size.flags & PMaxSize as i64 != 0 {
             (*c).maxw = size.max_width;
             (*c).maxh = size.max_height;
         } else {
@@ -993,10 +996,10 @@ fn updatesizehints(c: *mut Client) {
             (*c).maxh = 0;
         }
 
-        if size.flags & bindgen::PMinSize as i64 != 0 {
+        if size.flags & PMinSize as i64 != 0 {
             (*c).minw = size.min_width;
             (*c).minh = size.min_height;
-        } else if size.flags & bindgen::PBaseSize as i64 != 0 {
+        } else if size.flags & PBaseSize as i64 != 0 {
             (*c).minw = size.base_width;
             (*c).minh = size.base_height;
         } else {
@@ -1004,7 +1007,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).minh = 0;
         }
 
-        if size.flags & bindgen::PAspect as i64 != 0 {
+        if size.flags & PAspect as i64 != 0 {
             (*c).mina = size.min_aspect.y as f32 / size.min_aspect.x as f32;
             (*c).maxa = size.max_aspect.x as f32 / size.max_aspect.y as f32;
         } else {
@@ -1859,8 +1862,8 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
 fn updatebars() {
     let mut wa = bindgen::XSetWindowAttributes {
         override_redirect: True,
-        background_pixmap: bindgen::ParentRelative as u64,
-        event_mask: ButtonPressMask | bindgen::ExposureMask as i64,
+        background_pixmap: ParentRelative as u64,
+        event_mask: ButtonPressMask | ExposureMask as i64,
         // everything else should be uninit I guess
         background_pixel: 0,
         border_pixmap: 0,
@@ -1895,7 +1898,7 @@ fn updatebars() {
                 bh as c_uint,
                 0,
                 bindgen::XDefaultDepth(dpy, screen),
-                bindgen::CopyFromParent as c_uint,
+                CopyFromParent as c_uint,
                 bindgen::XDefaultVisual(dpy, screen),
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
@@ -2130,13 +2133,13 @@ fn height(x: *mut Client) -> i32 {
 fn cleanmask(mask: u32) -> u32 {
     unsafe {
         mask & !(numlockmask | LockMask)
-            & (bindgen::ShiftMask
-                | bindgen::ControlMask
-                | bindgen::Mod1Mask
-                | bindgen::Mod2Mask
-                | bindgen::Mod3Mask
-                | bindgen::Mod4Mask
-                | bindgen::Mod5Mask)
+            & (ShiftMask
+                | ControlMask
+                | Mod1Mask
+                | Mod2Mask
+                | Mod3Mask
+                | Mod4Mask
+                | Mod5Mask)
     }
 }
 
@@ -2292,7 +2295,7 @@ fn cleanup() {
         bindgen::XSync(dpy, False);
         bindgen::XSetInputFocus(
             dpy,
-            bindgen::PointerRoot as u64,
+            PointerRoot as u64,
             RevertToPointerRoot,
             CurrentTime,
         );
@@ -2329,7 +2332,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             bindgen::XConfigureWindow(
                 dpy,
                 (*c).win,
-                bindgen::CWBorderWidth,
+                CWBorderWidth as u32,
                 &mut wc,
             ); /* restore border */
             bindgen::XUngrabButton(
@@ -2338,7 +2341,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
                 AnyModifier,
                 (*c).win,
             );
-            setclientstate(c, bindgen::WithdrawnState as usize);
+            setclientstate(c, WITHDRAWN_STATE as usize);
             bindgen::XSync(dpy, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(dpy);
