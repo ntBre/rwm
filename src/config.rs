@@ -7,7 +7,7 @@ use x11::xlib::{Button1, Button2, Button3};
 
 use crate::bindgen;
 use crate::{
-    bindgen::{Arg, Button, Rule, MODKEY},
+    bindgen::{Rule, MODKEY},
     enums::Clk,
 };
 
@@ -64,10 +64,23 @@ impl Button {
     }
 }
 
-impl Arg {
-    const fn default() -> Self {
-        Self { i: 0 }
-    }
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union Arg {
+    pub i: ::std::os::raw::c_int,
+    pub ui: ::std::os::raw::c_uint,
+    pub f: f32,
+    pub v: *const ::std::os::raw::c_void,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct Button {
+    pub click: ::std::os::raw::c_uint,
+    pub mask: ::std::os::raw::c_uint,
+    pub button: ::std::os::raw::c_uint,
+    pub func: ::std::option::Option<unsafe extern "C" fn(arg: *const Arg)>,
+    pub arg: Arg,
 }
 
 pub static BUTTONS: [Button; 11] = [
