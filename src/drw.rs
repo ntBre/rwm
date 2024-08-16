@@ -108,9 +108,9 @@ pub(crate) fn create(
             dpy,
             (*drw).gc,
             1,
-            LineSolid as i32,
-            CapButt as i32,
-            JoinMiter as i32,
+            LineSolid,
+            CapButt,
+            JoinMiter,
         );
         drw
     }
