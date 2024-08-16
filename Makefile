@@ -1,7 +1,7 @@
 install: dwm/libdwm.so
 	cargo install --path .
 
-test:
+test: dwm/libdwm.so
 	cargo test
 
 clippy_args :=
