@@ -11,18 +11,44 @@ use crate::bindgen::{
 };
 use crate::die;
 use crate::enums::Col;
-use crate::util::ecalloc;
+use crate::util::{between, ecalloc};
 
 // defined in drw.c
 const UTF_SIZ: usize = 4;
+const UTF_INVALID: usize = 0xFFFD;
 
 // DUMMY
-fn utf8decode(
-    text: *const i8,
-    utf8codepoint: *mut c_long,
-    utf_siz: usize,
-) -> usize {
-    unsafe { bindgen::utf8decode(text, utf8codepoint, utf_siz) }
+fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
+    unsafe {
+        *u = UTF_INVALID as c_long;
+        if clen == 0 {
+            return 0;
+        }
+        let mut len = 0;
+        let mut udecoded = bindgen::utf8decodebyte(*c, &mut len);
+        if !between(len, 1, UTF_SIZ) {
+            return 1;
+        }
+        let mut i = 1;
+        let mut j = 1;
+        let mut type_ = 0;
+        while i < clen && j < len {
+            udecoded = (udecoded << 6)
+                | bindgen::utf8decodebyte(*c.add(i), &mut type_);
+            if type_ != 0 {
+                return j;
+            }
+            i += 1;
+            j += 1;
+        }
+        if j < len {
+            return 0;
+        }
+        *u = udecoded;
+        bindgen::utf8validate(u, len);
+
+        len
+    }
 }
 
 pub(crate) fn create(
