@@ -63,3 +63,5 @@ Fnt *xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern);
 
 /* UTF-8 functions */
 size_t utf8decode(const char *c, long *u, size_t clen);
+long utf8decodebyte(const char c, size_t *i);
+size_t utf8validate(long *u, size_t i);
