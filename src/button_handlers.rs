@@ -7,27 +7,27 @@ use crate::bindgen::selmon;
 use crate::{arrange, focus, Arg, TAGMASK};
 
 pub fn setlayout(arg: &Arg) {
-    log::trace!("setlayout");
+    log::trace!("setlayout: {arg:?}");
 }
 
 pub fn zoom(arg: &Arg) {
-    log::trace!("zoom");
+    log::trace!("zoom: {arg:?}");
 }
 
 pub fn spawn(arg: &Arg) {
-    log::trace!("spawn");
+    log::trace!("spawn: {arg:?}");
 }
 
 pub fn movemouse(arg: &Arg) {
-    log::trace!("movemouse");
+    log::trace!("movemouse: {arg:?}");
 }
 
 pub fn togglefloating(arg: &Arg) {
-    log::trace!("togglefloating");
+    log::trace!("togglefloating: {arg:?}");
 }
 
 pub fn resizemouse(arg: &Arg) {
-    log::trace!("resizemouse");
+    log::trace!("resizemouse: {arg:?}");
 }
 
 pub fn view(arg: &Arg) {
@@ -47,13 +47,13 @@ pub fn view(arg: &Arg) {
 }
 
 pub fn toggleview(arg: &Arg) {
-    log::trace!("toggleview");
+    log::trace!("toggleview: {arg:?}");
 }
 
 pub fn tag(arg: &Arg) {
-    log::trace!("tag");
+    log::trace!("tag: {arg:?}");
 }
 
 pub fn toggletag(arg: &Arg) {
-    log::trace!("toggletag");
+    log::trace!("toggletag: {arg:?}");
 }
