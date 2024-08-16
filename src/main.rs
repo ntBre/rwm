@@ -109,9 +109,12 @@ extern "C" fn xerror(mdpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
     }
 }
 
-// extern "C" fn xerrordummy(_dpy: *mut XDisplay, _ee: *mut XErrorEvent) -> c_int {
-//     0
-// }
+extern "C" fn xerrordummy(
+    _dpy: *mut bindgen::Display,
+    _ee: *mut bindgen::XErrorEvent,
+) -> c_int {
+    0
+}
 
 /// I hate to start using globals already, but I'm not sure how else to do it.
 /// maybe we can pack this stuff into a struct eventually
@@ -2328,7 +2331,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         if destroyed == 0 {
             wc.border_width = (*c).oldbw;
             bindgen::XGrabServer(dpy); /* avoid race conditions */
-            bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
+            bindgen::XSetErrorHandler(Some(xerrordummy));
             bindgen::XSelectInput(dpy, (*c).win, NoEventMask);
             bindgen::XConfigureWindow(
                 dpy,
