@@ -5,10 +5,12 @@ use std::{
 
 use x11::xlib::{Button1, Button2, Button3};
 
-use crate::bindgen;
+use crate::bindgen::{self, Monitor};
 use crate::{
     bindgen::{Rule, MODKEY},
+    button_handlers::*,
     enums::Clk,
+    Arg,
 };
 
 /// Border pixel of windows
@@ -52,90 +54,68 @@ pub const RULES: [Rule; 2] = [
     Rule::new(c"Firefox", null(), null(), 1 << 8, 0, -1),
 ];
 
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Layout {
+    pub symbol: &'static CStr,
+    pub arrange:
+        ::std::option::Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
+}
+
+impl Layout {
+    const fn new(
+        symbol: &'static CStr,
+        arrange: Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
+    ) -> Self {
+        Self { symbol, arrange }
+    }
+}
+
+#[derive(Clone)]
+pub struct Button {
+    pub click: ::std::os::raw::c_uint,
+    pub mask: ::std::os::raw::c_uint,
+    pub button: ::std::os::raw::c_uint,
+    pub func: Option<fn(arg: &Arg)>,
+    pub arg: Arg,
+}
+
 impl Button {
     const fn new(
         click: Clk,
         mask: c_uint,
         button: c_uint,
-        func: unsafe extern "C" fn(*const Arg),
+        func: fn(&Arg),
         arg: Arg,
     ) -> Self {
         Self { click: click as c_uint, mask, button, func: Some(func), arg }
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union Arg {
-    pub i: ::std::os::raw::c_int,
-    pub ui: ::std::os::raw::c_uint,
-    pub f: f32,
-    pub v: *const ::std::os::raw::c_void,
-}
+const LAYOUTS: [Layout; 3] = [
+    Layout::new(c"[]=", Some(bindgen::tile)),
+    Layout::new(c"><>", None),
+    Layout::new(c"[M]", Some(bindgen::monocle)),
+];
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Button {
-    pub click: ::std::os::raw::c_uint,
-    pub mask: ::std::os::raw::c_uint,
-    pub button: ::std::os::raw::c_uint,
-    pub func: ::std::option::Option<unsafe extern "C" fn(arg: *const Arg)>,
-    pub arg: Arg,
-}
+const TERMCMD: [&CStr; 1] = [c"st"];
 
 pub static BUTTONS: [Button; 11] = [
-    Button::new(
-        Clk::LtSymbol,
-        0,
-        Button1,
-        bindgen::setlayout,
-        Arg::default(),
-    ),
+    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::None),
     Button::new(
         Clk::LtSymbol,
         0,
         Button3,
-        bindgen::setlayout,
-        // supposed to be a *const c_void, cast & to *const Layout then void
-        Arg { v: &bindgen::layouts[2] as *const _ as *const _ },
+        setlayout,
+        Arg::Layout(&LAYOUTS[2]),
     ),
-    Button::new(Clk::WinTitle, 0, Button2, bindgen::zoom, Arg::default()),
-    Button::new(
-        Clk::StatusText,
-        0,
-        Button2,
-        bindgen::spawn,
-        Arg { v: bindgen::termcmd.as_ptr().cast() },
-    ),
-    Button::new(
-        Clk::ClientWin,
-        MODKEY,
-        Button1,
-        bindgen::movemouse,
-        Arg::default(),
-    ),
-    Button::new(
-        Clk::ClientWin,
-        MODKEY,
-        Button2,
-        bindgen::togglefloating,
-        Arg::default(),
-    ),
-    Button::new(
-        Clk::ClientWin,
-        MODKEY,
-        Button3,
-        bindgen::resizemouse,
-        Arg::default(),
-    ),
-    Button::new(Clk::TagBar, 0, Button1, bindgen::view, Arg::default()),
-    Button::new(Clk::TagBar, 0, Button3, bindgen::toggleview, Arg::default()),
-    Button::new(Clk::TagBar, MODKEY, Button1, bindgen::tag, Arg::default()),
-    Button::new(
-        Clk::TagBar,
-        MODKEY,
-        Button3,
-        bindgen::toggletag,
-        Arg::default(),
-    ),
+    Button::new(Clk::WinTitle, 0, Button2, zoom, Arg::None),
+    Button::new(Clk::StatusText, 0, Button2, spawn, Arg::Str(&TERMCMD)),
+    Button::new(Clk::ClientWin, MODKEY, Button1, movemouse, Arg::None),
+    Button::new(Clk::ClientWin, MODKEY, Button2, togglefloating, Arg::None),
+    Button::new(Clk::ClientWin, MODKEY, Button3, resizemouse, Arg::None),
+    Button::new(Clk::TagBar, 0, Button1, view, Arg::None),
+    Button::new(Clk::TagBar, 0, Button3, toggleview, Arg::None),
+    Button::new(Clk::TagBar, MODKEY, Button1, tag, Arg::None),
+    Button::new(Clk::TagBar, MODKEY, Button3, toggletag, Arg::None),
 ];

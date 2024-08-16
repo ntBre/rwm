@@ -9,10 +9,6 @@ use x11::xlib::{
     XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use crate::bindgen::{
-    self, bh, buttons, dpy, keys, mons, netatom, root, selmon, sh, stext, sw,
-    tags, Arg, Monitor, XEvent,
-};
 use crate::{
     arrange, cleanmask, configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
@@ -22,10 +18,18 @@ use crate::{
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window,
     WITHDRAWN_STATE,
 };
+use crate::{
+    bindgen::{
+        self, bh, dpy, keys, mons, netatom, root, selmon, sh, stext, sw, tags,
+        Monitor, XEvent,
+    },
+    config::BUTTONS,
+    Arg,
+};
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
     unsafe {
-        let mut arg = Arg { i: 0 };
+        let mut arg = Arg::Int(0);
         let ev = &(*e).xbutton;
         let mut click = Clk::RootWin;
         // focus monitor if necessary
@@ -52,7 +56,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             }
             if i < tags.len() {
                 click = Clk::TagBar;
-                arg = Arg { ui: 1 << i };
+                arg = Arg::Uint(1 << i);
             } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
             {
                 click = Clk::LtSymbol;
@@ -70,17 +74,19 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for i in 0..buttons.len() {
-            if click as u32 == buttons[i].click
-                && buttons[i].func.is_some()
-                && buttons[i].button == ev.button
-                && cleanmask(buttons[i].mask) == cleanmask(ev.state)
+        for i in 0..BUTTONS.len() {
+            if click as u32 == BUTTONS[i].click
+                && BUTTONS[i].func.is_some()
+                && BUTTONS[i].button == ev.button
+                && cleanmask(BUTTONS[i].mask) == cleanmask(ev.state)
             {
-                let f = buttons[i].func.unwrap();
-                let a = if click == Clk::TagBar && buttons[i].arg.i == 0 {
+                let f = BUTTONS[i].func.unwrap();
+                let a = if click == Clk::TagBar
+                    && *BUTTONS[i].arg.as_int().unwrap() == 0
+                {
                     &arg
                 } else {
-                    &buttons[i].arg
+                    &BUTTONS[i].arg
                 };
                 f(a)
             }
