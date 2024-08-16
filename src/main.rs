@@ -163,7 +163,7 @@ const BROKEN: &CStr = c"broken";
 // const TAGMASK: usize = (1 << TAGS.len()) - 1;
 // const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub enum Arg {
     Uint(c_uint),
     Int(isize),
@@ -189,6 +189,14 @@ impl Arg {
         } else {
             None
         }
+    }
+
+    /// Returns `true` if the arg is [`None`].
+    ///
+    /// [`None`]: Arg::None
+    #[must_use]
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
     }
 }
 
