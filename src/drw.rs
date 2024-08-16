@@ -3,7 +3,7 @@ use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
 use fontconfig_sys::FcMatchPattern;
-use x11::xlib::False;
+use x11::xlib::{CapButt, False, JoinMiter, LineSolid};
 
 use crate::bindgen::{
     self, Clr, Cur, Display, Drw, FcChar8, FcCharSet, FcPattern, Fnt, Window,
@@ -20,6 +20,9 @@ const UTFBYTE: [c_uchar; UTF_SIZ + 1] = [0x80, 0, 0xC0, 0xE0, 0xF0];
 const UTFMASK: [c_uchar; UTF_SIZ + 1] = [0xC0, 0x80, 0xE0, 0xF0, 0xF8];
 const UTFMIN: [c_long; UTF_SIZ + 1] = [0, 0, 0x80, 0x800, 0x10000];
 const UTFMAX: [c_long; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
+
+// defined in /usr/include/fontconfig/fontconfig.h
+const FC_TRUE: i32 = 1;
 
 fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
     unsafe {
@@ -105,9 +108,9 @@ pub(crate) fn create(
             dpy,
             (*drw).gc,
             1,
-            bindgen::LineSolid as i32,
-            bindgen::CapButt as i32,
-            bindgen::JoinMiter as i32,
+            LineSolid as i32,
+            CapButt as i32,
+            JoinMiter as i32,
         );
         drw
     }
@@ -594,7 +597,7 @@ pub(crate) fn text(
                     fcpattern,
                     // same as above: &[u8] -> *u8 -> *i8
                     bindgen::FC_SCALABLE.as_ptr() as *const _,
-                    bindgen::FcTrue as i32,
+                    FC_TRUE,
                 );
 
                 bindgen::FcConfigSubstitute(
