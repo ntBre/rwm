@@ -41,9 +41,9 @@ use bindgen::{
     bh, broken, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad,
     mons, netatom, resizehints, root, rules, scheme, screen, selmon, sh, stext,
     sw, tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
-    Monitor, SchemeNorm, SchemeSel, WMProtocols, XInternAtom,
+    Monitor, WMProtocols, XInternAtom,
 };
-use enums::{Clk, Col, Cur, Net, WM};
+use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
 /// function to be called on a startup error
@@ -524,7 +524,7 @@ fn focus(mut c: *mut Client) {
             detachstack(c);
             attachstack(c);
             grabbuttons(c, true);
-            let color = (*(*scheme.offset(SchemeSel as isize))
+            let color = (*(*scheme.offset(Scheme::Sel as isize))
                 .offset(ColBorder as isize))
             .pixel;
             bindgen::XSetWindowBorder(dpy, (*c).win, color);
@@ -1643,7 +1643,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
     grabbuttons(c, false);
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
-        let color = (*(*scheme.offset(SchemeNorm as isize))
+        let color = (*(*scheme.offset(Scheme::Norm as isize))
             .offset(ColBorder as isize))
         .pixel;
         bindgen::XSetWindowBorder(dpy, (*c).win, color);
@@ -1700,7 +1700,7 @@ fn drawbar(m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == selmon {
             // status is only drawn on selected monitor
-            drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
+            drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
             tw = textw(addr_of!(stext) as *const _) - lrpad + 2; // 2px right padding
             drw::text(
                 drw,
@@ -1731,9 +1731,9 @@ fn drawbar(m: *mut Monitor) {
                 drw,
                 *scheme.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
-                        SchemeSel as usize
+                        Scheme::Sel as usize
                     } else {
-                        SchemeNorm as usize
+                        Scheme::Norm as usize
                     },
                 ),
             );
@@ -1766,7 +1766,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let w = textw((*m).ltsymbol.as_ptr());
-        drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
+        drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
         x = drw::text(
             drw,
             x,
@@ -1784,9 +1784,9 @@ fn drawbar(m: *mut Monitor) {
                 drw::setscheme(
                     drw,
                     *scheme.offset(if m == selmon {
-                        SchemeSel as isize
+                        Scheme::Sel as isize
                     } else {
-                        SchemeNorm as isize
+                        Scheme::Norm as isize
                     }),
                 );
                 drw::text(
@@ -1811,7 +1811,7 @@ fn drawbar(m: *mut Monitor) {
                     );
                 }
             } else {
-                drw::setscheme(drw, *scheme.add(SchemeNorm as usize));
+                drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
                 drw::rect(drw, x, 0, w as u32, bh as u32, 1, 1);
             }
         }
@@ -2558,7 +2558,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         );
         log::trace!("scheme: {:?}", scheme);
         let scheme_norm: *mut Clr =
-            *bindgen::scheme.offset(bindgen::SchemeNorm as isize);
+            *bindgen::scheme.offset(Scheme::Norm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
         let border: Clr = *scheme_norm.offset(Col::Border as isize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
