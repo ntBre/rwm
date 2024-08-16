@@ -81,9 +81,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 && cleanmask(BUTTONS[i].mask) == cleanmask(ev.state)
             {
                 let f = BUTTONS[i].func.unwrap();
-                let a = if click == Clk::TagBar
-                    && *BUTTONS[i].arg.as_int().unwrap() == 0
-                {
+                let a = if click == Clk::TagBar && BUTTONS[i].arg.is_none() {
                     &arg
                 } else {
                     &BUTTONS[i].arg
