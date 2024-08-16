@@ -20,6 +20,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
+use config::RULES;
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
@@ -40,8 +41,8 @@ use x11::xlib::{
 
 use bindgen::{
     bh, broken, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad,
-    mons, netatom, resizehints, root, rules, scheme, screen, selmon, sh, stext,
-    sw, tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
+    mons, netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw,
+    tags, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
     Monitor, WMProtocols, XInternAtom,
 };
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -2767,8 +2768,8 @@ fn applyrules(c: *mut Client) {
             CStr::from_ptr(broken.as_ptr())
         };
 
-        for i in 0..rules.len() {
-            let r = &rules[i];
+        for i in 0..RULES.len() {
+            let r = &RULES[i];
             if (r.title.is_null()
                 || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
