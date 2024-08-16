@@ -16,6 +16,7 @@ use crate::{
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon,
+    WITHDRAWN_STATE,
 };
 use crate::{
     bindgen::{
@@ -436,7 +437,7 @@ pub(crate) fn unmapnotify(e: *mut XEvent) {
         let c = wintoclient(ev.window);
         if !c.is_null() {
             if ev.send_event != 0 {
-                setclientstate(c, bindgen::WithdrawnState as usize);
+                setclientstate(c, WITHDRAWN_STATE as usize);
             } else {
                 unmanage(c, 0);
             }

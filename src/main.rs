@@ -28,13 +28,14 @@ use x11::xlib::{
     CWSibling, CWStackMode, CWWidth, ClientMessage, ControlMask,
     CopyFromParent, CurrentTime, Display as XDisplay, EnterWindowMask,
     ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
-    IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask, Mod3Mask,
-    Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize,
-    PResizeInc, PSize, ParentRelative, PointerMotionMask, PointerRoot,
-    PropModeAppend, PropModeReplace, PropertyChangeMask, RevertToPointerRoot,
-    ShiftMask, StructureNotifyMask, SubstructureNotifyMask,
-    SubstructureRedirectMask, Success, True, XErrorEvent, XFree,
-    XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
+    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 
 use bindgen::{
@@ -2629,7 +2630,7 @@ fn updatewmhints(c: *mut Client) {
             } else {
                 (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
             }
-            if (*wmh).flags & bindgen::InputHint as i64 != 0 {
+            if (*wmh).flags & InputHint as i64 != 0 {
                 (*c).neverfocus = ((*wmh).input == 0) as c_int;
             } else {
                 (*c).neverfocus = 0;
