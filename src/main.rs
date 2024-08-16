@@ -722,7 +722,7 @@ fn restack(m: *mut Monitor) {
         }
         if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
             let mut wc = bindgen::XWindowChanges {
-                stack_mode: Below as i32,
+                stack_mode: Below,
                 sibling: (*m).barwin,
                 x: Default::default(),
                 y: Default::default(),
@@ -968,12 +968,12 @@ fn updatesizehints(c: *mut Client) {
         if bindgen::XGetWMNormalHints(dpy, (*c).win, &mut size, &mut msize) == 0
         {
             /* size is uninitialized, ensure that size.flags aren't used */
-            size.flags = PSize as i64;
+            size.flags = PSize;
         }
-        if size.flags & PBaseSize as i64 != 0 {
+        if size.flags & PBaseSize != 0 {
             (*c).basew = size.base_width;
             (*c).baseh = size.base_height;
-        } else if size.flags & PMinSize as i64 != 0 {
+        } else if size.flags & PMinSize != 0 {
             (*c).basew = size.min_width;
             (*c).baseh = size.min_height;
         } else {
@@ -981,7 +981,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).baseh = 0;
         }
 
-        if size.flags & PResizeInc as i64 != 0 {
+        if size.flags & PResizeInc != 0 {
             (*c).incw = size.width_inc;
             (*c).inch = size.height_inc;
         } else {
@@ -989,7 +989,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).inch = 0;
         }
 
-        if size.flags & PMaxSize as i64 != 0 {
+        if size.flags & PMaxSize != 0 {
             (*c).maxw = size.max_width;
             (*c).maxh = size.max_height;
         } else {
@@ -997,10 +997,10 @@ fn updatesizehints(c: *mut Client) {
             (*c).maxh = 0;
         }
 
-        if size.flags & PMinSize as i64 != 0 {
+        if size.flags & PMinSize != 0 {
             (*c).minw = size.min_width;
             (*c).minh = size.min_height;
-        } else if size.flags & PBaseSize as i64 != 0 {
+        } else if size.flags & PBaseSize != 0 {
             (*c).minw = size.base_width;
             (*c).minh = size.base_height;
         } else {
@@ -1008,7 +1008,7 @@ fn updatesizehints(c: *mut Client) {
             (*c).minh = 0;
         }
 
-        if size.flags & PAspect as i64 != 0 {
+        if size.flags & PAspect != 0 {
             (*c).mina = size.min_aspect.y as f32 / size.min_aspect.x as f32;
             (*c).maxa = size.max_aspect.x as f32 / size.max_aspect.y as f32;
         } else {
@@ -1864,7 +1864,7 @@ fn updatebars() {
     let mut wa = bindgen::XSetWindowAttributes {
         override_redirect: True,
         background_pixmap: ParentRelative as u64,
-        event_mask: ButtonPressMask | ExposureMask as i64,
+        event_mask: ButtonPressMask | ExposureMask,
         // everything else should be uninit I guess
         background_pixel: 0,
         border_pixmap: 0,
@@ -2342,7 +2342,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
                 AnyModifier,
                 (*c).win,
             );
-            setclientstate(c, WITHDRAWN_STATE as usize);
+            setclientstate(c, WITHDRAWN_STATE);
             bindgen::XSync(dpy, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(dpy);
@@ -2630,7 +2630,7 @@ fn updatewmhints(c: *mut Client) {
             } else {
                 (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
             }
-            if (*wmh).flags & InputHint as i64 != 0 {
+            if (*wmh).flags & InputHint != 0 {
                 (*c).neverfocus = ((*wmh).input == 0) as c_int;
             } else {
                 (*c).neverfocus = 0;

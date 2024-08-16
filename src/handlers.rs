@@ -437,7 +437,7 @@ pub(crate) fn unmapnotify(e: *mut XEvent) {
         let c = wintoclient(ev.window);
         if !c.is_null() {
             if ev.send_event != 0 {
-                setclientstate(c, WITHDRAWN_STATE as usize);
+                setclientstate(c, WITHDRAWN_STATE);
             } else {
                 unmanage(c, 0);
             }
