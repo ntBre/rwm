@@ -39,11 +39,11 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom, root, scheme,
-    screen, selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
+    bh, cursor, dpy, drw, keys, lrpad, mons, netatom, root, scheme, screen,
+    selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
     ColBorder, Layout, Monitor, WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, COLORS, FONTS, RESIZE_HINTS, RULES, TAGS};
+use config::{BUTTONS, COLORS, FONTS, LAYOUTS, RESIZE_HINTS, RULES, TAGS};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -316,11 +316,11 @@ fn createmon() -> *mut Monitor {
         (*m).nmaster = NMASTER;
         (*m).showbar = SHOWBAR;
         (*m).topbar = TOPBAR;
-        (*m).lt[0] = &layouts[0];
-        (*m).lt[1] = &layouts[1 % layouts.len()];
+        (*m).lt[0] = &LAYOUTS[0];
+        (*m).lt[1] = &LAYOUTS[1 % LAYOUTS.len()];
         libc::strncpy(
             &mut (*m).ltsymbol as *mut _,
-            layouts[0].symbol,
+            LAYOUTS[0].symbol,
             size_of_val(&(*m).ltsymbol),
         );
     }

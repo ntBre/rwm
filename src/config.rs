@@ -6,10 +6,10 @@ use std::{
 
 use x11::xlib::{Button1, Button2, Button3};
 
-use crate::enums::Clk;
+use crate::{bindgen::Layout, enums::Clk};
 use crate::{
     bindgen::{
-        layouts, movemouse, resizemouse, setlayout, spawn, tag, termcmd,
+        monocle, movemouse, resizemouse, setlayout, spawn, tag, termcmd, tile,
         togglefloating, toggletag, toggleview, view, zoom, Arg, Button, Rule,
         MODKEY,
     },
@@ -81,6 +81,12 @@ pub const RESIZE_HINTS: c_int = 0;
 /// 1 will force focus on the fullscreen window
 // pub const LOCK_FULLSCREEN: c_int = 1;
 
+pub const LAYOUTS: [Layout; 3] = [
+    Layout { symbol: c"[]=".as_ptr(), arrange: Some(tile) },
+    Layout { symbol: c"><>".as_ptr(), arrange: None },
+    Layout { symbol: c"[M]".as_ptr(), arrange: Some(monocle) },
+];
+
 // key definitions
 
 // commands
@@ -108,7 +114,7 @@ pub static BUTTONS: [Button; 11] = [
         0,
         Button3,
         setlayout,
-        Arg { v: unsafe { &layouts[2] as *const _ as *const _ } },
+        Arg { v: &LAYOUTS[2] as *const _ as *const _ },
     ),
     Button::new(Clk::WinTitle, 0, Button2, zoom, Arg { i: 0 }),
     Button::new(
