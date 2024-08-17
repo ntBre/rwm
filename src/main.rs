@@ -39,11 +39,11 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom, resizehints,
-    root, scheme, screen, selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom,
-    Client, Clr, ColBorder, Layout, Monitor, WMProtocols, XInternAtom,
+    bh, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom, root, scheme,
+    screen, selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
+    ColBorder, Layout, Monitor, WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, COLORS, FONTS, RULES, TAGS};
+use config::{BUTTONS, COLORS, FONTS, RESIZE_HINTS, RULES, TAGS};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -892,7 +892,7 @@ fn applysizehints(
         if *w < bh {
             *w = bh;
         }
-        if resizehints != 0
+        if RESIZE_HINTS != 0
             || (*c).isfloating != 0
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange

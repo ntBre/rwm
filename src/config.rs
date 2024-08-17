@@ -76,6 +76,10 @@ pub const RULES: [Rule; 2] = [
 pub const MFACT: c_float = 0.5;
 /// Number of clients in master area
 pub const NMASTER: c_int = 1;
+/// 1 means respect size hints in tiled resizals
+pub const RESIZE_HINTS: c_int = 0;
+/// 1 will force focus on the fullscreen window
+// pub const LOCK_FULLSCREEN: c_int = 1;
 
 // key definitions
 
