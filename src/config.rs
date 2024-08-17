@@ -23,6 +23,7 @@ pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
 pub const TOPBAR: c_int = 1;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
+// const DMENUFONT: &str = "monospace:size=12";
 
 // tagging
 pub const TAGS: [&CStr; 9] =
