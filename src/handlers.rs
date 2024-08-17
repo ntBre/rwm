@@ -11,7 +11,7 @@ use x11::xlib::{
 
 use crate::{
     arrange, cleanmask,
-    config::BUTTONS,
+    config::{BUTTONS, KEYS},
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -22,7 +22,7 @@ use crate::{
 };
 use crate::{
     bindgen::{
-        self, bh, dpy, keys, mons, netatom, root, selmon, sh, stext, sw, Arg,
+        self, bh, dpy, mons, netatom, root, selmon, sh, stext, sw, Arg,
         Monitor, XEvent,
     },
     config::TAGS,
@@ -294,12 +294,12 @@ pub(crate) fn keypress(e: *mut XEvent) {
         let ev = &mut (*e).xkey;
         let keysym =
             bindgen::XKeycodeToKeysym(dpy, ev.keycode as bindgen::KeyCode, 0);
-        for i in 0..keys.len() {
-            if keysym == keys[i].keysym
-                && cleanmask(keys[i].mod_) == cleanmask(ev.state)
-                && keys[i].func.is_some()
+        for i in 0..KEYS.len() {
+            if keysym == KEYS[i].keysym
+                && cleanmask(KEYS[i].mod_) == cleanmask(ev.state)
+                && KEYS[i].func.is_some()
             {
-                keys[i].func.unwrap()(&(keys[i].arg));
+                KEYS[i].func.unwrap()(&(KEYS[i].arg));
             }
         }
     }

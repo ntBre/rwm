@@ -4,15 +4,19 @@ use std::{
     sync::LazyLock,
 };
 
-use x11::xlib::{Button1, Button2, Button3, Mod4Mask};
+use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::{bindgen::Layout, enums::Clk};
 use crate::{
     bindgen::{
-        monocle, movemouse, resizemouse, setlayout, spawn, tag, termcmd, tile,
-        togglefloating, toggletag, toggleview, view, zoom, Arg, Button, Rule,
+        self, monocle, movemouse, resizemouse, setlayout, spawn, tag, termcmd,
+        tile, togglefloating, toggletag, toggleview, view, zoom, Arg, Button,
+        KeySym, Rule, XK_d,
     },
     enums::Scheme,
+};
+use crate::{
+    bindgen::{Key, Layout},
+    enums::Clk,
 };
 
 // appearance
@@ -26,7 +30,7 @@ pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
 pub const TOPBAR: c_int = 1;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
-// const DMENUFONT: &str = "monospace:size=12";
+// const DMENUFONT: &CStr = c"monospace:size=12";
 const COL_GRAY1: &CStr = c"#222222";
 const COL_GRAY2: &CStr = c"#444444";
 const COL_GRAY3: &CStr = c"#bbbbbb";
@@ -90,6 +94,222 @@ pub const LAYOUTS: [Layout; 3] = [
 pub const MODKEY: c_uint = Mod4Mask;
 
 // commands
+// pub static DMENUCMD: LazyLock<[&CStr; 13]> = LazyLock::new(|| {
+//     [
+//         c"dmenu_run",
+//         c"-m",
+//         // CStr::from_ptr is not yet stable as a const fn
+//         unsafe { CStr::from_ptr(crate::bindgen::dmenumon.as_ptr()) },
+//         c"-fn",
+//         DMENUFONT,
+//         c"-nb",
+//         COL_GRAY1,
+//         c"-nf",
+//         COL_GRAY3,
+//         c"-sb",
+//         COL_CYAN,
+//         c"-sf",
+//         COL_GRAY4,
+//     ]
+// });
+// pub const TERMCMD: [&CStr; 1] = [c"st"];
+
+impl Key {
+    const fn new(
+        mod_: c_uint,
+        keysym: u32,
+        func: unsafe extern "C" fn(arg1: *const Arg),
+        arg: Arg,
+    ) -> Self {
+        Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
+    }
+}
+
+unsafe impl Sync for Key {}
+
+use x11::keysym::{
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_f, XK_h, XK_i, XK_j, XK_k,
+    XK_l, XK_m, XK_period, XK_q, XK_space, XK_t, XK_u, XK_0, XK_1, XK_2, XK_3,
+    XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+};
+
+pub static KEYS: [Key; 60] = [
+    Key::new(
+        MODKEY,
+        XK_d,
+        spawn,
+        Arg { v: unsafe { bindgen::dmenucmd.as_ptr().cast() } },
+    ),
+    Key::new(
+        MODKEY,
+        XK_t,
+        spawn,
+        Arg { v: unsafe { bindgen::termcmd.as_ptr().cast() } },
+    ),
+    Key::new(MODKEY, XK_b, bindgen::togglebar, Arg { i: 0 }),
+    Key::new(MODKEY, XK_j, bindgen::focusstack, Arg { i: 1 }),
+    Key::new(MODKEY, XK_k, bindgen::focusstack, Arg { i: -1 }),
+    Key::new(MODKEY, XK_i, bindgen::incnmaster, Arg { i: 1 }),
+    Key::new(MODKEY, XK_u, bindgen::incnmaster, Arg { i: -1 }),
+    Key::new(MODKEY, XK_h, bindgen::setmfact, Arg { f: -0.05 }),
+    Key::new(MODKEY, XK_l, bindgen::setmfact, Arg { f: 0.05 }),
+    Key::new(MODKEY, XK_Return, bindgen::zoom, Arg { i: 0 }),
+    Key::new(MODKEY, XK_Tab, bindgen::view, Arg { i: 0 }),
+    Key::new(MODKEY | ShiftMask, XK_c, bindgen::killclient, Arg { i: 0 }),
+    Key::new(
+        MODKEY | ShiftMask,
+        XK_t,
+        bindgen::setlayout,
+        Arg { v: &LAYOUTS[0] as *const _ as *const _ },
+    ),
+    Key::new(
+        MODKEY,
+        XK_f,
+        setlayout,
+        Arg { v: &LAYOUTS[1] as *const _ as *const _ },
+    ),
+    Key::new(
+        MODKEY,
+        XK_m,
+        setlayout,
+        Arg { v: &LAYOUTS[2] as *const _ as *const _ },
+    ),
+    Key::new(MODKEY, XK_space, setlayout, Arg { i: 0 }),
+    Key::new(MODKEY | ShiftMask, XK_space, togglefloating, Arg { i: 0 }),
+    Key::new(MODKEY, XK_0, view, Arg { ui: !0 }),
+    Key::new(MODKEY | ShiftMask, XK_0, tag, Arg { ui: !0 }),
+    Key::new(MODKEY, XK_comma, bindgen::focusmon, Arg { i: -1 }),
+    Key::new(MODKEY, XK_period, bindgen::focusmon, Arg { i: 1 }),
+    Key::new(MODKEY | ShiftMask, XK_comma, bindgen::tagmon, Arg { i: -1 }),
+    Key::new(MODKEY | ShiftMask, XK_period, bindgen::tagmon, Arg { i: 1 }),
+    Key::new(MODKEY, XK_1, bindgen::view, Arg { ui: 1 << 0 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_1,
+        bindgen::toggleview,
+        Arg { ui: 1 << 0 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_1, bindgen::tag, Arg { ui: 1 << 0 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_1,
+        bindgen::toggletag,
+        Arg { ui: 1 << 0 },
+    ),
+    Key::new(MODKEY, XK_2, bindgen::view, Arg { ui: 1 << 1 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_2,
+        bindgen::toggleview,
+        Arg { ui: 1 << 1 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_2, bindgen::tag, Arg { ui: 1 << 1 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_2,
+        bindgen::toggletag,
+        Arg { ui: 1 << 1 },
+    ),
+    Key::new(MODKEY, XK_3, bindgen::view, Arg { ui: 1 << 2 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_3,
+        bindgen::toggleview,
+        Arg { ui: 1 << 2 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_3, bindgen::tag, Arg { ui: 1 << 2 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_3,
+        bindgen::toggletag,
+        Arg { ui: 1 << 2 },
+    ),
+    Key::new(MODKEY, XK_4, bindgen::view, Arg { ui: 1 << 3 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_4,
+        bindgen::toggleview,
+        Arg { ui: 1 << 3 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_4, bindgen::tag, Arg { ui: 1 << 3 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_4,
+        bindgen::toggletag,
+        Arg { ui: 1 << 3 },
+    ),
+    Key::new(MODKEY, XK_5, bindgen::view, Arg { ui: 1 << 4 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_5,
+        bindgen::toggleview,
+        Arg { ui: 1 << 4 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_5, bindgen::tag, Arg { ui: 1 << 4 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_5,
+        bindgen::toggletag,
+        Arg { ui: 1 << 4 },
+    ),
+    Key::new(MODKEY, XK_6, bindgen::view, Arg { ui: 1 << 5 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_6,
+        bindgen::toggleview,
+        Arg { ui: 1 << 5 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_6, bindgen::tag, Arg { ui: 1 << 5 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_6,
+        bindgen::toggletag,
+        Arg { ui: 1 << 5 },
+    ),
+    Key::new(MODKEY, XK_7, bindgen::view, Arg { ui: 1 << 6 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_7,
+        bindgen::toggleview,
+        Arg { ui: 1 << 6 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_7, bindgen::tag, Arg { ui: 1 << 6 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_7,
+        bindgen::toggletag,
+        Arg { ui: 1 << 6 },
+    ),
+    Key::new(MODKEY, XK_8, bindgen::view, Arg { ui: 1 << 7 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_8,
+        bindgen::toggleview,
+        Arg { ui: 1 << 7 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_8, bindgen::tag, Arg { ui: 1 << 7 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_8,
+        bindgen::toggletag,
+        Arg { ui: 1 << 7 },
+    ),
+    Key::new(MODKEY, XK_9, bindgen::view, Arg { ui: 1 << 8 }),
+    Key::new(
+        MODKEY | ControlMask,
+        XK_9,
+        bindgen::toggleview,
+        Arg { ui: 1 << 8 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_9, bindgen::tag, Arg { ui: 1 << 8 }),
+    Key::new(
+        MODKEY | ControlMask | ShiftMask,
+        XK_9,
+        bindgen::toggletag,
+        Arg { ui: 1 << 8 },
+    ),
+    Key::new(MODKEY | ShiftMask, XK_q, bindgen::quit, Arg { i: 0 }),
+];
 
 // button definitions
 

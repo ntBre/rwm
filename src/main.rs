@@ -39,11 +39,13 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, cursor, dpy, drw, keys, lrpad, mons, netatom, root, scheme, screen,
-    selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
-    ColBorder, Layout, Monitor, WMProtocols, XInternAtom,
+    bh, cursor, dpy, drw, lrpad, mons, netatom, root, scheme, screen, selmon,
+    sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder,
+    Layout, Monitor, WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, COLORS, FONTS, LAYOUTS, RESIZE_HINTS, RULES, TAGS};
+use config::{
+    BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
+};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -1572,16 +1574,16 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for i in 0..keys.len() {
+            for i in 0..KEYS.len() {
                 // skip modifier codes, we do that ourselves
-                if keys[i].keysym
+                if KEYS[i].keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
                 {
                     for j in 0..modifiers.len() {
                         bindgen::XGrabKey(
                             dpy,
                             k,
-                            keys[i].mod_ | modifiers[j],
+                            KEYS[i].mod_ | modifiers[j],
                             root,
                             True,
                             GrabModeAsync,
