@@ -42,7 +42,7 @@ use x11::xlib::{
 use bindgen::{
     bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
     netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
-    wmatom, wmcheckwin, Atom, Client, Clr, ColBorder, Layout, Monitor,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
     WMProtocols, XInternAtom,
 };
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -162,26 +162,15 @@ const BROKEN: &CStr = c"broken";
 // const TAGMASK: usize = (1 << TAGS.len()) - 1;
 // const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
-#[derive(Clone, Default)]
-pub enum Arg {
-    Uint(c_uint),
-    Int(isize),
-    Float(f64),
-    Str(&'static [&'static str]),
-    Layout(&'static Layout),
-    #[default]
-    None,
-}
-
-impl Arg {
-    pub fn as_uint(&self) -> Option<&c_uint> {
-        if let Self::Uint(v) = self {
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
+// #[derive(Clone)]
+// pub enum Arg {
+//     Uint(usize),
+//     Int(isize),
+//     Float(f64),
+//     Str(&'static [&'static str]),
+//     Layout(&'static Layout),
+//     None,
+// }
 
 // pub struct Button {
 //     pub click: Clk,
@@ -1347,15 +1336,12 @@ fn detach(c: *mut Client) {
 
 fn view(arg: *const Arg) {
     unsafe {
-        if (*arg).as_uint().unwrap() & TAGMASK
-            == (*selmon).tagset[(*selmon).seltags as usize]
-        {
+        if (*arg).ui & TAGMASK == (*selmon).tagset[(*selmon).seltags as usize] {
             return;
         }
         (*selmon).seltags ^= 1; // toggle sel tagset
-        if ((*arg).as_uint().unwrap() & TAGMASK) != 0 {
-            (*selmon).tagset[(*selmon).seltags as usize] =
-                (*arg).as_uint().unwrap() & TAGMASK;
+        if ((*arg).ui & TAGMASK) != 0 {
+            (*selmon).tagset[(*selmon).seltags as usize] = (*arg).ui & TAGMASK;
         }
         focus(null_mut());
         arrange(selmon);
@@ -2279,7 +2265,7 @@ fn cleanup() {
     log::trace!("entering cleanup");
 
     unsafe {
-        let a = Arg::Uint(!0);
+        let a = Arg { ui: !0 };
         view(&a);
         (*selmon).lt[(*selmon).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
