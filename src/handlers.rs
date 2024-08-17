@@ -10,11 +10,13 @@ use x11::xlib::{
 };
 
 use crate::bindgen::{
-    self, bh, buttons, dpy, keys, mons, netatom, root, selmon, sh, stext, sw,
-    tags, Arg, Monitor, XEvent,
+    self, bh, dpy, keys, mons, netatom, root, selmon, sh, stext, sw, tags, Arg,
+    Monitor, XEvent,
 };
 use crate::{
-    arrange, cleanmask, configure, drawbar, drawbars, drw,
+    arrange, cleanmask,
+    config::BUTTONS,
+    configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
@@ -70,17 +72,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for i in 0..buttons.len() {
-            if click as u32 == buttons[i].click
-                && buttons[i].func.is_some()
-                && buttons[i].button == ev.button
-                && cleanmask(buttons[i].mask) == cleanmask(ev.state)
+        for i in 0..BUTTONS.len() {
+            if click as u32 == BUTTONS[i].click
+                && BUTTONS[i].func.is_some()
+                && BUTTONS[i].button == ev.button
+                && cleanmask(BUTTONS[i].mask) == cleanmask(ev.state)
             {
-                let f = buttons[i].func.unwrap();
-                let a = if click == Clk::TagBar && buttons[i].arg.i == 0 {
+                let f = BUTTONS[i].func.unwrap();
+                let a = if click == Clk::TagBar && BUTTONS[i].arg.i == 0 {
                     &arg
                 } else {
-                    &buttons[i].arg
+                    &BUTTONS[i].arg
                 };
                 f(a)
             }
