@@ -20,7 +20,6 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
-use config::RULES;
 use libc::{c_long, c_uchar, sigaction};
 use x11::xlib::{
     AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
@@ -40,11 +39,12 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, buttons, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons,
-    netatom, resizehints, root, scheme, screen, selmon, sh, stext, sw, tags,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
+    bh, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons, netatom,
+    resizehints, root, scheme, screen, selmon, sh, stext, sw, tags, wmatom,
+    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
     WMProtocols, XInternAtom,
 };
+use config::{BUTTONS, RULES};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -632,13 +632,13 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for i in 0..buttons.len() {
-            if buttons[i].click == Clk::ClientWin as u32 {
+        for i in 0..BUTTONS.len() {
+            if BUTTONS[i].click == Clk::ClientWin as u32 {
                 for j in 0..modifiers.len() {
                     bindgen::XGrabButton(
                         dpy,
-                        buttons[i].button,
-                        buttons[i].mask | modifiers[j],
+                        BUTTONS[i].button,
+                        BUTTONS[i].mask | modifiers[j],
                         (*c).win,
                         False,
                         BUTTONMASK,
