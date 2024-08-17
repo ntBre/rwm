@@ -735,6 +735,7 @@ mod tests {
             (c"GNU Emacs at omsf", 71, 1),
             (c"NU Emacs at omsf", 78, 1),
             (c"U Emacs at omsf", 85, 1),
+            (c"🕔", 0x1f554, 4),
         ];
 
         for (inp, want_u, ret) in tests {
