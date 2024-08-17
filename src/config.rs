@@ -1,16 +1,20 @@
 use std::{
     ffi::{c_float, c_int, c_uint, CStr},
     ptr::null,
+    sync::LazyLock,
 };
 
 use x11::xlib::{Button1, Button2, Button3};
 
-use crate::bindgen::{
-    layouts, movemouse, resizemouse, setlayout, spawn, tag, termcmd,
-    togglefloating, toggletag, toggleview, view, zoom, Arg, Button, Rule,
-    MODKEY,
-};
 use crate::enums::Clk;
+use crate::{
+    bindgen::{
+        layouts, movemouse, resizemouse, setlayout, spawn, tag, termcmd,
+        togglefloating, toggletag, toggleview, view, zoom, Arg, Button, Rule,
+        MODKEY,
+    },
+    enums::Scheme,
+};
 
 // appearance
 
@@ -24,6 +28,18 @@ pub const SHOWBAR: c_int = 1;
 pub const TOPBAR: c_int = 1;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
 // const DMENUFONT: &str = "monospace:size=12";
+const COL_GRAY1: &CStr = c"#222222";
+const COL_GRAY2: &CStr = c"#444444";
+const COL_GRAY3: &CStr = c"#bbbbbb";
+const COL_GRAY4: &CStr = c"#eeeeee";
+const COL_CYAN: &CStr = c"#005577";
+
+pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
+    let mut ret = [[c""; 3]; 2];
+    ret[Scheme::Norm as usize] = [COL_GRAY3, COL_GRAY1, COL_GRAY2];
+    ret[Scheme::Sel as usize] = [COL_GRAY4, COL_CYAN, COL_CYAN];
+    ret
+});
 
 // tagging
 pub const TAGS: [&CStr; 9] =

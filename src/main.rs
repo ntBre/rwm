@@ -39,12 +39,11 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, colors, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom,
-    resizehints, root, scheme, screen, selmon, sh, stext, sw, wmatom,
-    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
-    WMProtocols, XInternAtom,
+    bh, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom, resizehints,
+    root, scheme, screen, selmon, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom,
+    Client, Clr, ColBorder, Layout, Monitor, WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, FONTS, RULES, TAGS};
+use config::{BUTTONS, COLORS, FONTS, RULES, TAGS};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -426,10 +425,9 @@ fn setup() {
             drw::cur_create(drw, bindgen::XC_fleur as i32);
 
         /* init appearance */
-        scheme = util::ecalloc(colors.len(), size_of::<*mut Clr>()).cast();
-        for i in 0..colors.len() {
-            *scheme.add(i) =
-                drw::scm_create(drw, &mut *addr_of_mut!(colors[i]), 3);
+        scheme = util::ecalloc(COLORS.len(), size_of::<*mut Clr>()).cast();
+        for i in 0..COLORS.len() {
+            *scheme.add(i) = drw::scm_create(drw, &COLORS[i], 3);
         }
 
         /* init bars */
@@ -2286,7 +2284,7 @@ fn cleanup() {
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
-        for i in 0..colors.len() {
+        for i in 0..COLORS.len() {
             let tmp: *mut Clr = *scheme.add(i);
             libc::free(tmp.cast());
         }

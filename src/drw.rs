@@ -330,7 +330,7 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
 
 pub(crate) fn scm_create(
     drw: *mut Drw,
-    clrnames: &mut [*const c_char],
+    clrnames: &[&CStr],
     clrcount: usize,
 ) -> *mut Clr {
     if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
@@ -343,7 +343,7 @@ pub(crate) fn scm_create(
     }
     for i in 0..clrcount {
         unsafe {
-            clr_create(drw, ret.add(i), clrnames[i]);
+            clr_create(drw, ret.add(i), clrnames[i].as_ptr());
         }
     }
     ret
