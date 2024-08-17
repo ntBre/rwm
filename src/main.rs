@@ -40,11 +40,11 @@ use x11::xlib::{
 
 use bindgen::{
     bh, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons, netatom,
-    resizehints, root, scheme, screen, selmon, sh, stext, sw, tags, wmatom,
+    resizehints, root, scheme, screen, selmon, sh, stext, sw, wmatom,
     wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
     WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, RULES};
+use config::{BUTTONS, RULES, TAGS};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -159,7 +159,6 @@ const BROKEN: &CStr = c"broken";
 // static mut numlockmask: u32 = 0;
 // const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 
-// const TAGMASK: usize = (1 << TAGS.len()) - 1;
 // const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 // #[derive(Clone)]
@@ -1729,9 +1728,9 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let mut x = 0;
-        for i in 0..tags.len() {
-            let text = tags[i].to_owned();
-            let w = textw(text);
+        for i in 0..TAGS.len() {
+            let text = TAGS[i].to_owned();
+            let w = textw(text.as_ptr());
             drw::setscheme(
                 drw,
                 *scheme.add(
@@ -1749,7 +1748,7 @@ fn drawbar(m: *mut Monitor) {
                 w as u32,
                 bh as u32,
                 lrpad as u32 / 2,
-                text,
+                text.as_ptr(),
                 (urg as i32) & 1 << i,
             );
 
@@ -2803,7 +2802,7 @@ fn applyrules(c: *mut Client) {
 }
 
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-const TAGMASK: u32 = (1 << 9) - 1;
+const TAGMASK: u32 = (1 << TAGS.len()) - 1;
 
 fn updatetitle(c: *mut Client) {
     log::trace!("updatetitle");

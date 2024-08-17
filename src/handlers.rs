@@ -9,10 +9,6 @@ use x11::xlib::{
     XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use crate::bindgen::{
-    self, bh, dpy, keys, mons, netatom, root, selmon, sh, stext, sw, tags, Arg,
-    Monitor, XEvent,
-};
 use crate::{
     arrange, cleanmask,
     config::BUTTONS,
@@ -23,6 +19,13 @@ use crate::{
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window,
     WITHDRAWN_STATE,
+};
+use crate::{
+    bindgen::{
+        self, bh, dpy, keys, mons, netatom, root, selmon, sh, stext, sw, Arg,
+        Monitor, XEvent,
+    },
+    config::TAGS,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -42,17 +45,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(tags[i]);
+                x += textw(TAGS[i].as_ptr());
                 // condition
                 if ev.x < x {
                     break;
                 }
                 i += 1;
-                if i >= tags.len() {
+                if i >= TAGS.len() {
                     break;
                 }
             }
-            if i < tags.len() {
+            if i < TAGS.len() {
                 click = Clk::TagBar;
                 arg = Arg { ui: 1 << i };
             } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)

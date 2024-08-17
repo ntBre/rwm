@@ -12,6 +12,8 @@ use crate::bindgen::{
 };
 use crate::enums::Clk;
 
+// appearance
+
 /// Border pixel of windows
 pub const BORDERPX: c_uint = 3;
 // Snap pixel
@@ -21,12 +23,9 @@ pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
 pub const TOPBAR: c_int = 1;
 
-// layouts
-
-/// Factor of master area size [0.05..0.95]
-pub const MFACT: c_float = 0.5;
-/// Number of clients in master area
-pub const NMASTER: c_int = 1;
+// tagging
+pub const TAGS: [&CStr; 9] =
+    [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"];
 
 impl Rule {
     const fn new(
@@ -52,6 +51,19 @@ pub const RULES: [Rule; 2] = [
     Rule::new(c"Gimp", null(), null(), 0, 1, -1),
     Rule::new(c"Firefox", null(), null(), 1 << 8, 0, -1),
 ];
+
+// layouts
+
+/// Factor of master area size [0.05..0.95]
+pub const MFACT: c_float = 0.5;
+/// Number of clients in master area
+pub const NMASTER: c_int = 1;
+
+// key definitions
+
+// commands
+
+// button definitions
 
 impl Button {
     const fn new(
