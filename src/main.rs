@@ -2867,6 +2867,7 @@ mod config;
 mod drw;
 mod enums;
 mod handlers;
+mod key_handlers;
 mod util;
 
 fn main() {
