@@ -39,12 +39,12 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, colors, cursor, dpy, drw, fonts, keys, layouts, lrpad, mons, netatom,
+    bh, colors, cursor, dpy, drw, keys, layouts, lrpad, mons, netatom,
     resizehints, root, scheme, screen, selmon, sh, stext, sw, wmatom,
     wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
     WMProtocols, XInternAtom,
 };
-use config::{BUTTONS, RULES, TAGS};
+use config::{BUTTONS, FONTS, RULES, TAGS};
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -379,9 +379,7 @@ fn setup() {
         sh = bindgen::XDisplayHeight(dpy, screen);
         root = bindgen::XRootWindow(dpy, screen);
         drw = drw::create(dpy, screen, root, sw as u32, sh as u32);
-        if drw::fontset_create(drw, &mut *addr_of_mut!(fonts), fonts.len())
-            .is_null()
-        {
+        if drw::fontset_create(drw, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
         }
         lrpad = (*(*drw).fonts).h as i32;

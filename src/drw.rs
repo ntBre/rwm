@@ -206,7 +206,7 @@ pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
 
 pub(crate) fn fontset_create(
     drw: *mut Drw,
-    fonts: &mut [*const c_char],
+    fonts: &[&CStr],
     fontcount: usize,
 ) -> *mut Fnt {
     unsafe {
@@ -218,7 +218,8 @@ pub(crate) fn fontset_create(
         }
 
         for i in 1..=fontcount {
-            let cur = xfont_create(drw, fonts[fontcount - i], null_mut());
+            let cur =
+                xfont_create(drw, fonts[fontcount - i].as_ptr(), null_mut());
             if !cur.is_null() {
                 (*cur).next = ret;
                 ret = cur;
