@@ -4,14 +4,13 @@ use std::{
     sync::LazyLock,
 };
 
-use x11::xlib::{Button1, Button2, Button3};
+use x11::xlib::{Button1, Button2, Button3, Mod4Mask};
 
 use crate::{bindgen::Layout, enums::Clk};
 use crate::{
     bindgen::{
         monocle, movemouse, resizemouse, setlayout, spawn, tag, termcmd, tile,
         togglefloating, toggletag, toggleview, view, zoom, Arg, Button, Rule,
-        MODKEY,
     },
     enums::Scheme,
 };
@@ -88,6 +87,7 @@ pub const LAYOUTS: [Layout; 3] = [
 ];
 
 // key definitions
+pub const MODKEY: c_uint = Mod4Mask;
 
 // commands
 
