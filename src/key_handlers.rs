@@ -310,3 +310,19 @@ pub(crate) unsafe extern "C" fn quit(_arg: *const Arg) {
         crate::running = 0;
     }
 }
+
+pub(crate) unsafe extern "C" fn movemouse(arg: *const Arg) {
+    unsafe { bindgen::movemouse(arg) }
+}
+
+pub(crate) unsafe extern "C" fn resizemouse(arg: *const Arg) {
+    unsafe { bindgen::resizemouse(arg) }
+}
+
+pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
+    unsafe { bindgen::spawn(arg) }
+}
+
+pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
+    unsafe { bindgen::toggletag(arg) }
+}

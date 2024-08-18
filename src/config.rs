@@ -7,10 +7,7 @@ use std::{
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
-    bindgen::{
-        dmenucmd, movemouse, resizemouse, spawn, termcmd, toggletag, Arg,
-        Button, KeySym, Rule,
-    },
+    bindgen::{dmenucmd, termcmd, Arg, Button, KeySym, Rule},
     enums::Scheme,
 };
 use crate::{
