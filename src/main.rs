@@ -2230,11 +2230,11 @@ fn getstate(w: Window) -> c_long {
 }
 
 mod config;
-// mod layouts;
 mod drw;
 mod enums;
 mod handlers;
 mod key_handlers;
+mod layouts;
 mod util;
 
 fn main() {

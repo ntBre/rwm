@@ -8,8 +8,8 @@ use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
     bindgen::{
-        dmenucmd, monocle, movemouse, resizemouse, spawn, termcmd, tile,
-        toggletag, Arg, Button, KeySym, Rule, XK_d,
+        dmenucmd, movemouse, resizemouse, spawn, termcmd, toggletag, Arg,
+        Button, KeySym, Rule, XK_d,
     },
     enums::Scheme,
 };
@@ -17,6 +17,7 @@ use crate::{
     bindgen::{Key, Layout},
     enums::Clk,
     key_handlers::*,
+    layouts::{monocle, tile},
 };
 
 // appearance
