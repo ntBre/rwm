@@ -1,11 +1,14 @@
 use std::ffi::c_int;
 use std::ptr::null_mut;
 
-use crate::bindgen::{self, dpy, Arg, Client};
+use x11::xlib::False;
+
+use crate::bindgen::{self, dpy, wmatom, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
+use crate::enums::WM;
 use crate::{
-    arrange, focus, is_visible, nexttiled, pop, restack, updatebarpos, BH,
-    TAGMASK,
+    arrange, focus, is_visible, nexttiled, pop, restack, sendevent,
+    updatebarpos, BH, TAGMASK,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -143,8 +146,25 @@ pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
     }
 }
 
-pub(crate) unsafe extern "C" fn killclient(arg: *const Arg) {
-    unsafe { bindgen::killclient(arg) }
+pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if selmon.sel.is_null() {
+            return;
+        }
+
+        if sendevent(selmon.sel, wmatom[WM::Delete as usize]) == 0 {
+            bindgen::XGrabServer(dpy);
+            bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
+            bindgen::XSetCloseDownMode(dpy, bindgen::DestroyAll as i32);
+            bindgen::XKillClient(dpy, (*selmon.sel).win);
+            bindgen::XSync(dpy, False);
+            bindgen::XSetErrorHandler(Some(bindgen::xerror));
+            bindgen::XUngrabServer(dpy);
+        }
+    }
 }
 
 pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
