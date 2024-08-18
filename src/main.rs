@@ -1054,14 +1054,14 @@ fn updatesizehints(c: *mut Client) {
 //     }
 // }
 
-// fn pop(mdpy: &Display, c: *mut Client) {
-//     detach(c);
-//     attach(c);
-//     focus(mdpy, c);
-//     unsafe {
-//         arrange(mdpy, (*c).mon);
-//     }
-// }
+fn pop(c: *mut Client) {
+    detach(c);
+    attach(c);
+    focus(c);
+    unsafe {
+        arrange((*c).mon);
+    }
+}
 
 fn detach(c: *mut Client) {
     log::trace!("detach");
