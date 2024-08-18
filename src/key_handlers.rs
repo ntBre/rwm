@@ -84,6 +84,10 @@ pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     }
 }
 
+/// Set the fraction of the screen occupied by the master window. An `arg.f`
+/// greater than 1.0 sets the fraction absolutely, while fractional values add
+/// to the current value. Total values are restricted to the range [0.05, 0.95]
+/// to leave at least 5% of the screen for other windows.
 pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
     unsafe {
         assert!(!bindgen::selmon.is_null());
@@ -99,7 +103,7 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
         } else {
             (*arg).f - 1.0
         };
-        if f < 0.05 || f > 0.95 {
+        if !(0.05..=0.95).contains(&f) {
             return;
         }
         selmon.mfact = f;
