@@ -1074,14 +1074,12 @@ fn detach(c: *mut Client) {
     }
 }
 
-// fn nexttiled(mut c: *mut Client) -> *mut Client {
-//     unsafe {
-//         while !c.is_null() && ((*c).isfloating || !is_visible(c)) {
-//             c = (*c).next;
-//         }
-//     }
-//     c
-// }
+fn nexttiled(mut c: *mut Client) -> *mut Client {
+    unsafe {
+        cfor!((; !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)); c = (*c).next) {});
+        c
+    }
+}
 
 // pub fn spawn(_dpy: &Display, arg: Arg) {
 //     unsafe {

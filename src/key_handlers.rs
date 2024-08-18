@@ -3,7 +3,7 @@ use std::ptr::null_mut;
 
 use crate::bindgen::{self, bh, dpy, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
-use crate::{arrange, focus, is_visible, restack, updatebarpos};
+use crate::{arrange, focus, is_visible, nexttiled, restack, updatebarpos};
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
@@ -112,8 +112,8 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
         {
             return;
         }
-        if c == bindgen::nexttiled(selmon.clients) {
-            c = bindgen::nexttiled((*c).next);
+        if c == nexttiled(selmon.clients) {
+            c = nexttiled((*c).next);
             if c.is_null() {
                 return;
             }
