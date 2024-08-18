@@ -85,7 +85,26 @@ pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
-    unsafe { bindgen::setmfact(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if arg.is_null()
+            || (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+        {
+            return;
+        }
+        let f = if (*arg).f < 1.0 {
+            (*arg).f + selmon.mfact
+        } else {
+            (*arg).f - 1.0
+        };
+        if f < 0.05 || f > 0.95 {
+            return;
+        }
+        selmon.mfact = f;
+        arrange(selmon);
+    }
 }
 
 pub(crate) unsafe extern "C" fn zoom(arg: *const Arg) {
