@@ -12,10 +12,16 @@ use crate::{
     updatebarpos, BH, TAGMASK,
 };
 
-pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
+fn get_selmon() -> &'static mut Monitor {
     unsafe {
         assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        &mut *bindgen::selmon
+    }
+}
+
+pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
+    unsafe {
+        let selmon = get_selmon();
         selmon.showbar = (selmon.showbar == 0) as c_int;
         updatebarpos(selmon);
         bindgen::XMoveResizeWindow(
@@ -35,8 +41,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
         let mut c: *mut Client = null_mut();
         let mut i: *mut Client;
 
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
         if selmon.sel.is_null()
             || ((*selmon.sel).isfullscreen != 0 && LOCK_FULLSCREEN != 0)
         {
@@ -71,8 +76,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
         selmon.nmaster = std::cmp::max(selmon.nmaster + (*arg).i, 0);
         arrange(selmon);
     }
@@ -84,8 +88,7 @@ pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
 /// to leave at least 5% of the screen for other windows.
 pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if arg.is_null()
             || (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
@@ -109,8 +112,7 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
 /// the top of the stack.
 pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         let mut c = selmon.sel;
         if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
@@ -132,8 +134,7 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
 /// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if (*arg).ui & TAGMASK == selmon.tagset[selmon.seltags as usize] {
             return;
@@ -149,8 +150,7 @@ pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if selmon.sel.is_null() {
             return;
@@ -170,8 +170,7 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
         if arg.is_null()
             || (*arg).v.is_null()
             || (*arg).v.cast() != selmon.lt[selmon.sellt as usize]
@@ -196,8 +195,7 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if selmon.sel.is_null() {
             return;
@@ -219,8 +217,7 @@ pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if !selmon.sel.is_null() && (*arg).ui & TAGMASK != 0 {
             (*selmon.sel).tags = (*arg).ui & TAGMASK;
@@ -284,8 +281,7 @@ fn sendmon(c: *mut Client, m: *mut Monitor) {
 
 pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         if selmon.sel.is_null() || (*mons).next.is_null() {
             return;
@@ -296,8 +292,7 @@ pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        let selmon = &mut *bindgen::selmon;
+        let selmon = get_selmon();
 
         let newtagset =
             selmon.tagset[selmon.seltags as usize] ^ ((*arg).ui & TAGMASK);
