@@ -25,8 +25,14 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
     unsafe { bindgen::focusstack(arg) }
 }
 
+/// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
-    unsafe { bindgen::incnmaster(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+        selmon.nmaster = std::cmp::max(selmon.nmaster + (*arg).i, 0);
+        arrange(selmon);
+    }
 }
 
 pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
