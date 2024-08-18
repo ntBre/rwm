@@ -1,7 +1,24 @@
-use crate::bindgen::{self, Arg};
+use std::ffi::c_int;
 
-pub(crate) unsafe extern "C" fn togglebar(arg: *const Arg) {
-    unsafe { bindgen::togglebar(arg) }
+use crate::bindgen::{self, bh, dpy, Arg};
+use crate::{arrange, updatebarpos};
+
+pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+        selmon.showbar = (selmon.showbar == 0) as c_int;
+        updatebarpos(selmon);
+        bindgen::XMoveResizeWindow(
+            dpy,
+            selmon.barwin,
+            selmon.wx,
+            selmon.by,
+            selmon.ww as u32,
+            bh as u32,
+        );
+        arrange(selmon);
+    }
 }
 
 pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
