@@ -273,7 +273,19 @@ pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
-    unsafe { bindgen::toggleview(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        let newtagset =
+            selmon.tagset[selmon.seltags as usize] ^ ((*arg).ui & TAGMASK);
+
+        if newtagset != 0 {
+            selmon.tagset[selmon.seltags as usize] = newtagset;
+            focus(null_mut());
+            arrange(selmon);
+        }
+    }
 }
 
 pub(crate) unsafe extern "C" fn quit(arg: *const Arg) {
