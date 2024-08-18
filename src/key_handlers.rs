@@ -5,19 +5,6 @@ use crate::bindgen::{self, bh, dpy, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
 use crate::{arrange, focus, is_visible, restack, updatebarpos};
 
-macro_rules! cfor {
-    ((; $cond:expr; $step:expr) $body:block ) => {
-        cfor!(({}; $cond; $step) $body)
-    };
-    (($init:expr; $cond:expr; $step:expr) $body:block ) => {
-        $init;
-        while $cond {
-            $body;
-            $step;
-        }
-    };
-}
-
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
         assert!(!bindgen::selmon.is_null());

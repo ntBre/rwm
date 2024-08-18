@@ -49,6 +49,19 @@ use config::{
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
+macro_rules! cfor {
+    ((; $cond:expr; $step:expr) $body:block ) => {
+        cfor!(({}; $cond; $step) $body)
+    };
+    (($init:expr; $cond:expr; $step:expr) $body:block ) => {
+        $init;
+        while $cond {
+            $body;
+            $step;
+        }
+    };
+}
+
 /// function to be called on a startup error
 extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
     panic!("another window manager is already running")
