@@ -5,6 +5,7 @@ use crate::bindgen::{self, dpy, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
 use crate::{
     arrange, focus, is_visible, nexttiled, pop, restack, updatebarpos, BH,
+    TAGMASK,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -124,8 +125,22 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
     }
 }
 
+/// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
-    unsafe { bindgen::view(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if (*arg).ui & TAGMASK == selmon.tagset[selmon.seltags as usize] {
+            return;
+        }
+        selmon.seltags ^= 1; // toggle sel tagset
+        if (*arg).ui & TAGMASK != 0 {
+            selmon.tagset[selmon.seltags as usize] = (*arg).ui & TAGMASK;
+        }
+        focus(null_mut());
+        arrange(selmon);
+    }
 }
 
 pub(crate) unsafe extern "C" fn killclient(arg: *const Arg) {
