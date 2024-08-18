@@ -3,12 +3,12 @@ use std::ptr::null_mut;
 
 use x11::xlib::False;
 
-use crate::bindgen::{self, dpy, wmatom, Arg, Client};
+use crate::bindgen::{self, dpy, mons, wmatom, Arg, Client, Monitor};
 use crate::config::LOCK_FULLSCREEN;
 use crate::enums::WM;
 use crate::{
     arrange, focus, is_visible, nexttiled, pop, resize, restack, sendevent,
-    updatebarpos, BH, TAGMASK,
+    unfocus, updatebarpos, BH, TAGMASK,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -207,8 +207,37 @@ pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
     }
 }
 
+fn dirtomon(dir: i32) -> *mut Monitor {
+    unsafe {
+        let mut m;
+
+        if dir > 0 {
+            m = (*bindgen::selmon).next;
+            if m.is_null() {
+                m = mons;
+            }
+        } else if bindgen::selmon == mons {
+            cfor!((m = mons; !(*m).next.is_null(); m = (*m).next) {});
+        } else {
+            cfor!((m = mons; (*m).next != bindgen::selmon; m = (*m).next) {});
+        }
+        m
+    }
+}
+
 pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
-    unsafe { bindgen::focusmon(arg) }
+    unsafe {
+        if (*mons).next.is_null() {
+            return;
+        }
+        let m = dirtomon((*arg).i);
+        if m == bindgen::selmon {
+            return;
+        }
+        unfocus((*bindgen::selmon).sel, false);
+        bindgen::selmon = m;
+        focus(null_mut());
+    }
 }
 
 pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
