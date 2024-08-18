@@ -7,7 +7,7 @@ use crate::bindgen::{self, dpy, wmatom, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
 use crate::enums::WM;
 use crate::{
-    arrange, focus, is_visible, nexttiled, pop, restack, sendevent,
+    arrange, focus, is_visible, nexttiled, pop, resize, restack, sendevent,
     updatebarpos, BH, TAGMASK,
 };
 
@@ -171,8 +171,27 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
     unsafe { bindgen::setlayout(arg) }
 }
 
-pub(crate) unsafe extern "C" fn togglefloating(arg: *const Arg) {
-    unsafe { bindgen::togglefloating(arg) }
+pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if selmon.sel.is_null() {
+            return;
+        }
+        if (*selmon.sel).isfullscreen != 0 {
+            // no support for fullscreen windows
+            return;
+        }
+        (*selmon.sel).isfloating = ((*selmon.sel).isfloating == 0
+            || (*selmon.sel).isfixed != 0)
+            as c_int;
+        if (*selmon.sel).isfloating != 0 {
+            let sel = &mut *selmon.sel;
+            resize(sel, sel.x, sel.y, sel.w, sel.h, 0);
+        }
+        arrange(selmon);
+    }
 }
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
