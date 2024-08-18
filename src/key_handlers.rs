@@ -111,8 +111,28 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
     }
 }
 
-pub(crate) unsafe extern "C" fn zoom(arg: *const Arg) {
-    unsafe { bindgen::zoom(arg) }
+/// Move the selected window to the master area. The current master is pushed to
+/// the top of the stack.
+pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        let mut c = selmon.sel;
+        if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+            || c.is_null()
+            || (*c).isfloating != 0
+        {
+            return;
+        }
+        if c == bindgen::nexttiled(selmon.clients) {
+            c = bindgen::nexttiled((*c).next);
+            if c.is_null() {
+                return;
+            }
+        }
+        bindgen::pop(c);
+    }
 }
 
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
