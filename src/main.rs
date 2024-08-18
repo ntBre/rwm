@@ -1190,34 +1190,6 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 //     }
 // }
 
-// pub fn togglefloating(mdpy: &Display, _arg: Arg) {
-//     unsafe {
-//         if (*SELMON).sel.is_null() {
-//             return;
-//         }
-//         if (*(*SELMON).sel).isfullscreen {
-//             // no support for fullscreen windows
-//             return;
-//         }
-//         // either toggle or use fixed value
-//         (*(*SELMON).sel).isfloating =
-//             !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed;
-
-//         if (*(*SELMON).sel).isfloating {
-//             resize(
-//                 mdpy,
-//                 (*SELMON).sel,
-//                 (*(*SELMON).sel).x,
-//                 (*(*SELMON).sel).y,
-//                 (*(*SELMON).sel).w,
-//                 (*(*SELMON).sel).h,
-//                 false,
-//             );
-//         }
-//         arrange(mdpy, SELMON);
-//     }
-// }
-
 // pub fn resizemouse(mdpy: &Display, _arg: Arg) {
 //     unsafe {
 //         let c = (*SELMON).sel;
@@ -1374,23 +1346,6 @@ fn view(arg: *const Arg) {
 //             (*(*SELMON).sel).tags = newtags;
 //             focus(mdpy, null_mut());
 //             arrange(mdpy, SELMON);
-//         }
-//     }
-// }
-
-// pub fn killclient(mdpy: &Display, _arg: Arg) {
-//     unsafe {
-//         if (*SELMON).sel.is_null() {
-//             return;
-//         }
-//         if !sendevent(mdpy, (*SELMON).sel, WMATOM[WM::Delete as usize]) {
-//             XGrabServer(mdpy.inner);
-//             XSetErrorHandler(Some(xerrordummy));
-//             XSetCloseDownMode(mdpy.inner, DestroyAll);
-//             XKillClient(mdpy.inner, (*(*SELMON).sel).win);
-//             XSync(mdpy.inner, False);
-//             XSetErrorHandler(Some(xerror));
-//             XUngrabServer(mdpy.inner);
 //         }
 //     }
 // }
