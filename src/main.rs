@@ -1038,22 +1038,6 @@ fn updatesizehints(c: *mut Client) {
     }
 }
 
-// pub fn zoom(mdpy: &Display, _arg: Arg) {
-//     unsafe {
-//         let c = (*SELMON).sel;
-//         if c.is_null() || (*c).isfloating {
-//             return;
-//         }
-//         if c == nexttiled((*SELMON).clients) {
-//             let c = nexttiled((*c).next);
-//             if c.is_null() {
-//                 return;
-//             }
-//         }
-//         pop(mdpy, c);
-//     }
-// }
-
 fn pop(c: *mut Client) {
     detach(c);
     attach(c);
@@ -1391,94 +1375,6 @@ fn view(arg: *const Arg) {
 //             focus(mdpy, null_mut());
 //             arrange(mdpy, SELMON);
 //         }
-//     }
-// }
-
-// pub fn togglebar(mdpy: &Display, _arg: Arg) {
-//     unsafe {
-//         (*SELMON).showbar = !(*SELMON).showbar;
-//         updatebarpos(SELMON);
-//         XMoveResizeWindow(
-//             mdpy.inner,
-//             (*SELMON).barwin,
-//             (*SELMON).wx as i32,
-//             (*SELMON).by as i32,
-//             (*SELMON).ww as u32,
-//             BH as u32,
-//         );
-//         arrange(mdpy, SELMON);
-//     }
-// }
-
-// pub fn focusstack(mdpy: &Display, arg: Arg) {
-//     let Arg::Int(ai) = arg else { return };
-//     let mut c = null_mut();
-//     unsafe {
-//         if (*SELMON).sel.is_null()
-//             || ((*(*SELMON).sel).isfullscreen && LOCKFULLSCREEN)
-//         {
-//             return;
-//         }
-
-//         if ai > 0 {
-//             c = (*(*SELMON).sel).next;
-//             while !c.is_null() && !is_visible(c) {
-//                 c = (*c).next;
-//             }
-//             if c.is_null() {
-//                 c = (*SELMON).clients;
-//                 while !c.is_null() && !is_visible(c) {
-//                     c = (*c).next;
-//                 }
-//             }
-//         } else {
-//             let mut i = (*SELMON).clients;
-//             while i != (*SELMON).sel {
-//                 if is_visible(i) {
-//                     c = i;
-//                 }
-//                 i = (*i).next
-//             }
-//             if c.is_null() {
-//                 while !i.is_null() {
-//                     if is_visible(i) {
-//                         c = i;
-//                     }
-//                     i = (*i).next;
-//                 }
-//             }
-//         }
-//         if !c.is_null() {
-//             focus(mdpy, c);
-//             restack(mdpy, SELMON);
-//         }
-//     }
-// }
-
-// pub fn incnmaster(mdpy: &Display, arg: Arg) {
-//     unsafe {
-//         let Arg::Int(ai) = arg else { return };
-//         (*SELMON).nmaster = max((*SELMON).nmaster + ai as i32, 0);
-//         arrange(mdpy, SELMON);
-//     }
-// }
-
-// pub fn setmfact(mdpy: &Display, arg: Arg) {
-//     let Arg::Float(mut f) = arg else { return };
-//     unsafe {
-//         if (*(*SELMON).lt[(*SELMON).sellt]).arrange.is_none() {
-//             return;
-//         }
-//         f = if f < 1.0 {
-//             f + (*SELMON).mfact
-//         } else {
-//             f - 1.0
-//         };
-//         if !(0.05..=0.95).contains(&f) {
-//             return;
-//         }
-//         (*SELMON).mfact = f;
-//         arrange(mdpy, SELMON);
 //     }
 // }
 
