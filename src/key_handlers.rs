@@ -3,13 +3,13 @@ use std::ptr::null_mut;
 
 use x11::xlib::False;
 
-use crate::bindgen::{self, dpy, mons, wmatom, Arg, Client, Monitor};
+use crate::bindgen::{self, dpy, mons, wmatom, Arg, Client, Layout, Monitor};
 use crate::config::LOCK_FULLSCREEN;
 use crate::enums::WM;
 use crate::{
-    arrange, attach, attachstack, detach, detachstack, focus, is_visible,
-    nexttiled, pop, resize, restack, sendevent, unfocus, updatebarpos, BH,
-    TAGMASK,
+    arrange, attach, attachstack, detach, detachstack, drawbar, focus,
+    is_visible, nexttiled, pop, resize, restack, sendevent, unfocus,
+    updatebarpos, BH, TAGMASK,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -169,7 +169,29 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
-    unsafe { bindgen::setlayout(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+        if arg.is_null()
+            || (*arg).v.is_null()
+            || (*arg).v.cast() != selmon.lt[selmon.sellt as usize]
+        {
+            selmon.sellt ^= 1;
+        }
+        if !arg.is_null() && !(*arg).v.is_null() {
+            selmon.lt[selmon.sellt as usize] = (*arg).v as *mut Layout;
+        }
+        libc::strncpy(
+            selmon.ltsymbol.as_mut_ptr(),
+            (*selmon.lt[selmon.sellt as usize]).symbol,
+            size_of_val(&selmon.ltsymbol),
+        );
+        if !selmon.sel.is_null() {
+            arrange(selmon);
+        } else {
+            drawbar(selmon);
+        }
+    }
 }
 
 pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
