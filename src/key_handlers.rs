@@ -7,8 +7,9 @@ use crate::bindgen::{self, dpy, mons, wmatom, Arg, Client, Monitor};
 use crate::config::LOCK_FULLSCREEN;
 use crate::enums::WM;
 use crate::{
-    arrange, focus, is_visible, nexttiled, pop, resize, restack, sendevent,
-    unfocus, updatebarpos, BH, TAGMASK,
+    arrange, attach, attachstack, detach, detachstack, focus, is_visible,
+    nexttiled, pop, resize, restack, sendevent, unfocus, updatebarpos, BH,
+    TAGMASK,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -240,8 +241,35 @@ pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
     }
 }
 
+fn sendmon(c: *mut Client, m: *mut Monitor) {
+    unsafe {
+        if (*c).mon == m {
+            return;
+        }
+
+        unfocus(c, true);
+        detach(c);
+        detachstack(c);
+        (*c).mon = m;
+        // assign tags of target monitor
+        (*c).tags = (*m).tagset[(*m).seltags as usize];
+        attach(c);
+        attachstack(c);
+        focus(null_mut());
+        arrange(null_mut());
+    }
+}
+
 pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
-    unsafe { bindgen::tagmon(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if selmon.sel.is_null() || (*mons).next.is_null() {
+            return;
+        }
+        sendmon(selmon.sel, dirtomon((*arg).i));
+    }
 }
 
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
