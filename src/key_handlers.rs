@@ -195,7 +195,16 @@ pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
-    unsafe { bindgen::tag(arg) }
+    unsafe {
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+
+        if !selmon.sel.is_null() && (*arg).ui & TAGMASK != 0 {
+            (*selmon.sel).tags = (*arg).ui & TAGMASK;
+            focus(null_mut());
+            arrange(selmon);
+        }
+    }
 }
 
 pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
