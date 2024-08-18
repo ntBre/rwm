@@ -1,7 +1,22 @@
 use std::ffi::c_int;
+use std::ptr::null_mut;
 
-use crate::bindgen::{self, bh, dpy, Arg};
-use crate::{arrange, updatebarpos};
+use crate::bindgen::{self, bh, dpy, Arg, Client};
+use crate::config::LOCK_FULLSCREEN;
+use crate::{arrange, focus, is_visible, restack, updatebarpos};
+
+macro_rules! cfor {
+    ((; $cond:expr; $step:expr) $body:block ) => {
+        cfor!(({}; $cond; $step) $body)
+    };
+    (($init:expr; $cond:expr; $step:expr) $body:block ) => {
+        $init;
+        while $cond {
+            $body;
+            $step;
+        }
+    };
+}
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
@@ -22,7 +37,41 @@ pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
-    unsafe { bindgen::focusstack(arg) }
+    unsafe {
+        let mut c: *mut Client = null_mut();
+        let mut i: *mut Client;
+
+        assert!(!bindgen::selmon.is_null());
+        let selmon = &mut *bindgen::selmon;
+        if selmon.sel.is_null()
+            || ((*selmon.sel).isfullscreen != 0 && LOCK_FULLSCREEN != 0)
+        {
+            return;
+        }
+        if (*arg).i > 0 {
+            cfor!((c = (*selmon.sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
+            if c.is_null() {
+                cfor!((c = selmon.clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
+            }
+        } else {
+            cfor!((i = selmon.clients; i != selmon.sel; i = (*i).next) {
+                if is_visible(i) {
+                    c = i;
+                }
+            });
+            if c.is_null() {
+                cfor!((; !i.is_null(); i = (*i).next) {
+                    if is_visible(i) {
+                        c = i;
+                    }
+                });
+            }
+        }
+        if !c.is_null() {
+            focus(c);
+            restack(selmon);
+        }
+    }
 }
 
 /// Increase the number of windows in the master area.
