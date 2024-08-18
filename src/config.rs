@@ -9,7 +9,7 @@ use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 use crate::{
     bindgen::{
         dmenucmd, movemouse, resizemouse, spawn, termcmd, toggletag, Arg,
-        Button, KeySym, Rule, XK_d,
+        Button, KeySym, Rule,
     },
     enums::Scheme,
 };
@@ -129,9 +129,9 @@ impl Key {
 unsafe impl Sync for Key {}
 
 use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_f, XK_h, XK_i, XK_j, XK_k,
-    XK_l, XK_m, XK_period, XK_q, XK_space, XK_t, XK_u, XK_0, XK_1, XK_2, XK_3,
-    XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
+    XK_k, XK_l, XK_m, XK_period, XK_q, XK_space, XK_t, XK_u, XK_0, XK_1, XK_2,
+    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
 };
 
 pub static KEYS: [Key; 60] = [
