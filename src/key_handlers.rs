@@ -288,6 +288,8 @@ pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
     }
 }
 
-pub(crate) unsafe extern "C" fn quit(arg: *const Arg) {
-    unsafe { bindgen::quit(arg) }
+pub(crate) unsafe extern "C" fn quit(_arg: *const Arg) {
+    unsafe {
+        crate::running = 0;
+    }
 }
