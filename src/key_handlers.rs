@@ -1,10 +1,10 @@
 use std::ffi::c_int;
 use std::ptr::null_mut;
 
-use crate::bindgen::{self, bh, dpy, Arg, Client};
+use crate::bindgen::{self, dpy, Arg, Client};
 use crate::config::LOCK_FULLSCREEN;
 use crate::{
-    arrange, focus, is_visible, nexttiled, pop, restack, updatebarpos,
+    arrange, focus, is_visible, nexttiled, pop, restack, updatebarpos, BH,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -19,7 +19,7 @@ pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
             selmon.wx,
             selmon.by,
             selmon.ww as u32,
-            bh as u32,
+            BH as u32,
         );
         arrange(selmon);
     }

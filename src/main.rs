@@ -39,9 +39,9 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    bh, cursor, dpy, drw, lrpad, mons, netatom, root, scheme, screen, selmon,
-    sh, stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder,
-    Layout, Monitor, WMProtocols, XInternAtom,
+    cursor, dpy, drw, lrpad, mons, netatom, root, scheme, screen, selmon, sh,
+    stext, sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout,
+    Monitor, WMProtocols, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -149,7 +149,7 @@ const BROKEN: &CStr = c"broken";
 // static mut STEXT: String = String::new();
 
 /// bar height
-// static mut BH: i16 = 0;
+static mut BH: c_int = 0;
 // static mut SW: c_int = 0;
 // static mut SH: c_int = 0;
 
@@ -397,7 +397,7 @@ fn setup() {
             panic!("no fonts could be loaded");
         }
         lrpad = (*(*drw).fonts).h as i32;
-        bh = (*(*drw).fonts).h as i32 + 2;
+        BH = (*(*drw).fonts).h as i32 + 2;
         updategeom();
 
         /* init atoms */
@@ -901,11 +901,11 @@ fn applysizehints(
                 *y = (*m).wy;
             }
         }
-        if *h < bh {
-            *h = bh;
+        if *h < BH {
+            *h = BH;
         }
-        if *w < bh {
-            *w = bh;
+        if *w < BH {
+            *w = BH;
         }
         if RESIZE_HINTS != 0
             || (*c).isfloating != 0
@@ -1720,7 +1720,7 @@ fn drawbar(m: *mut Monitor) {
                 (*m).ww - tw,
                 0,
                 tw as u32,
-                bh as u32,
+                BH as u32,
                 0,
                 addr_of!(stext) as *const _,
                 0,
@@ -1755,7 +1755,7 @@ fn drawbar(m: *mut Monitor) {
                 x,
                 0,
                 w as u32,
-                bh as u32,
+                BH as u32,
                 lrpad as u32 / 2,
                 text.as_ptr(),
                 (urg as i32) & 1 << i,
@@ -1785,14 +1785,14 @@ fn drawbar(m: *mut Monitor) {
             x,
             0,
             w as u32,
-            bh as u32,
+            BH as u32,
             lrpad as u32 / 2,
             (*m).ltsymbol.as_ptr(),
             0,
         ) as i32;
 
         let w = (*m).ww - tw - x;
-        if w > bh {
+        if w > BH {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     drw,
@@ -1807,7 +1807,7 @@ fn drawbar(m: *mut Monitor) {
                     x,
                     0,
                     w as u32,
-                    bh as u32,
+                    BH as u32,
                     lrpad as u32 / 2,
                     (*(*m).sel).name.as_ptr(),
                     0,
@@ -1825,10 +1825,10 @@ fn drawbar(m: *mut Monitor) {
                 }
             } else {
                 drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
-                drw::rect(drw, x, 0, w as u32, bh as u32, 1, 1);
+                drw::rect(drw, x, 0, w as u32, BH as u32, 1, 1);
             }
         }
-        drw::map(drw, (*m).barwin, 0, 0, (*m).ww as u32, bh as u32);
+        drw::map(drw, (*m).barwin, 0, 0, (*m).ww as u32, BH as u32);
     }
 }
 
@@ -1908,7 +1908,7 @@ fn updatebars() {
                 (*m).wx as c_int,
                 (*m).by as c_int,
                 (*m).ww as c_uint,
-                bh as c_uint,
+                BH as c_uint,
                 0,
                 bindgen::XDefaultDepth(dpy, screen),
                 CopyFromParent as c_uint,
@@ -2236,12 +2236,12 @@ fn updatebarpos(m: *mut Monitor) {
         (*m).wy = (*m).my;
         (*m).wh = (*m).mh;
         if (*m).showbar != 0 {
-            (*m).wh -= bh;
+            (*m).wh -= BH;
             (*m).by =
                 if (*m).topbar != 0 { (*m).wy } else { (*m).wy + (*m).wh };
-            (*m).wy = if (*m).topbar != 0 { (*m).wy + bh } else { (*m).wy };
+            (*m).wy = if (*m).topbar != 0 { (*m).wy + BH } else { (*m).wy };
         } else {
-            (*m).by = -bh;
+            (*m).by = -BH;
         }
     }
 }
