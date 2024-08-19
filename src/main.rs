@@ -2168,6 +2168,8 @@ fn applyrules(c: *mut Client) {
 
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 const TAGMASK: u32 = (1 << TAGS.len()) - 1;
+const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
+const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 fn updatetitle(c: *mut Client) {
     log::trace!("updatetitle");

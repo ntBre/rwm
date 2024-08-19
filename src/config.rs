@@ -22,7 +22,7 @@ use crate::{
 /// Border pixel of windows
 pub const BORDERPX: c_uint = 3;
 // Snap pixel
-// pub const SNAP: c_uint = 32;
+pub const SNAP: c_uint = 32;
 /// 0 means no bar
 pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
