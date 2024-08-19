@@ -1,11 +1,15 @@
 use std::ffi::c_int;
 use std::ptr::null_mut;
 
+use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::False;
 
-use crate::bindgen::{self, dpy, mons, wmatom, Arg, Client, Layout, Monitor};
+use crate::bindgen::{
+    self, dmenucmd, dmenumon, dpy, mons, wmatom, Arg, Client, Layout, Monitor,
+};
 use crate::config::LOCK_FULLSCREEN;
 use crate::enums::WM;
+use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     is_visible, nexttiled, pop, resize, restack, sendevent, unfocus,
@@ -320,7 +324,41 @@ pub(crate) unsafe extern "C" fn resizemouse(arg: *const Arg) {
 }
 
 pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
-    unsafe { bindgen::spawn(arg) }
+    unsafe {
+        let selmon = get_selmon();
+        if (*arg).v.cast() == dmenucmd.as_ptr() {
+            log::trace!("spawn: dmenucmd on monitor {}", selmon.num);
+            dmenumon[0] = '0' as c_char + selmon.num as c_char;
+        }
+        if libc::fork() == 0 {
+            if !dpy.is_null() {
+                libc::close(bindgen::XConnectionNumber(dpy));
+            }
+            libc::setsid();
+
+            let mut sa = sigaction {
+                sa_sigaction: SIG_DFL,
+                // this is probably not strictly safe, but I'd rather not
+                // MaybeUninit the whole sigaction if I can avoid it
+                sa_mask: std::mem::zeroed(),
+                sa_flags: 0,
+                sa_restorer: None,
+            };
+            libc::sigemptyset(&mut sa.sa_mask);
+            libc::sigaction(SIGCHLD, &sa, null_mut());
+
+            // trying to emulate ((char **)arg->v)[0]: casting arg->v to a
+            // char ** and then accessing the first string (char *)
+            libc::execvp(
+                *(((*arg).v as *const *const c_char).offset(0)),
+                (*arg).v as *const *const c_char,
+            );
+            die(&format!(
+                "dwm: execvp '{:?}' failed:",
+                *(((*arg).v as *const *const c_char).offset(0)),
+            ));
+        }
+    }
 }
 
 /// Move the current window to the tag specified by `arg.ui`.
