@@ -323,6 +323,18 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
     unsafe { bindgen::spawn(arg) }
 }
 
+/// Move the current window to the tag specified by `arg.ui`.
 pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
-    unsafe { bindgen::toggletag(arg) }
+    unsafe {
+        let selmon = get_selmon();
+        if selmon.sel.is_null() {
+            return;
+        }
+        let newtags = (*selmon.sel).tags ^ ((*arg).ui & TAGMASK);
+        if newtags != 0 {
+            (*selmon.sel).tags = newtags;
+            focus(null_mut());
+            arrange(selmon);
+        }
+    }
 }
