@@ -39,8 +39,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    mons, netatom, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
-    ColBorder, Display, Drw, Layout, Monitor, XInternAtom,
+    mons, netatom, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr, Display,
+    Drw, Layout, Monitor, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -410,7 +410,7 @@ fn focus(mut c: *mut Client) {
             attachstack(c);
             grabbuttons(c, true);
             let color = (*(*SCHEME.offset(Scheme::Sel as isize))
-                .offset(ColBorder as isize))
+                .offset(Col::Border as isize))
             .pixel;
             bindgen::XSetWindowBorder(DPY, (*c).win, color);
             setfocus(c);
@@ -1018,7 +1018,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
         let color = (*(*SCHEME.offset(Scheme::Norm as isize))
-            .offset(ColBorder as isize))
+            .offset(Col::Border as isize))
         .pixel;
         bindgen::XSetWindowBorder(DPY, (*c).win, color);
         if setfocus {
