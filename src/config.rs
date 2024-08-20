@@ -6,13 +6,11 @@ use std::{
 
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::{
-    bindgen::{dmenucmd, termcmd, Arg, Button, KeySym, Rule},
-    enums::Scheme,
+use crate::bindgen::{
+    dmenucmd, termcmd, Arg, Button, Key, KeySym, Layout, Rule,
 };
 use crate::{
-    bindgen::{Key, Layout},
-    enums::Clk,
+    enums::{Clk, Scheme},
     key_handlers::*,
     layouts::{monocle, tile},
 };
