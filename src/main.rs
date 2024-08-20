@@ -44,7 +44,7 @@ use bindgen::{
 };
 
 // these are variables and should be replaced with Rust versions
-use bindgen::{stext, wmcheckwin};
+use bindgen::stext;
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -155,12 +155,9 @@ static mut CURSOR: [*mut bindgen::Cur; Cur::Last as usize] =
 
 static mut SCHEME: *mut *mut Clr = null_mut();
 
-// static mut MONS: *mut Monitor = std::ptr::null_mut();
-
 static mut SCREEN: c_int = 0;
 
 const BROKEN: &CStr = c"broken";
-// static mut STEXT: String = String::new();
 
 /// bar height
 static mut BH: c_int = 0;
@@ -173,7 +170,7 @@ static mut SH: c_int = 0;
 
 static mut ROOT: Window = 0;
 
-// static mut WMCHECKWIN: Window = 0;
+static mut WMCHECKWIN: Window = 0;
 
 // static mut RUNNING: bool = true;
 
@@ -325,21 +322,21 @@ fn setup() {
         updatestatus();
 
         /* supporting window for NetWMCheck */
-        wmcheckwin =
+        WMCHECKWIN =
             bindgen::XCreateSimpleWindow(DPY, ROOT, 0, 0, 1, 1, 0, 0, 0);
         bindgen::XChangeProperty(
             DPY,
-            wmcheckwin,
+            WMCHECKWIN,
             NETATOM[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
-            addr_of_mut!(wmcheckwin) as *mut c_uchar,
+            addr_of_mut!(WMCHECKWIN) as *mut c_uchar,
             1,
         );
         bindgen::XChangeProperty(
             DPY,
-            wmcheckwin,
+            WMCHECKWIN,
             NETATOM[Net::WMName as usize],
             utf8string,
             8,
@@ -354,7 +351,7 @@ fn setup() {
             XA_WINDOW,
             32,
             PropModeReplace,
-            addr_of_mut!(wmcheckwin) as *mut c_uchar,
+            addr_of_mut!(WMCHECKWIN) as *mut c_uchar,
             1,
         );
         /* EWMH support per view */
@@ -1669,7 +1666,7 @@ fn cleanup() {
         }
         libc::free(SCHEME.cast());
 
-        bindgen::XDestroyWindow(DPY, wmcheckwin);
+        bindgen::XDestroyWindow(DPY, WMCHECKWIN);
         drw::free(DRW);
         bindgen::XSync(DPY, False);
         bindgen::XSetInputFocus(
