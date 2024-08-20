@@ -9,7 +9,7 @@ use x11::xlib::{
     SubstructureRedirectMask,
 };
 
-use crate::bindgen::{self, dmenucmd, dmenumon, wmatom};
+use crate::bindgen::{self, dmenucmd, dmenumon};
 use crate::bindgen::{Arg, ButtonRelease, Client, Layout, Monitor, XEvent};
 use crate::config::{LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
@@ -18,7 +18,7 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
     sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER, MONS,
-    MOUSEMASK, ROOT, SELMON, TAGMASK, XNONE,
+    MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -147,7 +147,7 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
             return;
         }
 
-        if sendevent((*SELMON).sel, wmatom[WM::Delete as usize]) == 0 {
+        if sendevent((*SELMON).sel, WMATOM[WM::Delete as usize]) == 0 {
             bindgen::XGrabServer(DPY);
             bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
             bindgen::XSetCloseDownMode(DPY, DestroyAll);

@@ -44,7 +44,7 @@ use bindgen::{
 };
 
 // these are variables and should be replaced with Rust versions
-use bindgen::{netatom, stext, wmatom, wmcheckwin};
+use bindgen::{stext, wmcheckwin};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -140,6 +140,9 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut XDisplay, *mut XErrorEvent) -> i32,
 > = None;
 
+static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
+static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
+
 static mut DPY: *mut Display = null_mut();
 
 static mut DRW: *mut Drw = std::ptr::null_mut();
@@ -171,9 +174,6 @@ static mut SH: c_int = 0;
 static mut ROOT: Window = 0;
 
 // static mut WMCHECKWIN: Window = 0;
-
-// static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
-// static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
 
 // static mut RUNNING: bool = true;
 
@@ -278,32 +278,32 @@ fn setup() {
 
         /* init atoms */
         let utf8string = XInternAtom(DPY, c"UTF8_STRING".as_ptr(), False);
-        wmatom[WM::Protocols as usize] =
+        WMATOM[WM::Protocols as usize] =
             XInternAtom(DPY, c"WM_PROTOCOLS".as_ptr(), False);
-        wmatom[WM::Delete as usize] =
+        WMATOM[WM::Delete as usize] =
             XInternAtom(DPY, c"WM_DELETE_WINDOW".as_ptr(), False);
-        wmatom[WM::State as usize] =
+        WMATOM[WM::State as usize] =
             XInternAtom(DPY, c"WM_STATE".as_ptr(), False);
-        wmatom[WM::TakeFocus as usize] =
+        WMATOM[WM::TakeFocus as usize] =
             XInternAtom(DPY, c"WM_TAKE_FOCUS".as_ptr(), False);
 
-        netatom[Net::ActiveWindow as usize] =
+        NETATOM[Net::ActiveWindow as usize] =
             XInternAtom(DPY, c"_NET_ACTIVE_WINDOW".as_ptr(), False);
-        netatom[Net::Supported as usize] =
+        NETATOM[Net::Supported as usize] =
             XInternAtom(DPY, c"_NET_SUPPORTED".as_ptr(), False);
-        netatom[Net::WMName as usize] =
+        NETATOM[Net::WMName as usize] =
             XInternAtom(DPY, c"_NET_WM_NAME".as_ptr(), False);
-        netatom[Net::WMState as usize] =
+        NETATOM[Net::WMState as usize] =
             XInternAtom(DPY, c"_NET_WM_STATE".as_ptr(), False);
-        netatom[Net::WMCheck as usize] =
+        NETATOM[Net::WMCheck as usize] =
             XInternAtom(DPY, c"_NET_SUPPORTING_WM_CHECK".as_ptr(), False);
-        netatom[Net::WMFullscreen as usize] =
+        NETATOM[Net::WMFullscreen as usize] =
             XInternAtom(DPY, c"_NET_WM_STATE_FULLSCREEN".as_ptr(), False);
-        netatom[Net::WMWindowType as usize] =
+        NETATOM[Net::WMWindowType as usize] =
             XInternAtom(DPY, c"_NET_WM_WINDOW_TYPE".as_ptr(), False);
-        netatom[Net::WMWindowTypeDialog as usize] =
+        NETATOM[Net::WMWindowTypeDialog as usize] =
             XInternAtom(DPY, c"_NET_WM_WINDOW_TYPE_DIALOG".as_ptr(), False);
-        netatom[Net::ClientList as usize] =
+        NETATOM[Net::ClientList as usize] =
             XInternAtom(DPY, c"_NET_CLIENT_LIST".as_ptr(), False);
 
         /* init cursors */
@@ -330,7 +330,7 @@ fn setup() {
         bindgen::XChangeProperty(
             DPY,
             wmcheckwin,
-            netatom[Net::WMCheck as usize],
+            NETATOM[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
@@ -340,7 +340,7 @@ fn setup() {
         bindgen::XChangeProperty(
             DPY,
             wmcheckwin,
-            netatom[Net::WMName as usize],
+            NETATOM[Net::WMName as usize],
             utf8string,
             8,
             PropModeReplace,
@@ -350,7 +350,7 @@ fn setup() {
         bindgen::XChangeProperty(
             DPY,
             ROOT,
-            netatom[Net::WMCheck as usize],
+            NETATOM[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
@@ -361,14 +361,14 @@ fn setup() {
         bindgen::XChangeProperty(
             DPY,
             ROOT,
-            netatom[Net::Supported as usize],
+            NETATOM[Net::Supported as usize],
             XA_ATOM,
             32,
             PropModeReplace,
-            netatom.as_ptr() as *mut c_uchar,
+            NETATOM.as_ptr() as *mut c_uchar,
             Net::Last as i32,
         );
-        bindgen::XDeleteProperty(DPY, ROOT, netatom[Net::ClientList as usize]);
+        bindgen::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
 
         // /* select events */
         wa.cursor = (*CURSOR[Cur::Normal as usize]).cursor;
@@ -429,7 +429,7 @@ fn focus(mut c: *mut Client) {
             bindgen::XDeleteProperty(
                 DPY,
                 ROOT,
-                netatom[Net::ActiveWindow as usize],
+                NETATOM[Net::ActiveWindow as usize],
             );
         }
         (*SELMON).sel = c;
@@ -459,7 +459,7 @@ fn setfocus(c: *mut Client) {
             bindgen::XChangeProperty(
                 DPY,
                 ROOT,
-                netatom[Net::ActiveWindow as usize],
+                NETATOM[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
                 PropModeReplace,
@@ -467,7 +467,7 @@ fn setfocus(c: *mut Client) {
                 1,
             );
         }
-        sendevent(c, wmatom[WM::TakeFocus as usize]);
+        sendevent(c, WMATOM[WM::TakeFocus as usize]);
     }
 }
 
@@ -487,7 +487,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
         if exists != 0 {
             let mut ev = bindgen::XEvent { type_: ClientMessage };
             ev.xclient.window = (*c).win;
-            ev.xclient.message_type = wmatom[WM::Protocols as usize];
+            ev.xclient.message_type = WMATOM[WM::Protocols as usize];
             ev.xclient.format = 32;
             ev.xclient.data.l[0] = proto as c_long;
             ev.xclient.data.l[1] = CurrentTime as c_long;
@@ -1036,7 +1036,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
             bindgen::XDeleteProperty(
                 DPY,
                 ROOT,
-                netatom[Net::ActiveWindow as usize],
+                NETATOM[Net::ActiveWindow as usize],
             );
         }
     }
@@ -1681,7 +1681,7 @@ fn cleanup() {
         bindgen::XDeleteProperty(
             DPY,
             ROOT,
-            netatom[Net::ActiveWindow as usize],
+            NETATOM[Net::ActiveWindow as usize],
         );
     }
 
@@ -1737,7 +1737,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 
 fn updateclientlist() {
     unsafe {
-        bindgen::XDeleteProperty(DPY, ROOT, netatom[Net::ClientList as usize]);
+        bindgen::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
         let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
@@ -1745,7 +1745,7 @@ fn updateclientlist() {
                 bindgen::XChangeProperty(
                     DPY,
                     ROOT,
-                    netatom[Net::ClientList as usize],
+                    NETATOM[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
                     PropModeAppend,
@@ -1766,8 +1766,8 @@ fn setclientstate(c: *mut Client, state: usize) {
         bindgen::XChangeProperty(
             DPY,
             (*c).win,
-            wmatom[WM::State as usize],
-            wmatom[WM::State as usize],
+            WMATOM[WM::State as usize],
+            WMATOM[WM::State as usize],
             32,
             PropModeReplace,
             ptr,
@@ -1971,7 +1971,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XChangeProperty(
             DPY,
             ROOT,
-            netatom[Net::ClientList as usize],
+            NETATOM[Net::ClientList as usize],
             XA_WINDOW,
             32,
             PropModeAppend,
@@ -2023,12 +2023,12 @@ fn updatewmhints(c: *mut Client) {
 fn updatewindowtype(c: *mut Client) {
     log::trace!("updatewindowtype");
     unsafe {
-        let state = getatomprop(c, netatom[Net::WMState as usize]);
-        let wtype = getatomprop(c, netatom[Net::WMWindowType as usize]);
-        if state == netatom[Net::WMFullscreen as usize] {
+        let state = getatomprop(c, NETATOM[Net::WMState as usize]);
+        let wtype = getatomprop(c, NETATOM[Net::WMWindowType as usize]);
+        if state == NETATOM[Net::WMFullscreen as usize] {
             setfullscreen(c, true);
         }
-        if wtype == netatom[Net::WMWindowTypeDialog as usize] {
+        if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
             (*c).isfloating = 1;
         }
     }
@@ -2040,13 +2040,13 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             bindgen::XChangeProperty(
                 DPY,
                 (*c).win,
-                netatom[Net::WMState as usize],
+                NETATOM[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
                 // trying to emulate (unsigned char*)&netatom[NetWMFullscreen],
                 // so take a reference and then cast
-                &mut netatom[Net::WMFullscreen as usize] as *mut u64
+                &mut NETATOM[Net::WMFullscreen as usize] as *mut u64
                     as *mut c_uchar,
                 1,
             );
@@ -2067,7 +2067,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             bindgen::XChangeProperty(
                 DPY,
                 (*c).win,
-                netatom[Net::WMState as usize],
+                NETATOM[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
@@ -2185,7 +2185,7 @@ fn updatetitle(c: *mut Client) {
     unsafe {
         if gettextprop(
             (*c).win,
-            netatom[Net::WMName as usize],
+            NETATOM[Net::WMName as usize],
             &mut (*c).name as *mut _,
             size_of_val(&(*c).name) as u32,
         ) == 0
@@ -2218,11 +2218,11 @@ fn getstate(w: Window) -> c_long {
         let cond = bindgen::XGetWindowProperty(
             DPY,
             w,
-            wmatom[WM::State as usize],
+            WMATOM[WM::State as usize],
             0,
             2,
             False,
-            wmatom[WM::State as usize],
+            WMATOM[WM::State as usize],
             &mut real,
             &mut format,
             &mut n,

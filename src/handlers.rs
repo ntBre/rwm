@@ -9,8 +9,11 @@ use x11::xlib::{
     XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use crate::bindgen::{self, netatom, stext};
 use crate::bindgen::{Arg, Monitor, XEvent, XWindowAttributes};
+use crate::{
+    bindgen::{self, stext},
+    NETATOM,
+};
 
 use crate::{
     arrange, cleanmask,
@@ -97,9 +100,9 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
         if c.is_null() {
             return;
         }
-        if cme.message_type == netatom[Net::WMState as usize] {
-            if cme.data.l[1] == netatom[Net::WMFullscreen as usize] as i64
-                || cme.data.l[2] == netatom[Net::WMFullscreen as usize] as i64
+        if cme.message_type == NETATOM[Net::WMState as usize] {
+            if cme.data.l[1] == NETATOM[Net::WMFullscreen as usize] as i64
+                || cme.data.l[2] == NETATOM[Net::WMFullscreen as usize] as i64
             {
                 setfullscreen(
                     c,
@@ -108,7 +111,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                             && (*c).isfullscreen == 0),
                 );
             }
-        } else if cme.message_type == netatom[Net::ActiveWindow as usize]
+        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
             && c != (*SELMON).sel
             && (*c).isurgent == 0
         {
@@ -412,14 +415,14 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
                 }
                 _ => {}
             }
-            if ev.atom == XA_WM_NAME || ev.atom == netatom[Net::WMName as usize]
+            if ev.atom == XA_WM_NAME || ev.atom == NETATOM[Net::WMName as usize]
             {
                 updatetitle(c);
                 if c as *mut _ == (*c.mon).sel {
                     drawbar(c.mon);
                 }
             }
-            if ev.atom == netatom[Net::WMWindowType as usize] {
+            if ev.atom == NETATOM[Net::WMWindowType as usize] {
                 updatewindowtype(c);
             }
         }
