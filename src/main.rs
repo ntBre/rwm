@@ -40,8 +40,8 @@ use x11::xlib::{
 
 use bindgen::{
     cursor, drw, lrpad, mons, netatom, root, scheme, screen, sh, stext, sw,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
-    WMProtocols, XInternAtom,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Display, Layout,
+    Monitor, WMProtocols, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -125,7 +125,7 @@ extern "C" fn xerror(mdpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
 }
 
 extern "C" fn xerrordummy(
-    _dpy: *mut bindgen::Display,
+    _dpy: *mut Display,
     _ee: *mut bindgen::XErrorEvent,
 ) -> c_int {
     0
@@ -137,7 +137,7 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut XDisplay, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut DPY: *mut bindgen::Display = null_mut();
+static mut DPY: *mut Display = null_mut();
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
