@@ -272,8 +272,7 @@ fn setup() {
         updategeom();
 
         /* init atoms */
-        let utf8string =
-            bindgen::XInternAtom(DPY, c"UTF8_STRING".as_ptr(), False);
+        let utf8string = XInternAtom(DPY, c"UTF8_STRING".as_ptr(), False);
         wmatom[WM::Protocols as usize] =
             XInternAtom(DPY, c"WM_PROTOCOLS".as_ptr(), False);
         wmatom[WM::Delete as usize] =
