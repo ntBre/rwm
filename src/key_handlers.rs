@@ -9,7 +9,7 @@ use x11::xlib::{
     SubstructureRedirectMask,
 };
 
-use crate::bindgen::{self, dmenucmd, dmenumon, mons, wmatom};
+use crate::bindgen::{self, dmenucmd, dmenumon, wmatom};
 use crate::bindgen::{Arg, ButtonRelease, Client, Layout, Monitor, XEvent};
 use crate::config::{LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
@@ -17,7 +17,7 @@ use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER,
+    sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER, MONS,
     MOUSEMASK, ROOT, SELMON, TAGMASK, XNONE,
 };
 
@@ -220,12 +220,12 @@ fn dirtomon(dir: i32) -> *mut Monitor {
         if dir > 0 {
             m = (*SELMON).next;
             if m.is_null() {
-                m = mons;
+                m = MONS;
             }
-        } else if SELMON == mons {
-            cfor!((m = mons; !(*m).next.is_null(); m = (*m).next) {});
+        } else if SELMON == MONS {
+            cfor!((m = MONS; !(*m).next.is_null(); m = (*m).next) {});
         } else {
-            cfor!((m = mons; (*m).next != SELMON; m = (*m).next) {});
+            cfor!((m = MONS; (*m).next != SELMON; m = (*m).next) {});
         }
         m
     }
@@ -233,7 +233,7 @@ fn dirtomon(dir: i32) -> *mut Monitor {
 
 pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
     unsafe {
-        if (*mons).next.is_null() {
+        if (*MONS).next.is_null() {
             return;
         }
         let m = dirtomon((*arg).i);
@@ -267,7 +267,7 @@ fn sendmon(c: *mut Client, m: *mut Monitor) {
 
 pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
     unsafe {
-        if (*SELMON).sel.is_null() || (*mons).next.is_null() {
+        if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
             return;
         }
         sendmon((*SELMON).sel, dirtomon((*arg).i));

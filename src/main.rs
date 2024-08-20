@@ -44,7 +44,7 @@ use bindgen::{
 };
 
 // these are variables and should be replaced with Rust versions
-use bindgen::{mons, netatom, stext, wmatom, wmcheckwin};
+use bindgen::{netatom, stext, wmatom, wmcheckwin};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -145,6 +145,7 @@ static mut DPY: *mut Display = null_mut();
 static mut DRW: *mut Drw = std::ptr::null_mut();
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
+static mut MONS: *mut Monitor = null_mut();
 
 static mut CURSOR: [*mut bindgen::Cur; Cur::Last as usize] =
     [null_mut(); Cur::Last as usize];
@@ -438,7 +439,7 @@ fn focus(mut c: *mut Client) {
 
 fn drawbars() {
     unsafe {
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             drawbar(m);
             m = (*m).next;
@@ -543,7 +544,7 @@ fn arrange(mut m: *mut Monitor) {
         if !m.is_null() {
             showhide((*m).stack);
         } else {
-            m = mons;
+            m = MONS;
             while !m.is_null() {
                 showhide((*m).stack);
                 m = (*m).next;
@@ -554,7 +555,7 @@ fn arrange(mut m: *mut Monitor) {
             arrangemon(m);
             restack(m);
         } else {
-            m = mons;
+            m = MONS;
             while !m.is_null() {
                 arrangemon(m);
             }
@@ -1262,7 +1263,7 @@ fn updatebars() {
     };
 
     unsafe {
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             if (*m).barwin != 0 {
                 continue;
@@ -1303,7 +1304,7 @@ fn updategeom() -> i32 {
             let info = bindgen::XineramaQueryScreens(DPY as *mut _, &mut nn);
 
             let mut n = 0;
-            let mut m = mons;
+            let mut m = MONS;
             while !m.is_null() {
                 m = (*m).next;
                 n += 1;
@@ -1339,19 +1340,19 @@ fn updategeom() -> i32 {
                 log::trace!("updategeom: adding monitors");
             }
             for _ in n..nn {
-                let mut m = mons;
+                let mut m = MONS;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
                 }
                 if !m.is_null() {
                     (*m).next = createmon();
                 } else {
-                    mons = createmon();
+                    MONS = createmon();
                 }
             }
 
             let mut i = 0;
-            let mut m = mons;
+            let mut m = MONS;
             while i < nn && !m.is_null() {
                 if i >= n
                     || unique[i as usize].x_org != (*m).mx as i16
@@ -1385,7 +1386,7 @@ fn updategeom() -> i32 {
                 log::trace!("updategeom: removing monitors");
             }
             for _ in nn..n {
-                let mut m = mons;
+                let mut m = MONS;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
                 }
@@ -1394,13 +1395,13 @@ fn updategeom() -> i32 {
                     dirty = 1;
                     (*m).clients = (*c).next;
                     detachstack(c);
-                    (*c).mon = mons;
+                    (*c).mon = MONS;
                     attach(c);
                     attachstack(c);
                     c = (*m).clients;
                 }
                 if m == SELMON {
-                    SELMON = mons;
+                    SELMON = MONS;
                 }
                 cleanupmon(m);
             }
@@ -1409,20 +1410,20 @@ fn updategeom() -> i32 {
             log::trace!("updategeom: default monitor setup");
 
             // default monitor setup
-            if mons.is_null() {
-                mons = createmon();
+            if MONS.is_null() {
+                MONS = createmon();
             }
-            if (*mons).mw != SW || (*mons).mh != SH {
+            if (*MONS).mw != SW || (*MONS).mh != SH {
                 dirty = 1;
-                (*mons).mw = SW;
-                (*mons).ww = SW;
-                (*mons).mh = SH;
-                (*mons).wh = SH;
-                updatebarpos(mons);
+                (*MONS).mw = SW;
+                (*MONS).ww = SW;
+                (*MONS).mh = SH;
+                (*MONS).wh = SH;
+                updatebarpos(MONS);
             }
         }
         if dirty != 0 {
-            SELMON = mons;
+            SELMON = MONS;
             SELMON = wintomon(ROOT);
         }
         dirty
@@ -1436,7 +1437,7 @@ fn wintomon(w: Window) -> *mut Monitor {
         if w == ROOT && getrootptr(&mut x, &mut y) != 0 {
             return recttomon(x, y, 1, 1);
         }
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             if w == (*m).barwin {
                 return m;
@@ -1454,7 +1455,7 @@ fn wintomon(w: Window) -> *mut Monitor {
 fn wintoclient(w: u64) -> *mut Client {
     log::trace!("wintoclient");
     unsafe {
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -1473,7 +1474,7 @@ fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
     unsafe {
         let mut r = SELMON;
         let mut area = 0;
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             let a = intersect(x, y, w, h, m);
             if a > area {
@@ -1532,13 +1533,13 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
     }
 }
 
-/// remove `mon` from the linked list of `Monitor`s in `mons` and free it.
+/// remove `mon` from the linked list of `Monitor`s in `MONS` and free it.
 fn cleanupmon(mon: *mut Monitor) {
     unsafe {
-        if mon == mons {
-            mons = (*mons).next;
+        if mon == MONS {
+            MONS = (*MONS).next;
         } else {
-            let mut m = mons;
+            let mut m = MONS;
             while !m.is_null() && (*m).next != mon {
                 m = (*m).next;
             }
@@ -1643,7 +1644,7 @@ fn cleanup() {
         (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {
                 unmanage((*m).stack, 0);
@@ -1653,8 +1654,8 @@ fn cleanup() {
 
         bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
 
-        while !mons.is_null() {
-            cleanupmon(mons);
+        while !MONS.is_null() {
+            cleanupmon(MONS);
         }
 
         for i in 0..Cur::Last as usize {
@@ -1737,7 +1738,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 fn updateclientlist() {
     unsafe {
         bindgen::XDeleteProperty(DPY, ROOT, netatom[Net::ClientList as usize]);
-        let mut m = mons;
+        let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -2151,7 +2152,7 @@ fn applyrules(c: *mut Client) {
             {
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
-                let mut m = mons;
+                let mut m = MONS;
                 while !m.is_null() && (*m).num != r.monitor {
                     m = (*m).next;
                 }
