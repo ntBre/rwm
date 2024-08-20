@@ -9,9 +9,12 @@ use x11::xlib::{
     XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
+use crate::bindgen::{self, mons, netatom, stext};
+use crate::bindgen::{Arg, Monitor, XEvent, XWindowAttributes};
+
 use crate::{
     arrange, cleanmask,
-    config::{BUTTONS, KEYS},
+    config::{BUTTONS, KEYS, TAGS},
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -19,10 +22,6 @@ use crate::{
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window, BH,
     DPY, DRW, ROOT, SELMON, SH, SW, WITHDRAWN_STATE,
-};
-use crate::{
-    bindgen::{self, mons, netatom, stext, Arg, Monitor, XEvent},
-    config::TAGS,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -313,8 +312,6 @@ pub(crate) fn mappingnotify(e: *mut XEvent) {
 }
 
 pub(crate) fn maprequest(e: *mut XEvent) {
-    use bindgen::XWindowAttributes;
-
     static mut WA: XWindowAttributes = XWindowAttributes {
         x: 0,
         y: 0,

@@ -9,10 +9,8 @@ use x11::xlib::{
     SubstructureRedirectMask,
 };
 
-use crate::bindgen::{
-    self, dmenucmd, dmenumon, mons, wmatom, Arg, ButtonRelease, Client, Layout,
-    Monitor, XEvent,
-};
+use crate::bindgen::{self, dmenucmd, dmenumon, mons, wmatom};
+use crate::bindgen::{Arg, ButtonRelease, Client, Layout, Monitor, XEvent};
 use crate::config::{LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
 use crate::util::die;

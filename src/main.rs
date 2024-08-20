@@ -38,10 +38,14 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
+// these are types and are okay to have for now
 use bindgen::{
-    mons, netatom, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr, Display,
-    Drw, Layout, Monitor, XInternAtom,
+    Arg, Atom, Client, Clr, Display, Drw, Layout, Monitor, XInternAtom,
 };
+
+// these are variables and should be replaced with Rust versions
+use bindgen::{mons, netatom, stext, wmatom, wmcheckwin};
+
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
 };

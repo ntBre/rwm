@@ -2,8 +2,7 @@ use std::{cmp::min, ffi::c_uint};
 
 use libc::c_int;
 
-use crate::bindgen::Monitor;
-use crate::{height, is_visible, nexttiled, resize};
+use crate::{height, is_visible, nexttiled, resize, Monitor};
 
 pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
     unsafe {
