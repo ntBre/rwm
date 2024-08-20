@@ -4,8 +4,8 @@ use std::ptr::null_mut;
 
 use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::{
-    ConfigureRequest, CurrentTime, EnterWindowMask, Expose, ExposureMask,
-    False, GrabModeAsync, GrabSuccess, MapRequest, MotionNotify,
+    ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask, Expose,
+    ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest, MotionNotify,
     SubstructureRedirectMask,
 };
 
@@ -152,7 +152,7 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
         if sendevent((*SELMON).sel, wmatom[WM::Delete as usize]) == 0 {
             bindgen::XGrabServer(DPY);
             bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
-            bindgen::XSetCloseDownMode(DPY, bindgen::DestroyAll as i32);
+            bindgen::XSetCloseDownMode(DPY, DestroyAll);
             bindgen::XKillClient(DPY, (*(*SELMON).sel).win);
             bindgen::XSync(DPY, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
