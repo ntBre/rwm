@@ -1,14 +1,13 @@
 use std::{
     ffi::{c_float, c_int, c_uint, CStr},
-    ptr::null,
+    ptr::{null, null_mut},
     sync::LazyLock,
 };
 
+use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::bindgen::{
-    dmenucmd, termcmd, Arg, Button, Key, KeySym, Layout, Rule,
-};
+use crate::bindgen::{dmenucmd, Arg, Button, Key, KeySym, Layout, Rule};
 use crate::{
     enums::{Clk, Scheme},
     key_handlers::*,
@@ -108,7 +107,7 @@ pub const MODKEY: c_uint = Mod4Mask;
 //         COL_GRAY4,
 //     ]
 // });
-// pub const TERMCMD: [&CStr; 1] = [c"st"];
+pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
 
 impl Key {
     const fn new(
@@ -136,12 +135,7 @@ pub static KEYS: [Key; 60] = [
         spawn,
         Arg { v: unsafe { dmenucmd.as_ptr().cast() } },
     ),
-    Key::new(
-        MODKEY,
-        XK_t,
-        spawn,
-        Arg { v: unsafe { termcmd.as_ptr().cast() } },
-    ),
+    Key::new(MODKEY, XK_t, spawn, Arg { v: TERMCMD.as_ptr().cast() }),
     Key::new(MODKEY, XK_b, togglebar, Arg { i: 0 }),
     Key::new(MODKEY, XK_j, focusstack, Arg { i: 1 }),
     Key::new(MODKEY, XK_k, focusstack, Arg { i: -1 }),
@@ -293,7 +287,7 @@ pub static BUTTONS: [Button; 11] = [
         0,
         Button2,
         spawn,
-        Arg { v: unsafe { termcmd.as_ptr().cast() } },
+        Arg { v: TERMCMD.as_ptr().cast() },
     ),
     Button::new(Clk::ClientWin, MODKEY, Button1, movemouse, Arg { i: 0 }),
     Button::new(
