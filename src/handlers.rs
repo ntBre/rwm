@@ -11,8 +11,8 @@ use x11::xlib::{
 
 use crate::bindgen::{Arg, Monitor, XEvent, XWindowAttributes};
 use crate::{
-    bindgen::{self, stext},
-    NETATOM,
+    bindgen::{self},
+    NETATOM, STEXT,
 };
 
 use crate::{
@@ -60,7 +60,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             } else if ev.x < x + textw(addr_of!((*SELMON).ltsymbol) as *const _)
             {
                 click = Clk::LtSymbol;
-            } else if ev.x > (*SELMON).ww - textw(addr_of!(stext) as *const _) {
+            } else if ev.x > (*SELMON).ww - textw(addr_of!(STEXT) as *const _) {
                 click = Clk::StatusText;
             } else {
                 click = Clk::WinTitle;

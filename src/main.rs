@@ -43,9 +43,6 @@ use bindgen::{
     Arg, Atom, Client, Clr, Display, Drw, Layout, Monitor, XInternAtom,
 };
 
-// these are variables and should be replaced with Rust versions
-use bindgen::stext;
-
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
 };
@@ -158,6 +155,8 @@ static mut SCHEME: *mut *mut Clr = null_mut();
 static mut SCREEN: c_int = 0;
 
 const BROKEN: &CStr = c"broken";
+
+static mut STEXT: [c_char; 256] = ['\0' as c_char; 256];
 
 /// bar height
 static mut BH: c_int = 0;
@@ -1046,13 +1045,13 @@ fn updatestatus() {
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
-            addr_of_mut!(stext) as *mut _,
+            addr_of_mut!(STEXT) as *mut _,
             // the lint leading to this instead of simply &stext is very scary,
             // but hopefully it's fine
-            size_of_val(&*addr_of!(stext)) as u32,
+            size_of_val(&*addr_of!(STEXT)) as u32,
         ) == 0
         {
-            libc::strcpy(addr_of_mut!(stext) as *mut _, c"rwm-1.0".as_ptr());
+            libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
         }
         drawbar(SELMON);
     }
@@ -1077,7 +1076,7 @@ fn drawbar(m: *mut Monitor) {
         if m == SELMON {
             // status is only drawn on selected monitor
             drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(addr_of!(stext) as *const _) - LRPAD + 2; // 2px right padding
+            tw = textw(addr_of!(STEXT) as *const _) - LRPAD + 2; // 2px right padding
             drw::text(
                 DRW,
                 (*m).ww - tw,
@@ -1085,7 +1084,7 @@ fn drawbar(m: *mut Monitor) {
                 tw as u32,
                 BH as u32,
                 0,
-                addr_of!(stext) as *const _,
+                addr_of!(STEXT) as *const _,
                 0,
             );
         }
