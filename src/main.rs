@@ -39,8 +39,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    lrpad, mons, netatom, root, screen, sh, stext, sw, wmatom, wmcheckwin, Arg,
-    Atom, Client, Clr, ColBorder, Display, Drw, Layout, Monitor, WMProtocols,
+    mons, netatom, root, screen, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom,
+    Client, Clr, ColBorder, Display, Drw, Layout, Monitor, WMProtocols,
     XInternAtom,
 };
 use config::{
@@ -172,7 +172,7 @@ static mut BH: c_int = 0;
 // static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
 
 /// sum of left and right padding for text
-// static mut LRPAD: usize = 0;
+static mut LRPAD: c_int = 0;
 
 // #[allow(non_upper_case_globals)]
 // static mut numlockmask: u32 = 0;
@@ -266,7 +266,7 @@ fn setup() {
         if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
         }
-        lrpad = (*(*DRW).fonts).h as i32;
+        LRPAD = (*(*DRW).fonts).h as i32;
         BH = (*(*DRW).fonts).h as i32 + 2;
         updategeom();
 
@@ -1057,7 +1057,7 @@ fn updatestatus() {
 }
 
 fn textw(x: *const c_char) -> c_int {
-    unsafe { drw::fontset_getwidth(DRW, x) as c_int + lrpad }
+    unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
 }
 
 fn drawbar(m: *mut Monitor) {
@@ -1075,7 +1075,7 @@ fn drawbar(m: *mut Monitor) {
         if m == SELMON {
             // status is only drawn on selected monitor
             drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(addr_of!(stext) as *const _) - lrpad + 2; // 2px right padding
+            tw = textw(addr_of!(stext) as *const _) - LRPAD + 2; // 2px right padding
             drw::text(
                 DRW,
                 (*m).ww - tw,
@@ -1117,7 +1117,7 @@ fn drawbar(m: *mut Monitor) {
                 0,
                 w as u32,
                 BH as u32,
-                lrpad as u32 / 2,
+                LRPAD as u32 / 2,
                 text.as_ptr(),
                 (urg as i32) & 1 << i,
             );
@@ -1147,7 +1147,7 @@ fn drawbar(m: *mut Monitor) {
             0,
             w as u32,
             BH as u32,
-            lrpad as u32 / 2,
+            LRPAD as u32 / 2,
             (*m).ltsymbol.as_ptr(),
             0,
         ) as i32;
@@ -1169,7 +1169,7 @@ fn drawbar(m: *mut Monitor) {
                     0,
                     w as u32,
                     BH as u32,
-                    lrpad as u32 / 2,
+                    LRPAD as u32 / 2,
                     (*(*m).sel).name.as_ptr(),
                     0,
                 );
