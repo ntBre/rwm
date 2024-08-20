@@ -39,8 +39,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    mons, netatom, root, screen, stext, wmatom, wmcheckwin, Arg, Atom, Client,
-    Clr, ColBorder, Display, Drw, Layout, Monitor, WMProtocols, XInternAtom,
+    mons, netatom, root, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
+    ColBorder, Display, Drw, Layout, Monitor, WMProtocols, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -149,7 +149,7 @@ static mut SCHEME: *mut *mut Clr = null_mut();
 
 // static mut MONS: *mut Monitor = std::ptr::null_mut();
 
-// static mut SCREEN: i32 = 0;
+static mut SCREEN: c_int = 0;
 
 const BROKEN: &CStr = c"broken";
 // static mut STEXT: String = String::new();
@@ -170,9 +170,6 @@ static mut SH: c_int = 0;
 // static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
 
 // static mut RUNNING: bool = true;
-
-/// color scheme
-// static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
 
 /// sum of left and right padding for text
 static mut LRPAD: c_int = 0;
@@ -261,11 +258,11 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        screen = bindgen::XDefaultScreen(DPY);
-        SW = bindgen::XDisplayWidth(DPY, screen);
-        SH = bindgen::XDisplayHeight(DPY, screen);
-        root = bindgen::XRootWindow(DPY, screen);
-        DRW = drw::create(DPY, screen, root, SW as u32, SH as u32);
+        SCREEN = bindgen::XDefaultScreen(DPY);
+        SW = bindgen::XDisplayWidth(DPY, SCREEN);
+        SH = bindgen::XDisplayHeight(DPY, SCREEN);
+        root = bindgen::XRootWindow(DPY, SCREEN);
+        DRW = drw::create(DPY, SCREEN, root, SW as u32, SH as u32);
         if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
         }
@@ -1274,9 +1271,9 @@ fn updatebars() {
                 (*m).ww as c_uint,
                 BH as c_uint,
                 0,
-                bindgen::XDefaultDepth(DPY, screen),
+                bindgen::XDefaultDepth(DPY, SCREEN),
                 CopyFromParent as c_uint,
-                bindgen::XDefaultVisual(DPY, screen),
+                bindgen::XDefaultVisual(DPY, SCREEN),
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
             );
