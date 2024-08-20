@@ -1,10 +1,12 @@
+use std::cmp::max;
 use std::ffi::c_int;
 use std::ptr::null_mut;
 
 use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::{
-    ConfigureRequest, CurrentTime, Expose, ExposureMask, False, GrabModeAsync,
-    GrabSuccess, MapRequest, MotionNotify, SubstructureRedirectMask,
+    ConfigureRequest, CurrentTime, EnterWindowMask, Expose, ExposureMask,
+    False, GrabModeAsync, GrabSuccess, MapRequest, MotionNotify,
+    SubstructureRedirectMask,
 };
 
 use crate::bindgen::{
@@ -320,6 +322,12 @@ pub(crate) unsafe extern "C" fn quit(_arg: *const Arg) {
     }
 }
 
+// these are shared between movemouse and resizemouse
+const CONFIGURE_REQUEST: i32 = ConfigureRequest;
+const EXPOSE: i32 = Expose;
+const MAP_REQUEST: i32 = MapRequest;
+const MOTION_NOTIFY: i32 = MotionNotify;
+
 pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
     log::trace!("movemouse");
     unsafe {
@@ -365,10 +373,6 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
             );
-            const CONFIGURE_REQUEST: i32 = ConfigureRequest;
-            const EXPOSE: i32 = Expose;
-            const MAP_REQUEST: i32 = MapRequest;
-            const MOTION_NOTIFY: i32 = MotionNotify;
             match ev.type_ {
                 CONFIGURE_REQUEST | EXPOSE | MAP_REQUEST => {
                     HANDLER[ev.type_ as usize](&mut ev);
@@ -415,7 +419,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         }
         bindgen::XUngrabPointer(dpy, CurrentTime);
         let m = recttomon(c.x, c.y, c.w, c.h);
-        if m != selmon {
+        if m != bindgen::selmon {
             sendmon(c, m);
             bindgen::selmon = m;
             focus(null_mut());
@@ -423,8 +427,116 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
     }
 }
 
-pub(crate) unsafe extern "C" fn resizemouse(arg: *const Arg) {
-    unsafe { bindgen::resizemouse(arg) }
+pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
+    log::trace!("resizemouse");
+    unsafe {
+        let selmon = get_selmon();
+        let c = selmon.sel;
+        if c.is_null() {
+            return;
+        }
+        let c = &mut *c;
+        if c.isfullscreen != 0 {
+            return; // no support for resizing fullscreen window with mouse
+        }
+        restack(selmon);
+        let ocx = c.x;
+        let ocy = c.y;
+        if bindgen::XGrabPointer(
+            dpy,
+            root,
+            False,
+            MOUSEMASK as u32,
+            GrabModeAsync,
+            GrabModeAsync,
+            XNONE as u64,
+            (*bindgen::cursor[bindgen::CurResize as usize]).cursor,
+            CurrentTime,
+        ) != GrabSuccess
+        {
+            return;
+        }
+        bindgen::XWarpPointer(
+            dpy,
+            XNONE as u64,
+            c.win,
+            0,
+            0,
+            0,
+            0,
+            c.w + c.bw - 1,
+            c.h + c.bw - 1,
+        );
+
+        let mut ev = XEvent { type_: 0 };
+        let mut lasttime = 0;
+
+        // do-while
+        loop {
+            bindgen::XMaskEvent(
+                dpy,
+                MOUSEMASK | ExposureMask | SubstructureRedirectMask,
+                &mut ev,
+            );
+            match ev.type_ {
+                CONFIGURE_REQUEST | EXPOSE | MAP_REQUEST => {
+                    HANDLER[ev.type_ as usize](&mut ev);
+                }
+                MOTION_NOTIFY => {
+                    if ev.xmotion.time - lasttime <= 1000 / 60 {
+                        continue;
+                    }
+                    lasttime = ev.xmotion.time;
+                    let nw = max(ev.xmotion.x - ocx - 2 * c.bw + 1, 1);
+                    let nh = max(ev.xmotion.y - ocy - 2 * c.bw + 1, 1);
+                    if (*c.mon).wx + nw >= selmon.wx
+                        && (*c.mon).wx + nw <= selmon.wx + selmon.ww
+                        && (*c.mon).wy + nh >= selmon.wy
+                        && (*c.mon).wy + nh <= selmon.wy + selmon.wh
+                    {
+                        if c.isfloating == 0
+                            && (*selmon.lt[selmon.sellt as usize])
+                                .arrange
+                                .is_some()
+                            && ((nw - c.w).abs() > SNAP as c_int
+                                || (nh - c.h).abs() > SNAP as c_int)
+                        {
+                            togglefloating(null_mut());
+                        }
+                    }
+                    if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+                        || c.isfloating != 0
+                    {
+                        resize(c, c.x, c.y, nw, nh, 1);
+                    }
+                }
+                _ => {}
+            }
+            if ev.type_ == ButtonRelease as i32 {
+                break;
+            }
+        }
+
+        bindgen::XWarpPointer(
+            dpy,
+            XNONE as u64,
+            c.win,
+            0,
+            0,
+            0,
+            0,
+            c.w + c.bw - 1,
+            c.h + c.bw - 1,
+        );
+        bindgen::XUngrabPointer(dpy, CurrentTime);
+        while bindgen::XCheckMaskEvent(dpy, EnterWindowMask, &mut ev) != 0 {}
+        let m = recttomon(c.x, c.y, c.w, c.h);
+        if m != bindgen::selmon {
+            sendmon(c, m);
+            bindgen::selmon = m;
+            focus(null_mut());
+        }
+    }
 }
 
 pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
