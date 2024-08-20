@@ -1715,7 +1715,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             setclientstate(c, WITHDRAWN_STATE);
             bindgen::XSync(DPY, False);
             // xerror exists, but I'm using it somewhere else with X11
-            // arguments. just remove bindgen:: on xerror after switching to X11
+            // arguments. just remove prefix on xerror after switching to X11
             // types everywhere
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(DPY);
