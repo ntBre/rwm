@@ -39,8 +39,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    cursor, drw, lrpad, mons, netatom, root, scheme, screen, selmon, sh, stext,
-    sw, wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
+    cursor, drw, lrpad, mons, netatom, root, scheme, screen, sh, stext, sw,
+    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Layout, Monitor,
     WMProtocols, XInternAtom,
 };
 use config::{
@@ -139,7 +139,7 @@ static mut XERRORXLIB: Option<
 
 static mut DPY: *mut bindgen::Display = null_mut();
 
-// static mut SELMON: *mut Monitor = std::ptr::null_mut();
+static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
 // static mut MONS: *mut Monitor = std::ptr::null_mut();
 
@@ -388,17 +388,17 @@ fn focus(mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     unsafe {
         if c.is_null() || !is_visible(c) {
-            c = (*selmon).stack;
+            c = (*SELMON).stack;
             while !c.is_null() && !is_visible(c) {
                 c = (*c).snext;
             }
         }
-        if !(*selmon).sel.is_null() && (*selmon).sel != c {
-            unfocus((*selmon).sel, false);
+        if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
+            unfocus((*SELMON).sel, false);
         }
         if !c.is_null() {
-            if (*c).mon != selmon {
-                selmon = (*c).mon;
+            if (*c).mon != SELMON {
+                SELMON = (*c).mon;
             }
             if (*c).isurgent != 0 {
                 seturgent(c, false);
@@ -424,7 +424,7 @@ fn focus(mut c: *mut Client) {
                 netatom[Net::ActiveWindow as usize],
             );
         }
-        (*selmon).sel = c;
+        (*SELMON).sel = c;
         drawbars();
     }
 }
@@ -914,15 +914,15 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 
 fn view(arg: *const Arg) {
     unsafe {
-        if (*arg).ui & TAGMASK == (*selmon).tagset[(*selmon).seltags as usize] {
+        if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
             return;
         }
-        (*selmon).seltags ^= 1; // toggle sel tagset
+        (*SELMON).seltags ^= 1; // toggle sel tagset
         if ((*arg).ui & TAGMASK) != 0 {
-            (*selmon).tagset[(*selmon).seltags as usize] = (*arg).ui & TAGMASK;
+            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
         }
         focus(null_mut());
-        arrange(selmon);
+        arrange(SELMON);
     }
 }
 
@@ -1049,7 +1049,7 @@ fn updatestatus() {
         {
             libc::strcpy(addr_of_mut!(stext) as *mut _, c"rwm-1.0".as_ptr());
         }
-        drawbar(selmon);
+        drawbar(SELMON);
     }
 }
 
@@ -1069,7 +1069,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         // draw status first so it can be overdrawn by tags later
-        if m == selmon {
+        if m == SELMON {
             // status is only drawn on selected monitor
             drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
             tw = textw(addr_of!(stext) as *const _) - lrpad + 2; // 2px right padding
@@ -1126,9 +1126,9 @@ fn drawbar(m: *mut Monitor) {
                     boxs as i32,
                     boxw,
                     boxw,
-                    (m == selmon
-                        && !(*selmon).sel.is_null()
-                        && ((*(*selmon).sel).tags & 1 << i) != 0)
+                    (m == SELMON
+                        && !(*SELMON).sel.is_null()
+                        && ((*(*SELMON).sel).tags & 1 << i) != 0)
                         as c_int,
                     (urg & 1 << i) as c_int,
                 );
@@ -1154,7 +1154,7 @@ fn drawbar(m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     drw,
-                    *scheme.offset(if m == selmon {
+                    *scheme.offset(if m == SELMON {
                         Scheme::Sel as isize
                     } else {
                         Scheme::Norm as isize
@@ -1392,8 +1392,8 @@ fn updategeom() -> i32 {
                     attachstack(c);
                     c = (*m).clients;
                 }
-                if m == selmon {
-                    selmon = mons;
+                if m == SELMON {
+                    SELMON = mons;
                 }
                 cleanupmon(m);
             }
@@ -1415,8 +1415,8 @@ fn updategeom() -> i32 {
             }
         }
         if dirty != 0 {
-            selmon = mons;
-            selmon = wintomon(root);
+            SELMON = mons;
+            SELMON = wintomon(root);
         }
         dirty
     }
@@ -1440,7 +1440,7 @@ fn wintomon(w: Window) -> *mut Monitor {
         if !c.is_null() {
             return (*c).mon;
         }
-        selmon
+        SELMON
     }
 }
 
@@ -1464,7 +1464,7 @@ fn wintoclient(w: u64) -> *mut Client {
 
 fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
     unsafe {
-        let mut r = selmon;
+        let mut r = SELMON;
         let mut area = 0;
         let mut m = mons;
         while !m.is_null() {
@@ -1633,7 +1633,7 @@ fn cleanup() {
     unsafe {
         let a = Arg { ui: !0 };
         view(&a);
-        (*selmon).lt[(*selmon).sellt as usize] =
+        (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
         let mut m = mons;
@@ -1896,13 +1896,13 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
                 (*c).mon = (*t).mon;
                 (*c).tags = (*t).tags;
             } else {
-                (*c).mon = selmon;
+                (*c).mon = SELMON;
                 applyrules(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
-            (*c).mon = selmon;
+            (*c).mon = SELMON;
             applyrules(c);
         }
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
@@ -1981,8 +1981,8 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             (*c).h as u32,
         );
         setclientstate(c, NORMAL_STATE);
-        if (*c).mon == selmon {
-            unfocus((*selmon).sel, false);
+        if (*c).mon == SELMON {
+            unfocus((*SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
         arrange((*c).mon);
@@ -1997,7 +1997,7 @@ fn updatewmhints(c: *mut Client) {
     unsafe {
         let wmh = bindgen::XGetWMHints(DPY, (*c).win);
         if !wmh.is_null() {
-            if c == (*selmon).sel && (*wmh).flags & URGENT != 0 {
+            if c == (*SELMON).sel && (*wmh).flags & URGENT != 0 {
                 (*wmh).flags &= !URGENT;
                 bindgen::XSetWMHints(DPY, (*c).win, wmh);
             } else {

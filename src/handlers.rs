@@ -18,12 +18,10 @@ use crate::{
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window, BH,
-    DPY, WITHDRAWN_STATE,
+    DPY, SELMON, WITHDRAWN_STATE,
 };
 use crate::{
-    bindgen::{
-        self, mons, netatom, root, selmon, sh, stext, sw, Arg, Monitor, XEvent,
-    },
+    bindgen::{self, mons, netatom, root, sh, stext, sw, Arg, Monitor, XEvent},
     config::TAGS,
 };
 
@@ -34,12 +32,12 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
         let mut click = Clk::RootWin;
         // focus monitor if necessary
         let m = wintomon(ev.window);
-        if !m.is_null() && m != selmon {
-            crate::unfocus((*selmon).sel, true);
-            selmon = m;
+        if !m.is_null() && m != SELMON {
+            crate::unfocus((*SELMON).sel, true);
+            SELMON = m;
             crate::focus(null_mut());
         }
-        if ev.window == (*selmon).barwin {
+        if ev.window == (*SELMON).barwin {
             let mut i = 0;
             let mut x = 0;
             // emulating do-while
@@ -57,10 +55,10 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             if i < TAGS.len() {
                 click = Clk::TagBar;
                 arg = Arg { ui: 1 << i };
-            } else if ev.x < x + textw(addr_of!((*selmon).ltsymbol) as *const _)
+            } else if ev.x < x + textw(addr_of!((*SELMON).ltsymbol) as *const _)
             {
                 click = Clk::LtSymbol;
-            } else if ev.x > (*selmon).ww - textw(addr_of!(stext) as *const _) {
+            } else if ev.x > (*SELMON).ww - textw(addr_of!(stext) as *const _) {
                 click = Clk::StatusText;
             } else {
                 click = Clk::WinTitle;
@@ -69,7 +67,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             let c = wintoclient(ev.window);
             if !c.is_null() {
                 crate::focus(c);
-                restack(selmon);
+                restack(SELMON);
                 bindgen::XAllowEvents(DPY, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
@@ -112,7 +110,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                 );
             }
         } else if cme.message_type == netatom[Net::ActiveWindow as usize]
-            && c != (*selmon).sel
+            && c != (*SELMON).sel
             && (*c).isurgent == 0
         {
             seturgent(c, true);
@@ -128,7 +126,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
                 (*c).bw = ev.border_width;
             } else if (*c).isfloating != 0
-                || (*(*selmon).lt[(*selmon).sellt as usize]).arrange.is_none()
+                || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
             {
                 let m = (*c).mon;
                 if ev.value_mask & CWX as u64 != 0 {
@@ -256,10 +254,10 @@ pub(crate) fn enternotify(e: *mut XEvent) {
         }
         let c = wintoclient(ev.window);
         let m = if !c.is_null() { (*c).mon } else { wintomon(ev.window) };
-        if m != selmon {
-            unfocus((*selmon).sel, true);
-            selmon = m;
-        } else if c.is_null() || c == (*selmon).sel {
+        if m != SELMON {
+            unfocus((*SELMON).sel, true);
+            SELMON = m;
+        } else if c.is_null() || c == (*SELMON).sel {
             return;
         }
         focus(c)
@@ -282,8 +280,8 @@ pub(crate) fn expose(e: *mut XEvent) {
 pub(crate) fn focusin(e: *mut XEvent) {
     unsafe {
         let ev = &(*e).xfocus;
-        if !(*selmon).sel.is_null() && ev.window != (*(*selmon).sel).win {
-            setfocus((*selmon).sel);
+        if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
+            setfocus((*SELMON).sel);
         }
     }
 }
@@ -372,8 +370,8 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
         }
         let m = recttomon(ev.x_root, ev.y_root, 1, 1);
         if m != MON && !MON.is_null() {
-            unfocus((*selmon).sel, true);
-            selmon = m;
+            unfocus((*SELMON).sel, true);
+            SELMON = m;
             focus(null_mut());
         }
         MON = m;

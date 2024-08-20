@@ -25,8 +25,8 @@ use crate::{
 
 fn get_selmon() -> &'static mut Monitor {
     unsafe {
-        assert!(!bindgen::selmon.is_null());
-        &mut *bindgen::selmon
+        assert!(!crate::SELMON.is_null());
+        &mut *crate::SELMON
     }
 }
 
