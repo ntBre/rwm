@@ -39,9 +39,9 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    drw, lrpad, mons, netatom, root, scheme, screen, sh, stext, sw, wmatom,
-    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Display, Layout, Monitor,
-    WMProtocols, XInternAtom,
+    drw, lrpad, mons, netatom, root, screen, sh, stext, sw, wmatom, wmcheckwin,
+    Arg, Atom, Client, Clr, ColBorder, Display, Layout, Monitor, WMProtocols,
+    XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -143,6 +143,8 @@ static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
 static mut CURSOR: [*mut bindgen::Cur; Cur::Last as usize] =
     [null_mut(); Cur::Last as usize];
+
+static mut SCHEME: *mut *mut Clr = null_mut();
 
 // static mut MONS: *mut Monitor = std::ptr::null_mut();
 
@@ -308,9 +310,9 @@ fn setup() {
             drw::cur_create(drw, bindgen::XC_fleur as i32);
 
         /* init appearance */
-        scheme = util::ecalloc(COLORS.len(), size_of::<*mut Clr>()).cast();
+        SCHEME = util::ecalloc(COLORS.len(), size_of::<*mut Clr>()).cast();
         for i in 0..COLORS.len() {
-            *scheme.add(i) = drw::scm_create(drw, &COLORS[i], 3);
+            *SCHEME.add(i) = drw::scm_create(drw, &COLORS[i], 3);
         }
 
         /* init bars */
@@ -407,7 +409,7 @@ fn focus(mut c: *mut Client) {
             detachstack(c);
             attachstack(c);
             grabbuttons(c, true);
-            let color = (*(*scheme.offset(Scheme::Sel as isize))
+            let color = (*(*SCHEME.offset(Scheme::Sel as isize))
                 .offset(ColBorder as isize))
             .pixel;
             bindgen::XSetWindowBorder(DPY, (*c).win, color);
@@ -1015,7 +1017,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
     grabbuttons(c, false);
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
-        let color = (*(*scheme.offset(Scheme::Norm as isize))
+        let color = (*(*SCHEME.offset(Scheme::Norm as isize))
             .offset(ColBorder as isize))
         .pixel;
         bindgen::XSetWindowBorder(DPY, (*c).win, color);
@@ -1072,7 +1074,7 @@ fn drawbar(m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
             // status is only drawn on selected monitor
-            drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
+            drw::setscheme(drw, *SCHEME.add(Scheme::Norm as usize));
             tw = textw(addr_of!(stext) as *const _) - lrpad + 2; // 2px right padding
             drw::text(
                 drw,
@@ -1101,7 +1103,7 @@ fn drawbar(m: *mut Monitor) {
             let w = textw(text.as_ptr());
             drw::setscheme(
                 drw,
-                *scheme.add(
+                *SCHEME.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
                         Scheme::Sel as usize
                     } else {
@@ -1138,7 +1140,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let w = textw((*m).ltsymbol.as_ptr());
-        drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
+        drw::setscheme(drw, *SCHEME.add(Scheme::Norm as usize));
         x = drw::text(
             drw,
             x,
@@ -1155,7 +1157,7 @@ fn drawbar(m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     drw,
-                    *scheme.offset(if m == SELMON {
+                    *SCHEME.offset(if m == SELMON {
                         Scheme::Sel as isize
                     } else {
                         Scheme::Norm as isize
@@ -1183,7 +1185,7 @@ fn drawbar(m: *mut Monitor) {
                     );
                 }
             } else {
-                drw::setscheme(drw, *scheme.add(Scheme::Norm as usize));
+                drw::setscheme(drw, *SCHEME.add(Scheme::Norm as usize));
                 drw::rect(drw, x, 0, w as u32, BH as u32, 1, 1);
             }
         }
@@ -1657,10 +1659,10 @@ fn cleanup() {
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..COLORS.len() {
-            let tmp: *mut Clr = *scheme.add(i);
+            let tmp: *mut Clr = *SCHEME.add(i);
             libc::free(tmp.cast());
         }
-        libc::free(scheme.cast());
+        libc::free(SCHEME.cast());
 
         bindgen::XDestroyWindow(DPY, wmcheckwin);
         drw::free(drw);
@@ -1931,9 +1933,8 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         log::trace!(
             "manage: XSetWindowBorder with DPY = {DPY:?} and w = {w:?}"
         );
-        log::trace!("scheme: {:?}", scheme);
-        let scheme_norm: *mut Clr =
-            *bindgen::scheme.offset(Scheme::Norm as isize);
+        log::trace!("scheme: {:?}", SCHEME);
+        let scheme_norm: *mut Clr = *SCHEME.offset(Scheme::Norm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
         let border: Clr = *scheme_norm.offset(Col::Border as isize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
