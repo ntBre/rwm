@@ -18,10 +18,10 @@ use crate::{
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window, BH,
-    DPY, DRW, SELMON, WITHDRAWN_STATE,
+    DPY, DRW, SELMON, SH, SW, WITHDRAWN_STATE,
 };
 use crate::{
-    bindgen::{self, mons, netatom, root, sh, stext, sw, Arg, Monitor, XEvent},
+    bindgen::{self, mons, netatom, root, stext, Arg, Monitor, XEvent},
     config::TAGS,
 };
 
@@ -201,11 +201,11 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
         let ev = &mut (*e).xconfigure;
         /* TODO: updategeom handling sucks, needs to be simplified */
         if ev.window == root {
-            let dirty = sw != ev.width || sh != ev.height;
-            sw = ev.width;
-            sh = ev.height;
+            let dirty = SW != ev.width || SH != ev.height;
+            SW = ev.width;
+            SH = ev.height;
             if updategeom() != 0 || dirty {
-                drw::resize(DRW, sw as c_uint, BH as c_uint);
+                drw::resize(DRW, SW as c_uint, BH as c_uint);
                 updatebars();
                 let mut m = mons;
                 while !m.is_null() {

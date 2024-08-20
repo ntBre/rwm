@@ -39,9 +39,8 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    mons, netatom, root, screen, sh, stext, sw, wmatom, wmcheckwin, Arg, Atom,
-    Client, Clr, ColBorder, Display, Drw, Layout, Monitor, WMProtocols,
-    XInternAtom,
+    mons, netatom, root, screen, stext, wmatom, wmcheckwin, Arg, Atom, Client,
+    Clr, ColBorder, Display, Drw, Layout, Monitor, WMProtocols, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -157,8 +156,12 @@ const BROKEN: &CStr = c"broken";
 
 /// bar height
 static mut BH: c_int = 0;
-// static mut SW: c_int = 0;
-// static mut SH: c_int = 0;
+
+/// X display screen geometry width
+static mut SW: c_int = 0;
+
+/// X display screen geometry height
+static mut SH: c_int = 0;
 
 // static mut ROOT: Window = 0;
 // static mut WMCHECKWIN: Window = 0;
@@ -259,10 +262,10 @@ fn setup() {
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
         screen = bindgen::XDefaultScreen(DPY);
-        sw = bindgen::XDisplayWidth(DPY, screen);
-        sh = bindgen::XDisplayHeight(DPY, screen);
+        SW = bindgen::XDisplayWidth(DPY, screen);
+        SH = bindgen::XDisplayHeight(DPY, screen);
         root = bindgen::XRootWindow(DPY, screen);
-        DRW = drw::create(DPY, screen, root, sw as u32, sh as u32);
+        DRW = drw::create(DPY, screen, root, SW as u32, SH as u32);
         if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
         }
@@ -725,11 +728,11 @@ fn applysizehints(
         *w = 1.max(*w);
         *h = 1.max(*h);
         if interact {
-            if *x > sw {
-                *x = sw - width(c);
+            if *x > SW {
+                *x = SW - width(c);
             }
-            if *y > sh {
-                *y = sh - height(c);
+            if *y > SH {
+                *y = SH - height(c);
             }
             if *x + *w + 2 * (*c).bw < 0 {
                 *x = 0;
@@ -1408,12 +1411,12 @@ fn updategeom() -> i32 {
             if mons.is_null() {
                 mons = createmon();
             }
-            if (*mons).mw != sw || (*mons).mh != sh {
+            if (*mons).mw != SW || (*mons).mh != SH {
                 dirty = 1;
-                (*mons).mw = sw;
-                (*mons).ww = sw;
-                (*mons).mh = sh;
-                (*mons).wh = sh;
+                (*mons).mw = SW;
+                (*mons).ww = SW;
+                (*mons).mh = SH;
+                (*mons).wh = SH;
                 updatebarpos(mons);
             }
         }
@@ -1977,7 +1980,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         bindgen::XMoveResizeWindow(
             DPY,
             (*c).win,
-            (*c).x + 2 * sw,
+            (*c).x + 2 * SW,
             (*c).y,
             (*c).w as u32,
             (*c).h as u32,
