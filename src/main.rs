@@ -40,7 +40,7 @@ use x11::xlib::{
 
 use bindgen::{
     mons, netatom, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
-    ColBorder, Display, Drw, Layout, Monitor, WMProtocols, XInternAtom,
+    ColBorder, Display, Drw, Layout, Monitor, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -482,7 +482,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
         if exists != 0 {
             let mut ev = bindgen::XEvent { type_: ClientMessage };
             ev.xclient.window = (*c).win;
-            ev.xclient.message_type = wmatom[WMProtocols as usize];
+            ev.xclient.message_type = wmatom[WM::Protocols as usize];
             ev.xclient.format = 32;
             ev.xclient.data.l[0] = proto as c_long;
             ev.xclient.data.l[1] = CurrentTime as c_long;
