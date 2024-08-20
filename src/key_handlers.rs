@@ -14,13 +14,13 @@ use crate::bindgen::{
     Layout, Monitor, XEvent,
 };
 use crate::config::{LOCK_FULLSCREEN, SNAP};
-use crate::enums::WM;
+use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, BH, DPY, HANDLER, MOUSEMASK,
-    SELMON, TAGMASK, XNONE,
+    sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER,
+    MOUSEMASK, SELMON, TAGMASK, XNONE,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -323,7 +323,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
             GrabModeAsync,
             GrabModeAsync,
             XNONE as u64,
-            (*bindgen::cursor[bindgen::CurMove as usize]).cursor,
+            (*CURSOR[Cur::Move as usize]).cursor,
             CurrentTime,
         ) != GrabSuccess
         {
@@ -427,7 +427,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
             GrabModeAsync,
             GrabModeAsync,
             XNONE as u64,
-            (*bindgen::cursor[bindgen::CurResize as usize]).cursor,
+            (*CURSOR[Cur::Resize as usize]).cursor,
             CurrentTime,
         ) != GrabSuccess
         {

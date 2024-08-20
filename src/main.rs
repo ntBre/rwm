@@ -39,9 +39,9 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    cursor, drw, lrpad, mons, netatom, root, scheme, screen, sh, stext, sw,
-    wmatom, wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Display, Layout,
-    Monitor, WMProtocols, XInternAtom,
+    drw, lrpad, mons, netatom, root, scheme, screen, sh, stext, sw, wmatom,
+    wmcheckwin, Arg, Atom, Client, Clr, ColBorder, Display, Layout, Monitor,
+    WMProtocols, XInternAtom,
 };
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -141,6 +141,9 @@ static mut DPY: *mut Display = null_mut();
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 
+static mut CURSOR: [*mut bindgen::Cur; Cur::Last as usize] =
+    [null_mut(); Cur::Last as usize];
+
 // static mut MONS: *mut Monitor = std::ptr::null_mut();
 
 // static mut DRW: *mut Drw = std::ptr::null_mut();
@@ -162,8 +165,6 @@ static mut BH: c_int = 0;
 // static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
 
 // static mut RUNNING: bool = true;
-
-// static mut CURSOR: [Cursor; Cur::Last as usize] = [0; Cur::Last as usize];
 
 /// color scheme
 // static mut SCHEME: Vec<Vec<Clr>> = Vec::new();
@@ -299,11 +300,11 @@ fn setup() {
             XInternAtom(DPY, c"_NET_CLIENT_LIST".as_ptr(), False);
 
         /* init cursors */
-        cursor[Cur::Normal as usize] =
+        CURSOR[Cur::Normal as usize] =
             drw::cur_create(drw, bindgen::XC_left_ptr as i32);
-        cursor[Cur::Resize as usize] =
+        CURSOR[Cur::Resize as usize] =
             drw::cur_create(drw, bindgen::XC_sizing as i32);
-        cursor[Cur::Move as usize] =
+        CURSOR[Cur::Move as usize] =
             drw::cur_create(drw, bindgen::XC_fleur as i32);
 
         /* init appearance */
@@ -363,7 +364,7 @@ fn setup() {
         bindgen::XDeleteProperty(DPY, root, netatom[Net::ClientList as usize]);
 
         // /* select events */
-        wa.cursor = (*cursor[Cur::Normal as usize]).cursor;
+        wa.cursor = (*CURSOR[Cur::Normal as usize]).cursor;
         wa.event_mask = SubstructureRedirectMask
             | SubstructureNotifyMask
             | ButtonPressMask
@@ -1277,7 +1278,7 @@ fn updatebars() {
             bindgen::XDefineCursor(
                 DPY,
                 (*m).barwin,
-                (*cursor[Cur::Normal as usize]).cursor,
+                (*CURSOR[Cur::Normal as usize]).cursor,
             );
             bindgen::XMapRaised(DPY, (*m).barwin);
             bindgen::XSetClassHint(DPY, (*m).barwin, &mut ch);
@@ -1651,7 +1652,7 @@ fn cleanup() {
         }
 
         for i in 0..Cur::Last as usize {
-            drw::cur_free(drw, cursor[i]);
+            drw::cur_free(drw, CURSOR[i]);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
