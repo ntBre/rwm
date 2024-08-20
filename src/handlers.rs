@@ -18,12 +18,11 @@ use crate::{
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window, BH,
-    WITHDRAWN_STATE,
+    DPY, WITHDRAWN_STATE,
 };
 use crate::{
     bindgen::{
-        self, dpy, mons, netatom, root, selmon, sh, stext, sw, Arg, Monitor,
-        XEvent,
+        self, mons, netatom, root, selmon, sh, stext, sw, Arg, Monitor, XEvent,
     },
     config::TAGS,
 };
@@ -71,7 +70,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             if !c.is_null() {
                 crate::focus(c);
                 restack(selmon);
-                bindgen::XAllowEvents(dpy, ReplayPointer, CurrentTime);
+                bindgen::XAllowEvents(DPY, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
@@ -165,7 +164,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 }
                 if is_visible(c) {
                     bindgen::XMoveResizeWindow(
-                        dpy, c.win, c.x, c.y, c.w as u32, c.h as u32,
+                        DPY, c.win, c.x, c.y, c.w as u32, c.h as u32,
                     );
                 }
             } else {
@@ -189,13 +188,13 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 stack_mode,
             };
             bindgen::XConfigureWindow(
-                dpy,
+                DPY,
                 ev.window,
                 ev.value_mask as u32,
                 &mut wc,
             );
         }
-        bindgen::XSync(dpy, False);
+        bindgen::XSync(DPY, False);
     }
 }
 
@@ -220,7 +219,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
                         c = (*c).next;
                     }
                     bindgen::XMoveResizeWindow(
-                        dpy,
+                        DPY,
                         (*m).barwin,
                         (*m).wx,
                         (*m).by,
@@ -293,7 +292,7 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xkey;
         let keysym =
-            bindgen::XKeycodeToKeysym(dpy, ev.keycode as bindgen::KeyCode, 0);
+            bindgen::XKeycodeToKeysym(DPY, ev.keycode as bindgen::KeyCode, 0);
         for i in 0..KEYS.len() {
             if keysym == KEYS[i].keysym
                 && cleanmask(KEYS[i].mod_) == cleanmask(ev.state)
@@ -352,7 +351,7 @@ pub(crate) fn maprequest(e: *mut XEvent) {
         let ev = &(*e).xmaprequest;
         log::trace!("maprequest: XGetWindowAttributes");
         let res =
-            bindgen::XGetWindowAttributes(dpy, ev.window, addr_of_mut!(WA));
+            bindgen::XGetWindowAttributes(DPY, ev.window, addr_of_mut!(WA));
         // XGetWindowAttributes returns a zero if the function fails
         if res == 0 || WA.override_redirect != 0 {
             return;
@@ -400,7 +399,7 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
                 XA_WM_TRANSIENT_FOR => {
                     if c.isfloating == 0
                         && (bindgen::XGetTransientForHint(
-                            dpy, c.win, &mut trans,
+                            DPY, c.win, &mut trans,
                         ) != 0)
                     {
                         c.isfloating = !wintoclient(trans).is_null() as c_int;

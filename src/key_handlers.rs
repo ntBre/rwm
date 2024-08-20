@@ -10,8 +10,8 @@ use x11::xlib::{
 };
 
 use crate::bindgen::{
-    self, dmenucmd, dmenumon, dpy, mons, root, wmatom, Arg, ButtonRelease,
-    Client, Layout, Monitor, XEvent,
+    self, dmenucmd, dmenumon, mons, root, wmatom, Arg, ButtonRelease, Client,
+    Layout, Monitor, XEvent,
 };
 use crate::config::{LOCK_FULLSCREEN, SNAP};
 use crate::enums::WM;
@@ -19,8 +19,8 @@ use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, BH, HANDLER, MOUSEMASK, TAGMASK,
-    XNONE,
+    sendevent, unfocus, updatebarpos, width, BH, DPY, HANDLER, MOUSEMASK,
+    TAGMASK, XNONE,
 };
 
 fn get_selmon() -> &'static mut Monitor {
@@ -36,7 +36,7 @@ pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
         selmon.showbar = (selmon.showbar == 0) as c_int;
         updatebarpos(selmon);
         bindgen::XMoveResizeWindow(
-            dpy,
+            DPY,
             selmon.barwin,
             selmon.wx,
             selmon.by,
@@ -168,13 +168,13 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
         }
 
         if sendevent(selmon.sel, wmatom[WM::Delete as usize]) == 0 {
-            bindgen::XGrabServer(dpy);
+            bindgen::XGrabServer(DPY);
             bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
-            bindgen::XSetCloseDownMode(dpy, bindgen::DestroyAll as i32);
-            bindgen::XKillClient(dpy, (*selmon.sel).win);
-            bindgen::XSync(dpy, False);
+            bindgen::XSetCloseDownMode(DPY, bindgen::DestroyAll as i32);
+            bindgen::XKillClient(DPY, (*selmon.sel).win);
+            bindgen::XSync(DPY, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
-            bindgen::XUngrabServer(dpy);
+            bindgen::XUngrabServer(DPY);
         }
     }
 }
@@ -344,7 +344,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         let ocx = c.x;
         let ocy = c.y;
         if bindgen::XGrabPointer(
-            dpy,
+            DPY,
             root,
             False,
             MOUSEMASK as u32,
@@ -369,7 +369,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         // emulating do-while
         loop {
             bindgen::XMaskEvent(
-                dpy,
+                DPY,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
             );
@@ -417,7 +417,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                 break;
             }
         }
-        bindgen::XUngrabPointer(dpy, CurrentTime);
+        bindgen::XUngrabPointer(DPY, CurrentTime);
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != bindgen::selmon {
             sendmon(c, m);
@@ -443,7 +443,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         let ocx = c.x;
         let ocy = c.y;
         if bindgen::XGrabPointer(
-            dpy,
+            DPY,
             root,
             False,
             MOUSEMASK as u32,
@@ -457,7 +457,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
             return;
         }
         bindgen::XWarpPointer(
-            dpy,
+            DPY,
             XNONE as u64,
             c.win,
             0,
@@ -474,7 +474,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         // do-while
         loop {
             bindgen::XMaskEvent(
-                dpy,
+                DPY,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
             );
@@ -514,7 +514,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         }
 
         bindgen::XWarpPointer(
-            dpy,
+            DPY,
             XNONE as u64,
             c.win,
             0,
@@ -524,8 +524,8 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
             c.w + c.bw - 1,
             c.h + c.bw - 1,
         );
-        bindgen::XUngrabPointer(dpy, CurrentTime);
-        while bindgen::XCheckMaskEvent(dpy, EnterWindowMask, &mut ev) != 0 {}
+        bindgen::XUngrabPointer(DPY, CurrentTime);
+        while bindgen::XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != bindgen::selmon {
             sendmon(c, m);
@@ -543,8 +543,8 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
             dmenumon[0] = '0' as c_char + selmon.num as c_char;
         }
         if libc::fork() == 0 {
-            if !dpy.is_null() {
-                libc::close(bindgen::XConnectionNumber(dpy));
+            if !DPY.is_null() {
+                libc::close(bindgen::XConnectionNumber(DPY));
             }
             libc::setsid();
 
