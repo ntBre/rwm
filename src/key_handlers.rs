@@ -10,8 +10,8 @@ use x11::xlib::{
 };
 
 use crate::bindgen::{
-    self, dmenucmd, dmenumon, mons, root, wmatom, Arg, ButtonRelease, Client,
-    Layout, Monitor, XEvent,
+    self, dmenucmd, dmenumon, mons, wmatom, Arg, ButtonRelease, Client, Layout,
+    Monitor, XEvent,
 };
 use crate::config::{LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
@@ -20,7 +20,7 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
     sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER,
-    MOUSEMASK, SELMON, TAGMASK, XNONE,
+    MOUSEMASK, ROOT, SELMON, TAGMASK, XNONE,
 };
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
@@ -317,7 +317,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         let ocy = c.y;
         if bindgen::XGrabPointer(
             DPY,
-            root,
+            ROOT,
             False,
             MOUSEMASK as u32,
             GrabModeAsync,
@@ -421,7 +421,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         let ocy = c.y;
         if bindgen::XGrabPointer(
             DPY,
-            root,
+            ROOT,
             False,
             MOUSEMASK as u32,
             GrabModeAsync,

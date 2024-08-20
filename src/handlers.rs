@@ -18,10 +18,10 @@ use crate::{
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
     updatewindowtype, updatewmhints, width, wintoclient, wintomon, Window, BH,
-    DPY, DRW, SELMON, SH, SW, WITHDRAWN_STATE,
+    DPY, DRW, ROOT, SELMON, SH, SW, WITHDRAWN_STATE,
 };
 use crate::{
-    bindgen::{self, mons, netatom, root, stext, Arg, Monitor, XEvent},
+    bindgen::{self, mons, netatom, stext, Arg, Monitor, XEvent},
     config::TAGS,
 };
 
@@ -200,7 +200,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xconfigure;
         /* TODO: updategeom handling sucks, needs to be simplified */
-        if ev.window == root {
+        if ev.window == ROOT {
             let dirty = SW != ev.width || SH != ev.height;
             SW = ev.width;
             SH = ev.height;
@@ -248,7 +248,7 @@ pub(crate) fn enternotify(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xcrossing;
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
-            && ev.window != root
+            && ev.window != ROOT
         {
             return;
         }
@@ -365,7 +365,7 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
     static mut MON: *mut Monitor = null_mut();
     unsafe {
         let ev = &(*e).xmotion;
-        if ev.window != root {
+        if ev.window != ROOT {
             return;
         }
         let m = recttomon(ev.x_root, ev.y_root, 1, 1);
@@ -383,7 +383,7 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
     unsafe {
         let mut trans: Window = 0;
         let ev = &mut (*e).xproperty;
-        if ev.window == root && ev.atom == XA_WM_NAME {
+        if ev.window == ROOT && ev.atom == XA_WM_NAME {
             updatestatus();
         } else if ev.state == PropertyDelete {
             return; // ignore

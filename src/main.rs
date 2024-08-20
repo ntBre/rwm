@@ -39,7 +39,7 @@ use x11::xlib::{
 };
 
 use bindgen::{
-    mons, netatom, root, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
+    mons, netatom, stext, wmatom, wmcheckwin, Arg, Atom, Client, Clr,
     ColBorder, Display, Drw, Layout, Monitor, WMProtocols, XInternAtom,
 };
 use config::{
@@ -163,7 +163,8 @@ static mut SW: c_int = 0;
 /// X display screen geometry height
 static mut SH: c_int = 0;
 
-// static mut ROOT: Window = 0;
+static mut ROOT: Window = 0;
+
 // static mut WMCHECKWIN: Window = 0;
 
 // static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
@@ -261,8 +262,8 @@ fn setup() {
         SCREEN = bindgen::XDefaultScreen(DPY);
         SW = bindgen::XDisplayWidth(DPY, SCREEN);
         SH = bindgen::XDisplayHeight(DPY, SCREEN);
-        root = bindgen::XRootWindow(DPY, SCREEN);
-        DRW = drw::create(DPY, SCREEN, root, SW as u32, SH as u32);
+        ROOT = bindgen::XRootWindow(DPY, SCREEN);
+        DRW = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
         if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
         }
@@ -321,7 +322,7 @@ fn setup() {
 
         /* supporting window for NetWMCheck */
         wmcheckwin =
-            bindgen::XCreateSimpleWindow(DPY, root, 0, 0, 1, 1, 0, 0, 0);
+            bindgen::XCreateSimpleWindow(DPY, ROOT, 0, 0, 1, 1, 0, 0, 0);
         bindgen::XChangeProperty(
             DPY,
             wmcheckwin,
@@ -344,7 +345,7 @@ fn setup() {
         );
         bindgen::XChangeProperty(
             DPY,
-            root,
+            ROOT,
             netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
@@ -355,7 +356,7 @@ fn setup() {
         /* EWMH support per view */
         bindgen::XChangeProperty(
             DPY,
-            root,
+            ROOT,
             netatom[Net::Supported as usize],
             XA_ATOM,
             32,
@@ -363,7 +364,7 @@ fn setup() {
             netatom.as_ptr() as *mut c_uchar,
             Net::Last as i32,
         );
-        bindgen::XDeleteProperty(DPY, root, netatom[Net::ClientList as usize]);
+        bindgen::XDeleteProperty(DPY, ROOT, netatom[Net::ClientList as usize]);
 
         // /* select events */
         wa.cursor = (*CURSOR[Cur::Normal as usize]).cursor;
@@ -377,11 +378,11 @@ fn setup() {
             | PropertyChangeMask;
         bindgen::XChangeWindowAttributes(
             DPY,
-            root,
+            ROOT,
             CWEventMask | CWCursor,
             &mut wa,
         );
-        bindgen::XSelectInput(DPY, root, wa.event_mask);
+        bindgen::XSelectInput(DPY, ROOT, wa.event_mask);
         grabkeys();
         focus(null_mut());
     }
@@ -417,13 +418,13 @@ fn focus(mut c: *mut Client) {
         } else {
             bindgen::XSetInputFocus(
                 DPY,
-                root,
+                ROOT,
                 RevertToPointerRoot,
                 CurrentTime,
             );
             bindgen::XDeleteProperty(
                 DPY,
-                root,
+                ROOT,
                 netatom[Net::ActiveWindow as usize],
             );
         }
@@ -453,7 +454,7 @@ fn setfocus(c: *mut Client) {
             );
             bindgen::XChangeProperty(
                 DPY,
-                root,
+                ROOT,
                 netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
@@ -934,7 +935,7 @@ fn grabkeys() {
         updatenumlockmask();
         let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, root);
+        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
         bindgen::XDisplayKeycodes(DPY, &mut start, &mut end);
         let syms = bindgen::XGetKeyboardMapping(
             DPY,
@@ -956,7 +957,7 @@ fn grabkeys() {
                             DPY,
                             k,
                             KEYS[i].mod_ | modifiers[j],
-                            root,
+                            ROOT,
                             True,
                             GrabModeAsync,
                             GrabModeAsync,
@@ -1024,13 +1025,13 @@ fn unfocus(c: *mut Client, setfocus: bool) {
         if setfocus {
             bindgen::XSetInputFocus(
                 DPY,
-                root,
+                ROOT,
                 RevertToPointerRoot,
                 CurrentTime,
             );
             bindgen::XDeleteProperty(
                 DPY,
-                root,
+                ROOT,
                 netatom[Net::ActiveWindow as usize],
             );
         }
@@ -1040,7 +1041,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
 fn updatestatus() {
     unsafe {
         if gettextprop(
-            root,
+            ROOT,
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
@@ -1265,7 +1266,7 @@ fn updatebars() {
             }
             (*m).barwin = bindgen::XCreateWindow(
                 DPY,
-                root,
+                ROOT,
                 (*m).wx as c_int,
                 (*m).by as c_int,
                 (*m).ww as c_uint,
@@ -1419,7 +1420,7 @@ fn updategeom() -> i32 {
         }
         if dirty != 0 {
             SELMON = mons;
-            SELMON = wintomon(root);
+            SELMON = wintomon(ROOT);
         }
         dirty
     }
@@ -1429,7 +1430,7 @@ fn wintomon(w: Window) -> *mut Monitor {
     unsafe {
         let mut x = 0;
         let mut y = 0;
-        if w == root && getrootptr(&mut x, &mut y) != 0 {
+        if w == ROOT && getrootptr(&mut x, &mut y) != 0 {
             return recttomon(x, y, 1, 1);
         }
         let mut m = mons;
@@ -1523,7 +1524,7 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
         let mut dui = 0;
         let mut dummy = 0;
         bindgen::XQueryPointer(
-            DPY, root, &mut dummy, &mut dummy, x, y, &mut di, &mut di, &mut dui,
+            DPY, ROOT, &mut dummy, &mut dummy, x, y, &mut di, &mut di, &mut dui,
         )
     }
 }
@@ -1647,7 +1648,7 @@ fn cleanup() {
             m = (*m).next;
         }
 
-        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, root);
+        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
 
         while !mons.is_null() {
             cleanupmon(mons);
@@ -1675,7 +1676,7 @@ fn cleanup() {
         );
         bindgen::XDeleteProperty(
             DPY,
-            root,
+            ROOT,
             netatom[Net::ActiveWindow as usize],
         );
     }
@@ -1732,14 +1733,14 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 
 fn updateclientlist() {
     unsafe {
-        bindgen::XDeleteProperty(DPY, root, netatom[Net::ClientList as usize]);
+        bindgen::XDeleteProperty(DPY, ROOT, netatom[Net::ClientList as usize]);
         let mut m = mons;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
                 bindgen::XChangeProperty(
                     DPY,
-                    root,
+                    ROOT,
                     netatom[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
@@ -1817,7 +1818,7 @@ fn scan() {
     unsafe {
         if bindgen::XQueryTree(
             DPY,
-            root,
+            ROOT,
             &mut d1,
             &mut d2,
             &mut wins as *mut _,
@@ -1965,7 +1966,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         attachstack(c);
         bindgen::XChangeProperty(
             DPY,
-            root,
+            ROOT,
             netatom[Net::ClientList as usize],
             XA_WINDOW,
             32,
