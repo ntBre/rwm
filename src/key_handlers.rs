@@ -20,30 +20,22 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
     sendevent, unfocus, updatebarpos, width, BH, DPY, HANDLER, MOUSEMASK,
-    TAGMASK, XNONE,
+    SELMON, TAGMASK, XNONE,
 };
-
-fn get_selmon() -> &'static mut Monitor {
-    unsafe {
-        assert!(!crate::SELMON.is_null());
-        &mut *crate::SELMON
-    }
-}
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-        selmon.showbar = (selmon.showbar == 0) as c_int;
-        updatebarpos(selmon);
+        (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
+        updatebarpos(SELMON);
         bindgen::XMoveResizeWindow(
             DPY,
-            selmon.barwin,
-            selmon.wx,
-            selmon.by,
-            selmon.ww as u32,
+            (*SELMON).barwin,
+            (*SELMON).wx,
+            (*SELMON).by,
+            (*SELMON).ww as u32,
             BH as u32,
         );
-        arrange(selmon);
+        arrange(SELMON);
     }
 }
 
@@ -52,19 +44,18 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
         let mut c: *mut Client = null_mut();
         let mut i: *mut Client;
 
-        let selmon = get_selmon();
-        if selmon.sel.is_null()
-            || ((*selmon.sel).isfullscreen != 0 && LOCK_FULLSCREEN != 0)
+        if (*SELMON).sel.is_null()
+            || ((*(*SELMON).sel).isfullscreen != 0 && LOCK_FULLSCREEN != 0)
         {
             return;
         }
         if (*arg).i > 0 {
-            cfor!((c = (*selmon.sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
+            cfor!((c = (*(*SELMON).sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
             if c.is_null() {
-                cfor!((c = selmon.clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
+                cfor!((c = (*SELMON).clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
             }
         } else {
-            cfor!((i = selmon.clients; i != selmon.sel; i = (*i).next) {
+            cfor!((i = (*SELMON).clients; i != (*SELMON).sel; i = (*i).next) {
                 if is_visible(i) {
                     c = i;
                 }
@@ -79,7 +70,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
         }
         if !c.is_null() {
             focus(c);
-            restack(selmon);
+            restack(SELMON);
         }
     }
 }
@@ -87,9 +78,8 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-        selmon.nmaster = std::cmp::max(selmon.nmaster + (*arg).i, 0);
-        arrange(selmon);
+        (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        arrange(SELMON);
     }
 }
 
@@ -99,23 +89,21 @@ pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
 /// to leave at least 5% of the screen for other windows.
 pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
         if arg.is_null()
-            || (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+            || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
         {
             return;
         }
         let f = if (*arg).f < 1.0 {
-            (*arg).f + selmon.mfact
+            (*arg).f + (*SELMON).mfact
         } else {
             (*arg).f - 1.0
         };
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        selmon.mfact = f;
-        arrange(selmon);
+        (*SELMON).mfact = f;
+        arrange(SELMON);
     }
 }
 
@@ -123,16 +111,14 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
 /// the top of the stack.
 pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        let mut c = selmon.sel;
-        if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+        let mut c = (*SELMON).sel;
+        if (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
             || c.is_null()
             || (*c).isfloating != 0
         {
             return;
         }
-        if c == nexttiled(selmon.clients) {
+        if c == nexttiled((*SELMON).clients) {
             c = nexttiled((*c).next);
             if c.is_null() {
                 return;
@@ -145,33 +131,29 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
 /// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        if (*arg).ui & TAGMASK == selmon.tagset[selmon.seltags as usize] {
+        if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
             return;
         }
-        selmon.seltags ^= 1; // toggle sel tagset
+        (*SELMON).seltags ^= 1; // toggle sel tagset
         if (*arg).ui & TAGMASK != 0 {
-            selmon.tagset[selmon.seltags as usize] = (*arg).ui & TAGMASK;
+            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
         }
         focus(null_mut());
-        arrange(selmon);
+        arrange(SELMON);
     }
 }
 
 pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        if selmon.sel.is_null() {
+        if (*SELMON).sel.is_null() {
             return;
         }
 
-        if sendevent(selmon.sel, wmatom[WM::Delete as usize]) == 0 {
+        if sendevent((*SELMON).sel, wmatom[WM::Delete as usize]) == 0 {
             bindgen::XGrabServer(DPY);
             bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
             bindgen::XSetCloseDownMode(DPY, bindgen::DestroyAll as i32);
-            bindgen::XKillClient(DPY, (*selmon.sel).win);
+            bindgen::XKillClient(DPY, (*(*SELMON).sel).win);
             bindgen::XSync(DPY, False);
             bindgen::XSetErrorHandler(Some(bindgen::xerror));
             bindgen::XUngrabServer(DPY);
@@ -181,59 +163,54 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
         if arg.is_null()
             || (*arg).v.is_null()
-            || (*arg).v.cast() != selmon.lt[selmon.sellt as usize]
+            || (*arg).v.cast() != (*SELMON).lt[(*SELMON).sellt as usize]
         {
-            selmon.sellt ^= 1;
+            (*SELMON).sellt ^= 1;
         }
         if !arg.is_null() && !(*arg).v.is_null() {
-            selmon.lt[selmon.sellt as usize] = (*arg).v as *mut Layout;
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
         }
         libc::strncpy(
-            selmon.ltsymbol.as_mut_ptr(),
-            (*selmon.lt[selmon.sellt as usize]).symbol,
-            size_of_val(&selmon.ltsymbol),
+            (*SELMON).ltsymbol.as_mut_ptr(),
+            (*(*SELMON).lt[(*SELMON).sellt as usize]).symbol,
+            size_of_val(&(*SELMON).ltsymbol),
         );
-        if !selmon.sel.is_null() {
-            arrange(selmon);
+        if !(*SELMON).sel.is_null() {
+            arrange(SELMON);
         } else {
-            drawbar(selmon);
+            drawbar(SELMON);
         }
     }
 }
 
 pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        if selmon.sel.is_null() {
+        if (*SELMON).sel.is_null() {
             return;
         }
-        if (*selmon.sel).isfullscreen != 0 {
+        if (*(*SELMON).sel).isfullscreen != 0 {
             // no support for fullscreen windows
             return;
         }
-        (*selmon.sel).isfloating = ((*selmon.sel).isfloating == 0
-            || (*selmon.sel).isfixed != 0)
+        (*(*SELMON).sel).isfloating = ((*(*SELMON).sel).isfloating == 0
+            || (*(*SELMON).sel).isfixed != 0)
             as c_int;
-        if (*selmon.sel).isfloating != 0 {
-            let sel = &mut *selmon.sel;
+        if (*(*SELMON).sel).isfloating != 0 {
+            let sel = &mut *(*SELMON).sel;
             resize(sel, sel.x, sel.y, sel.w, sel.h, 0);
         }
-        arrange(selmon);
+        arrange(SELMON);
     }
 }
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        if !selmon.sel.is_null() && (*arg).ui & TAGMASK != 0 {
-            (*selmon.sel).tags = (*arg).ui & TAGMASK;
+        if !(*SELMON).sel.is_null() && (*arg).ui & TAGMASK != 0 {
+            (*(*SELMON).sel).tags = (*arg).ui & TAGMASK;
             focus(null_mut());
-            arrange(selmon);
+            arrange(SELMON);
         }
     }
 }
@@ -243,14 +220,14 @@ fn dirtomon(dir: i32) -> *mut Monitor {
         let mut m;
 
         if dir > 0 {
-            m = (*bindgen::selmon).next;
+            m = (*SELMON).next;
             if m.is_null() {
                 m = mons;
             }
-        } else if bindgen::selmon == mons {
+        } else if SELMON == mons {
             cfor!((m = mons; !(*m).next.is_null(); m = (*m).next) {});
         } else {
-            cfor!((m = mons; (*m).next != bindgen::selmon; m = (*m).next) {});
+            cfor!((m = mons; (*m).next != SELMON; m = (*m).next) {});
         }
         m
     }
@@ -262,11 +239,11 @@ pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
             return;
         }
         let m = dirtomon((*arg).i);
-        if m == bindgen::selmon {
+        if m == SELMON {
             return;
         }
-        unfocus((*bindgen::selmon).sel, false);
-        bindgen::selmon = m;
+        unfocus((*SELMON).sel, false);
+        SELMON = m;
         focus(null_mut());
     }
 }
@@ -292,26 +269,22 @@ fn sendmon(c: *mut Client, m: *mut Monitor) {
 
 pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        if selmon.sel.is_null() || (*mons).next.is_null() {
+        if (*SELMON).sel.is_null() || (*mons).next.is_null() {
             return;
         }
-        sendmon(selmon.sel, dirtomon((*arg).i));
+        sendmon((*SELMON).sel, dirtomon((*arg).i));
     }
 }
 
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-
-        let newtagset =
-            selmon.tagset[selmon.seltags as usize] ^ ((*arg).ui & TAGMASK);
+        let newtagset = (*SELMON).tagset[(*SELMON).seltags as usize]
+            ^ ((*arg).ui & TAGMASK);
 
         if newtagset != 0 {
-            selmon.tagset[selmon.seltags as usize] = newtagset;
+            (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
             focus(null_mut());
-            arrange(selmon);
+            arrange(SELMON);
         }
     }
 }
@@ -331,8 +304,7 @@ const MOTION_NOTIFY: i32 = MotionNotify;
 pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
     log::trace!("movemouse");
     unsafe {
-        let selmon = get_selmon();
-        let c = selmon.sel;
+        let c = (*SELMON).sel;
         if c.is_null() {
             return;
         }
@@ -340,7 +312,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         if c.isfullscreen != 0 {
             return; // no support for moving fullscreen windows with mouse
         }
-        restack(selmon);
+        restack(SELMON);
         let ocx = c.x;
         let ocy = c.y;
         if bindgen::XGrabPointer(
@@ -384,28 +356,34 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                     lasttime = ev.xmotion.time;
                     let mut nx = ocx + (ev.xmotion.x - x);
                     let mut ny = ocy + (ev.xmotion.y - y);
-                    if (selmon.wx - nx).abs() < SNAP as c_int {
-                        nx = selmon.wx;
-                    } else if ((selmon.wx + selmon.ww) - (nx + width(c))).abs()
+                    if ((*SELMON).wx - nx).abs() < SNAP as c_int {
+                        nx = (*SELMON).wx;
+                    } else if (((*SELMON).wx + (*SELMON).ww) - (nx + width(c)))
+                        .abs()
                         < SNAP as c_int
                     {
-                        nx = selmon.wx + selmon.ww - width(c);
+                        nx = (*SELMON).wx + (*SELMON).ww - width(c);
                     }
-                    if (selmon.wy - ny).abs() < SNAP as c_int {
-                        ny = selmon.wy;
-                    } else if ((selmon.wy + selmon.wh) - (ny + height(c))).abs()
+                    if ((*SELMON).wy - ny).abs() < SNAP as c_int {
+                        ny = (*SELMON).wy;
+                    } else if (((*SELMON).wy + (*SELMON).wh) - (ny + height(c)))
+                        .abs()
                         < SNAP as c_int
                     {
-                        ny = selmon.wy + selmon.wh - height(c);
+                        ny = (*SELMON).wy + (*SELMON).wh - height(c);
                     }
                     if c.isfloating == 0
-                        && (*selmon.lt[selmon.sellt as usize]).arrange.is_some()
+                        && (*(*SELMON).lt[(*SELMON).sellt as usize])
+                            .arrange
+                            .is_some()
                         && ((nx - c.x).abs() > SNAP as c_int
                             || (ny - c.y).abs() > SNAP as c_int)
                     {
                         togglefloating(null_mut());
                     }
-                    if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+                    if (*(*SELMON).lt[(*SELMON).sellt as usize])
+                        .arrange
+                        .is_none()
                         || c.isfloating != 0
                     {
                         resize(c, nx, ny, c.w, c.h, 1);
@@ -419,9 +397,9 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         }
         bindgen::XUngrabPointer(DPY, CurrentTime);
         let m = recttomon(c.x, c.y, c.w, c.h);
-        if m != bindgen::selmon {
+        if m != SELMON {
             sendmon(c, m);
-            bindgen::selmon = m;
+            SELMON = m;
             focus(null_mut());
         }
     }
@@ -430,8 +408,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
 pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
     log::trace!("resizemouse");
     unsafe {
-        let selmon = get_selmon();
-        let c = selmon.sel;
+        let c = (*SELMON).sel;
         if c.is_null() {
             return;
         }
@@ -439,7 +416,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         if c.isfullscreen != 0 {
             return; // no support for resizing fullscreen window with mouse
         }
-        restack(selmon);
+        restack(SELMON);
         let ocx = c.x;
         let ocy = c.y;
         if bindgen::XGrabPointer(
@@ -489,18 +466,22 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
                     lasttime = ev.xmotion.time;
                     let nw = max(ev.xmotion.x - ocx - 2 * c.bw + 1, 1);
                     let nh = max(ev.xmotion.y - ocy - 2 * c.bw + 1, 1);
-                    if (*c.mon).wx + nw >= selmon.wx
-                        && (*c.mon).wx + nw <= selmon.wx + selmon.ww
-                        && (*c.mon).wy + nh >= selmon.wy
-                        && (*c.mon).wy + nh <= selmon.wy + selmon.wh
+                    if (*c.mon).wx + nw >= (*SELMON).wx
+                        && (*c.mon).wx + nw <= (*SELMON).wx + (*SELMON).ww
+                        && (*c.mon).wy + nh >= (*SELMON).wy
+                        && (*c.mon).wy + nh <= (*SELMON).wy + (*SELMON).wh
                         && c.isfloating == 0
-                        && (*selmon.lt[selmon.sellt as usize]).arrange.is_some()
+                        && (*(*SELMON).lt[(*SELMON).sellt as usize])
+                            .arrange
+                            .is_some()
                         && ((nw - c.w).abs() > SNAP as c_int
                             || (nh - c.h).abs() > SNAP as c_int)
                     {
                         togglefloating(null_mut());
                     }
-                    if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
+                    if (*(*SELMON).lt[(*SELMON).sellt as usize])
+                        .arrange
+                        .is_none()
                         || c.isfloating != 0
                     {
                         resize(c, c.x, c.y, nw, nh, 1);
@@ -527,9 +508,9 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         bindgen::XUngrabPointer(DPY, CurrentTime);
         while bindgen::XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
         let m = recttomon(c.x, c.y, c.w, c.h);
-        if m != bindgen::selmon {
+        if m != SELMON {
             sendmon(c, m);
-            bindgen::selmon = m;
+            SELMON = m;
             focus(null_mut());
         }
     }
@@ -537,10 +518,9 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
         if (*arg).v.cast() == dmenucmd.as_ptr() {
-            log::trace!("spawn: dmenucmd on monitor {}", selmon.num);
-            dmenumon[0] = '0' as c_char + selmon.num as c_char;
+            log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
+            dmenumon[0] = '0' as c_char + (*SELMON).num as c_char;
         }
         if libc::fork() == 0 {
             if !DPY.is_null() {
@@ -576,15 +556,14 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
 /// Move the current window to the tag specified by `arg.ui`.
 pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
     unsafe {
-        let selmon = get_selmon();
-        if selmon.sel.is_null() {
+        if (*SELMON).sel.is_null() {
             return;
         }
-        let newtags = (*selmon.sel).tags ^ ((*arg).ui & TAGMASK);
+        let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui & TAGMASK);
         if newtags != 0 {
-            (*selmon.sel).tags = newtags;
+            (*(*SELMON).sel).tags = newtags;
             focus(null_mut());
-            arrange(selmon);
+            arrange(SELMON);
         }
     }
 }
