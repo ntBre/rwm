@@ -493,16 +493,12 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
                         && (*c.mon).wx + nw <= selmon.wx + selmon.ww
                         && (*c.mon).wy + nh >= selmon.wy
                         && (*c.mon).wy + nh <= selmon.wy + selmon.wh
+                        && c.isfloating == 0
+                        && (*selmon.lt[selmon.sellt as usize]).arrange.is_some()
+                        && ((nw - c.w).abs() > SNAP as c_int
+                            || (nh - c.h).abs() > SNAP as c_int)
                     {
-                        if c.isfloating == 0
-                            && (*selmon.lt[selmon.sellt as usize])
-                                .arrange
-                                .is_some()
-                            && ((nw - c.w).abs() > SNAP as c_int
-                                || (nh - c.h).abs() > SNAP as c_int)
-                        {
-                            togglefloating(null_mut());
-                        }
+                        togglefloating(null_mut());
                     }
                     if (*selmon.lt[selmon.sellt as usize]).arrange.is_none()
                         || c.isfloating != 0
