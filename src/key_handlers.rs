@@ -4,13 +4,19 @@ use std::ptr::null_mut;
 
 use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::{
-    ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask, Expose,
-    ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest, MotionNotify,
-    SubstructureRedirectMask,
+    ButtonRelease, ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask,
+    Expose, ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest,
+    MotionNotify, SubstructureRedirectMask,
 };
 
-use crate::bindgen;
-use crate::bindgen::{Arg, ButtonRelease, Client, Layout, Monitor, XEvent};
+use crate::bindgen::{
+    xerror, xerrordummy, Arg, Client, Layout, Monitor, XEvent,
+};
+use crate::bindgen::{
+    XCheckMaskEvent, XConnectionNumber, XGrabPointer, XGrabServer, XKillClient,
+    XMaskEvent, XMoveResizeWindow, XSetCloseDownMode, XSetErrorHandler, XSync,
+    XUngrabPointer, XUngrabServer, XWarpPointer,
+};
 use crate::config::{DMENUCMD, DMENUMON, LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
 use crate::util::die;
@@ -25,7 +31,7 @@ pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
         (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
         updatebarpos(SELMON);
-        bindgen::XMoveResizeWindow(
+        XMoveResizeWindow(
             DPY,
             (*SELMON).barwin,
             (*SELMON).wx,
@@ -148,13 +154,13 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
         }
 
         if sendevent((*SELMON).sel, WMATOM[WM::Delete as usize]) == 0 {
-            bindgen::XGrabServer(DPY);
-            bindgen::XSetErrorHandler(Some(bindgen::xerrordummy));
-            bindgen::XSetCloseDownMode(DPY, DestroyAll);
-            bindgen::XKillClient(DPY, (*(*SELMON).sel).win);
-            bindgen::XSync(DPY, False);
-            bindgen::XSetErrorHandler(Some(bindgen::xerror));
-            bindgen::XUngrabServer(DPY);
+            XGrabServer(DPY);
+            XSetErrorHandler(Some(xerrordummy));
+            XSetCloseDownMode(DPY, DestroyAll);
+            XKillClient(DPY, (*(*SELMON).sel).win);
+            XSync(DPY, False);
+            XSetErrorHandler(Some(xerror));
+            XUngrabServer(DPY);
         }
     }
 }
@@ -313,7 +319,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
         restack(SELMON);
         let ocx = c.x;
         let ocy = c.y;
-        if bindgen::XGrabPointer(
+        if XGrabPointer(
             DPY,
             ROOT,
             False,
@@ -338,7 +344,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
 
         // emulating do-while
         loop {
-            bindgen::XMaskEvent(
+            XMaskEvent(
                 DPY,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
@@ -393,7 +399,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                 break;
             }
         }
-        bindgen::XUngrabPointer(DPY, CurrentTime);
+        XUngrabPointer(DPY, CurrentTime);
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != SELMON {
             sendmon(c, m);
@@ -417,7 +423,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         restack(SELMON);
         let ocx = c.x;
         let ocy = c.y;
-        if bindgen::XGrabPointer(
+        if XGrabPointer(
             DPY,
             ROOT,
             False,
@@ -431,7 +437,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
         {
             return;
         }
-        bindgen::XWarpPointer(
+        XWarpPointer(
             DPY,
             XNONE as u64,
             c.win,
@@ -448,7 +454,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
 
         // do-while
         loop {
-            bindgen::XMaskEvent(
+            XMaskEvent(
                 DPY,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
@@ -492,7 +498,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
             }
         }
 
-        bindgen::XWarpPointer(
+        XWarpPointer(
             DPY,
             XNONE as u64,
             c.win,
@@ -503,8 +509,8 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
             c.w + c.bw - 1,
             c.h + c.bw - 1,
         );
-        bindgen::XUngrabPointer(DPY, CurrentTime);
-        while bindgen::XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
+        XUngrabPointer(DPY, CurrentTime);
+        while XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != SELMON {
             sendmon(c, m);
@@ -522,7 +528,7 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
         }
         if libc::fork() == 0 {
             if !DPY.is_null() {
-                libc::close(bindgen::XConnectionNumber(DPY));
+                libc::close(XConnectionNumber(DPY));
             }
             libc::setsid();
 
