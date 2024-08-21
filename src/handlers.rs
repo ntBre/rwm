@@ -4,9 +4,10 @@ use std::{
 };
 
 use x11::xlib::{
-    CWBorderWidth, CWHeight, CWWidth, CurrentTime, False, MappingKeyboard,
-    NotifyInferior, NotifyNormal, PropertyDelete, ReplayPointer, CWX, CWY,
-    XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
+    CWBorderWidth, CWHeight, CWWidth, CurrentTime, False, KeyCode,
+    MappingKeyboard, NotifyInferior, NotifyNormal, PropertyDelete,
+    ReplayPointer, CWX, CWY, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR,
 };
 
 use crate::bindgen::{self, Arg, Monitor, XEvent, XWindowAttributes};
@@ -287,8 +288,7 @@ pub(crate) fn focusin(e: *mut XEvent) {
 pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).xkey;
-        let keysym =
-            bindgen::XKeycodeToKeysym(DPY, ev.keycode as bindgen::KeyCode, 0);
+        let keysym = bindgen::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
         for i in 0..KEYS.len() {
             if keysym == KEYS[i].keysym
                 && cleanmask(KEYS[i].mod_) == cleanmask(ev.state)
