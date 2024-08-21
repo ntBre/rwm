@@ -9,9 +9,7 @@ use x11::xlib::{
     MotionNotify, SubstructureRedirectMask,
 };
 
-use crate::bindgen::{
-    xerror, xerrordummy, Arg, Client, Layout, Monitor, XEvent,
-};
+use crate::bindgen::{xerror, xerrordummy, Client, Layout, Monitor, XEvent};
 use crate::bindgen::{
     XCheckMaskEvent, XConnectionNumber, XGrabPointer, XGrabServer, XKillClient,
     XMaskEvent, XMoveResizeWindow, XSetCloseDownMode, XSetErrorHandler, XSync,
@@ -26,6 +24,7 @@ use crate::{
     sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER, MONS,
     MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
 };
+use rwm::Arg;
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {

@@ -39,9 +39,9 @@ use x11::xlib::{
 };
 
 // these are types and are okay to have for now
-use bindgen::{
-    Arg, Atom, Client, Clr, Display, Drw, Layout, Monitor, XInternAtom,
-};
+use bindgen::{Atom, Client, Clr, Display, Drw, Layout, Monitor, XInternAtom};
+
+use rwm::Arg;
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
@@ -2228,7 +2228,7 @@ fn getstate(w: Window) -> c_long {
 
 mod config;
 mod drw;
-mod enums;
+pub use rwm::enums;
 mod handlers;
 mod key_handlers;
 mod layouts;

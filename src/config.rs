@@ -7,12 +7,13 @@ use std::{
 use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::bindgen::{Arg, Button, Key, KeySym, Layout, Rule};
+use crate::bindgen::{Layout, Rule};
 use crate::{
     enums::{Clk, Scheme},
     key_handlers::*,
     layouts::{monocle, tile},
 };
+use rwm::{Arg, Button, Key};
 
 // appearance
 
@@ -113,19 +114,6 @@ pub static DMENUCMD: DmenuCmd = DmenuCmd([
     null_mut(),
 ]);
 pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
-
-impl Key {
-    const fn new(
-        mod_: c_uint,
-        keysym: u32,
-        func: unsafe extern "C" fn(arg1: *const Arg),
-        arg: Arg,
-    ) -> Self {
-        Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
-    }
-}
-
-unsafe impl Sync for Key {}
 
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
@@ -257,20 +245,6 @@ pub static KEYS: [Key; 60] = [
 ];
 
 // button definitions
-
-impl Button {
-    const fn new(
-        click: Clk,
-        mask: c_uint,
-        button: c_uint,
-        func: unsafe extern "C" fn(arg: *const Arg),
-        arg: Arg,
-    ) -> Self {
-        Self { click: click as c_uint, mask, button, func: Some(func), arg }
-    }
-}
-
-unsafe impl Sync for Button {}
 
 pub static BUTTONS: [Button; 11] = [
     Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg { i: 0 }),

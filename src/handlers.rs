@@ -10,7 +10,9 @@ use x11::xlib::{
     XA_WM_TRANSIENT_FOR,
 };
 
-use crate::bindgen::{self, Arg, Monitor, XEvent, XWindowAttributes};
+use crate::bindgen::{self, Monitor, XEvent, XWindowAttributes};
+
+use rwm::Arg;
 
 use crate::{
     arrange, cleanmask,
