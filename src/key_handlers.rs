@@ -9,9 +9,9 @@ use x11::xlib::{
     SubstructureRedirectMask,
 };
 
-use crate::bindgen::{self, dmenucmd, dmenumon};
+use crate::bindgen;
 use crate::bindgen::{Arg, ButtonRelease, Client, Layout, Monitor, XEvent};
-use crate::config::{LOCK_FULLSCREEN, SNAP};
+use crate::config::{DMENUCMD, DMENUMON, LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
@@ -516,9 +516,9 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
     unsafe {
-        if (*arg).v.cast() == dmenucmd.as_ptr() {
+        if (*arg).v.cast() == DMENUCMD.0.as_ptr() {
             log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
-            dmenumon[0] = '0' as c_char + (*SELMON).num as c_char;
+            DMENUMON[0] = '0' as c_char + (*SELMON).num as c_char;
         }
         if libc::fork() == 0 {
             if !DPY.is_null() {

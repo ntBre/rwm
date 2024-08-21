@@ -7,7 +7,7 @@ use std::{
 use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::bindgen::{dmenucmd, Arg, Button, Key, KeySym, Layout, Rule};
+use crate::bindgen::{Arg, Button, Key, KeySym, Layout, Rule};
 use crate::{
     enums::{Clk, Scheme},
     key_handlers::*,
@@ -25,7 +25,7 @@ pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
 pub const TOPBAR: c_int = 1;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
-// const DMENUFONT: &CStr = c"monospace:size=12";
+const DMENUFONT: &CStr = c"monospace:size=12";
 const COL_GRAY1: &CStr = c"#222222";
 const COL_GRAY2: &CStr = c"#444444";
 const COL_GRAY3: &CStr = c"#bbbbbb";
@@ -88,25 +88,30 @@ pub const LAYOUTS: [Layout; 3] = [
 // key definitions
 pub const MODKEY: c_uint = Mod4Mask;
 
+/// This type is needed just to implement Sync for this raw pointer
+pub struct DmenuCmd(pub [*const c_char; 14]);
+
+unsafe impl Sync for DmenuCmd {}
+
+pub static mut DMENUMON: [c_char; 2] = ['0' as c_char, '\0' as c_char];
+
 // commands
-// pub static DMENUCMD: LazyLock<[&CStr; 13]> = LazyLock::new(|| {
-//     [
-//         c"dmenu_run",
-//         c"-m",
-//         // CStr::from_ptr is not yet stable as a const fn
-//         unsafe { CStr::from_ptr(crate::bindgen::dmenumon.as_ptr()) },
-//         c"-fn",
-//         DMENUFONT,
-//         c"-nb",
-//         COL_GRAY1,
-//         c"-nf",
-//         COL_GRAY3,
-//         c"-sb",
-//         COL_CYAN,
-//         c"-sf",
-//         COL_GRAY4,
-//     ]
-// });
+pub static DMENUCMD: DmenuCmd = DmenuCmd([
+    c"dmenu_run".as_ptr(),
+    c"-m".as_ptr(),
+    unsafe { DMENUMON.as_ptr() },
+    c"-fn".as_ptr(),
+    DMENUFONT.as_ptr(),
+    c"-nb".as_ptr(),
+    COL_GRAY1.as_ptr(),
+    c"-nf".as_ptr(),
+    COL_GRAY3.as_ptr(),
+    c"-sb".as_ptr(),
+    COL_CYAN.as_ptr(),
+    c"-sf".as_ptr(),
+    COL_GRAY4.as_ptr(),
+    null_mut(),
+]);
 pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
 
 impl Key {
@@ -129,12 +134,7 @@ use x11::keysym::{
 };
 
 pub static KEYS: [Key; 60] = [
-    Key::new(
-        MODKEY,
-        XK_d,
-        spawn,
-        Arg { v: unsafe { dmenucmd.as_ptr().cast() } },
-    ),
+    Key::new(MODKEY, XK_d, spawn, Arg { v: DMENUCMD.0.as_ptr().cast() }),
     Key::new(MODKEY, XK_t, spawn, Arg { v: TERMCMD.as_ptr().cast() }),
     Key::new(MODKEY, XK_b, togglebar, Arg { i: 0 }),
     Key::new(MODKEY, XK_j, focusstack, Arg { i: 1 }),
