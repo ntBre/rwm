@@ -395,7 +395,7 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                 }
                 _ => {}
             }
-            if ev.type_ == ButtonRelease as i32 {
+            if ev.type_ == ButtonRelease {
                 break;
             }
         }
@@ -493,7 +493,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
                 }
                 _ => {}
             }
-            if ev.type_ == ButtonRelease as i32 {
+            if ev.type_ == ButtonRelease {
                 break;
             }
         }
