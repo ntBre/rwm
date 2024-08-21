@@ -67,11 +67,6 @@ extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
     panic!("another window manager is already running")
 }
 
-extern "C" {
-    static mut numlockmask: c_uint;
-    static mut running: c_int;
-}
-
 // from Xproto.h
 const X_SET_INPUT_FOCUS: u8 = 42;
 const X_POLY_TEXT_8: u8 = 74;
@@ -171,16 +166,12 @@ static mut ROOT: Window = 0;
 
 static mut WMCHECKWIN: Window = 0;
 
-// static mut RUNNING: bool = true;
+static mut RUNNING: bool = true;
 
 /// sum of left and right padding for text
 static mut LRPAD: c_int = 0;
 
-// #[allow(non_upper_case_globals)]
-// static mut numlockmask: u32 = 0;
-// const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
-
-// const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
+static mut NUMLOCKMASK: c_uint = 0;
 
 type Window = u64;
 // type Atom = u64;
@@ -496,9 +487,8 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
 fn grabbuttons(c: *mut Client, focused: bool) {
     unsafe {
         updatenumlockmask();
-        let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
+        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         bindgen::XUngrabButton(DPY, AnyButton as u32, AnyModifier, (*c).win);
-        const BUTTONMASK: u32 = (ButtonPressMask | ButtonReleaseMask) as u32;
         if !focused {
             bindgen::XGrabButton(
                 DPY,
@@ -506,7 +496,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 AnyModifier,
                 (*c).win,
                 False,
-                BUTTONMASK,
+                BUTTONMASK as u32,
                 GrabModeSync,
                 GrabModeSync,
                 XNONE as u64,
@@ -522,7 +512,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                         BUTTONS[i].mask | modifiers[j],
                         (*c).win,
                         False,
-                        BUTTONMASK,
+                        BUTTONMASK as u32,
                         GrabModeAsync,
                         GrabModeSync,
                         XNONE as u64,
@@ -933,7 +923,7 @@ fn view(arg: *const Arg) {
 fn grabkeys() {
     unsafe {
         updatenumlockmask();
-        let modifiers = [0, LockMask, numlockmask, numlockmask | LockMask];
+        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
         bindgen::XDisplayKeycodes(DPY, &mut start, &mut end);
@@ -972,7 +962,7 @@ fn grabkeys() {
 
 fn updatenumlockmask() {
     unsafe {
-        numlockmask = 0;
+        NUMLOCKMASK = 0;
         let modmap = bindgen::XGetModifierMapping(DPY);
         for i in 0..8 {
             for j in 0..(*modmap).max_keypermod {
@@ -984,7 +974,7 @@ fn updatenumlockmask() {
                         bindgen::XK_Num_Lock as u64,
                     )
                 {
-                    numlockmask = 1 << i;
+                    NUMLOCKMASK = 1 << i;
                 }
             }
         }
@@ -1507,7 +1497,7 @@ fn height(x: *mut Client) -> i32 {
 #[inline]
 fn cleanmask(mask: u32) -> u32 {
     unsafe {
-        mask & !(numlockmask | LockMask)
+        mask & !(NUMLOCKMASK | LockMask)
             & (ShiftMask
                 | ControlMask
                 | Mod1Mask
@@ -1800,7 +1790,7 @@ fn run() {
     unsafe {
         bindgen::XSync(DPY, False);
         let mut ev: MaybeUninit<bindgen::XEvent> = MaybeUninit::uninit();
-        while running != 0 && bindgen::XNextEvent(DPY, ev.as_mut_ptr()) == 0 {
+        while RUNNING && bindgen::XNextEvent(DPY, ev.as_mut_ptr()) == 0 {
             let mut ev: bindgen::XEvent = ev.assume_init();
             if let Some(handler) = HANDLER.get(ev.type_ as usize) {
                 handler(&mut ev);

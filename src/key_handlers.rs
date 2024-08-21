@@ -295,7 +295,7 @@ pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn quit(_arg: *const Arg) {
     unsafe {
-        crate::running = 0;
+        crate::RUNNING = false;
     }
 }
 
