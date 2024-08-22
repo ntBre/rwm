@@ -21,7 +21,6 @@ pub enum Clk {
     WinTitle,
     ClientWin,
     RootWin,
-    #[allow(unused)]
     Last,
 }
 
@@ -31,7 +30,6 @@ pub enum WM {
     Delete,
     State,
     TakeFocus,
-    #[allow(unused)]
     Last,
 }
 
