@@ -11,9 +11,8 @@ use crate::{
     enums::{Clk, Scheme},
     key_handlers::*,
     layouts::{monocle, tile},
-    Layout,
 };
-use rwm::{Arg, Button, Key};
+use rwm::{Arg, Button, Key, Layout};
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]

@@ -10,7 +10,7 @@ use x11::xlib::{
     XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use rwm::Arg;
+use rwm::{Arg, Monitor, Window};
 
 use crate::{
     arrange, cleanmask,
@@ -20,9 +20,8 @@ use crate::{
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
-    updatewindowtype, updatewmhints, width, wintoclient, wintomon, Monitor,
-    Window, BH, DPY, DRW, MONS, NETATOM, ROOT, SELMON, SH, STEXT, SW,
-    WITHDRAWN_STATE,
+    updatewindowtype, updatewmhints, width, wintoclient, wintomon, BH, DPY,
+    DRW, MONS, NETATOM, ROOT, SELMON, SH, STEXT, SW, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {

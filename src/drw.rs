@@ -13,11 +13,12 @@ use x11::xlib::{
     self, CapButt, Display, Drawable, False, JoinMiter, LineSolid, GC,
 };
 
+use crate::die;
 use crate::enums::Col;
 use crate::util::{between, ecalloc};
 use crate::Clr;
-use crate::{die, Window};
 use rwm::Cursor as Cur;
+use rwm::Window;
 
 // defined in drw.c
 const UTF_SIZ: usize = 4;
