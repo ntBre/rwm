@@ -7,13 +7,24 @@ use std::{
 use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
-use crate::bindgen::{Layout, Rule};
 use crate::{
     enums::{Clk, Scheme},
     key_handlers::*,
     layouts::{monocle, tile},
+    Layout,
 };
 use rwm::{Arg, Button, Key};
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Rule {
+    pub class: *const ::std::os::raw::c_char,
+    pub instance: *const ::std::os::raw::c_char,
+    pub title: *const ::std::os::raw::c_char,
+    pub tags: ::std::os::raw::c_uint,
+    pub isfloating: ::std::os::raw::c_int,
+    pub monitor: ::std::os::raw::c_int,
+}
 
 // appearance
 

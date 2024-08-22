@@ -9,13 +9,14 @@ use fontconfig_sys::{
     FcNameParse, FcPattern, FcPatternDestroy, FcPatternDuplicate,
 };
 use x11::xft::{self, XftFont};
-use x11::xlib::{self, CapButt, Display, False, JoinMiter, LineSolid, GC};
+use x11::xlib::{
+    self, CapButt, Display, Drawable, False, JoinMiter, LineSolid, GC,
+};
 
-use crate::bindgen::{Drawable, Window};
-use crate::die;
 use crate::enums::Col;
 use crate::util::{between, ecalloc};
 use crate::Clr;
+use crate::{die, Window};
 use rwm::Cursor as Cur;
 
 // defined in drw.c

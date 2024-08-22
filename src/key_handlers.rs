@@ -12,15 +12,15 @@ use x11::xlib::{
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
 
-use crate::bindgen::{Client, Layout, Monitor};
 use crate::config::{DMENUCMD, DMENUMON, LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, BH, CURSOR,
-    DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
+    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, Client,
+    Layout, Monitor, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON,
+    TAGMASK, WMATOM, XNONE,
 };
 use rwm::Arg;
 

@@ -39,8 +39,80 @@ use x11::xlib::{
     XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
-// these are types and are okay to have for now
-use bindgen::{Client, Layout, Monitor};
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Layout {
+    pub symbol: *const ::std::os::raw::c_char,
+    pub arrange:
+        ::std::option::Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Monitor {
+    pub ltsymbol: [::std::os::raw::c_char; 16usize],
+    pub mfact: f32,
+    pub nmaster: ::std::os::raw::c_int,
+    pub num: ::std::os::raw::c_int,
+    pub by: ::std::os::raw::c_int,
+    pub mx: ::std::os::raw::c_int,
+    pub my: ::std::os::raw::c_int,
+    pub mw: ::std::os::raw::c_int,
+    pub mh: ::std::os::raw::c_int,
+    pub wx: ::std::os::raw::c_int,
+    pub wy: ::std::os::raw::c_int,
+    pub ww: ::std::os::raw::c_int,
+    pub wh: ::std::os::raw::c_int,
+    pub seltags: ::std::os::raw::c_uint,
+    pub sellt: ::std::os::raw::c_uint,
+    pub tagset: [::std::os::raw::c_uint; 2usize],
+    pub showbar: ::std::os::raw::c_int,
+    pub topbar: ::std::os::raw::c_int,
+    pub clients: *mut Client,
+    pub sel: *mut Client,
+    pub stack: *mut Client,
+    pub next: *mut Monitor,
+    pub barwin: Window,
+    pub lt: [*const Layout; 2usize],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Client {
+    pub name: [::std::os::raw::c_char; 256usize],
+    pub mina: f32,
+    pub maxa: f32,
+    pub x: ::std::os::raw::c_int,
+    pub y: ::std::os::raw::c_int,
+    pub w: ::std::os::raw::c_int,
+    pub h: ::std::os::raw::c_int,
+    pub oldx: ::std::os::raw::c_int,
+    pub oldy: ::std::os::raw::c_int,
+    pub oldw: ::std::os::raw::c_int,
+    pub oldh: ::std::os::raw::c_int,
+    pub basew: ::std::os::raw::c_int,
+    pub baseh: ::std::os::raw::c_int,
+    pub incw: ::std::os::raw::c_int,
+    pub inch: ::std::os::raw::c_int,
+    pub maxw: ::std::os::raw::c_int,
+    pub maxh: ::std::os::raw::c_int,
+    pub minw: ::std::os::raw::c_int,
+    pub minh: ::std::os::raw::c_int,
+    pub hintsvalid: ::std::os::raw::c_int,
+    pub bw: ::std::os::raw::c_int,
+    pub oldbw: ::std::os::raw::c_int,
+    pub tags: ::std::os::raw::c_uint,
+    pub isfixed: ::std::os::raw::c_int,
+    pub isfloating: ::std::os::raw::c_int,
+    pub isurgent: ::std::os::raw::c_int,
+    pub neverfocus: ::std::os::raw::c_int,
+    pub oldstate: ::std::os::raw::c_int,
+    pub isfullscreen: ::std::os::raw::c_int,
+    pub next: *mut Client,
+    pub snext: *mut Client,
+    pub mon: *mut Monitor,
+    pub win: Window,
+}
 
 use rwm::{Arg, Cursor};
 
@@ -547,7 +619,6 @@ fn arrangemon(m: *mut Monitor) {
             (*(*m).lt[(*m).sellt as usize]).symbol,
             size_of_val(&(*m).ltsymbol),
         );
-        // how did bindgen make this an Option??
         let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
         if let Some(arrange) = arrange {
             (arrange)(m);
