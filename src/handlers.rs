@@ -71,17 +71,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for i in 0..BUTTONS.len() {
-            if click as u32 == BUTTONS[i].click
-                && BUTTONS[i].func.is_some()
-                && BUTTONS[i].button == ev.button
-                && cleanmask(BUTTONS[i].mask) == cleanmask(ev.state)
+        for button in BUTTONS {
+            if click as u32 == button.click
+                && button.func.is_some()
+                && button.button == ev.button
+                && cleanmask(button.mask) == cleanmask(ev.state)
             {
-                let f = BUTTONS[i].func.unwrap();
-                let a = if click == Clk::TagBar && BUTTONS[i].arg.i == 0 {
+                let f = button.func.unwrap();
+                let a = if click == Clk::TagBar && button.arg.i == 0 {
                     &arg
                 } else {
-                    &BUTTONS[i].arg
+                    &button.arg
                 };
                 f(a)
             }
@@ -291,12 +291,12 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
         let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
-        for i in 0..KEYS.len() {
-            if keysym == KEYS[i].keysym
-                && cleanmask(KEYS[i].mod_) == cleanmask(ev.state)
-                && KEYS[i].func.is_some()
+        for key in KEYS {
+            if keysym == key.keysym
+                && cleanmask(key.mod_) == cleanmask(ev.state)
+                && key.func.is_some()
             {
-                KEYS[i].func.unwrap()(&(KEYS[i].arg));
+                key.func.unwrap()(&(key.arg));
             }
         }
     }

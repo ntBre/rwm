@@ -370,9 +370,9 @@ pub(crate) fn scm_create(
     if ret.is_null() {
         return null_mut();
     }
-    for i in 0..clrcount {
+    for (i, clr) in clrnames.iter().enumerate() {
         unsafe {
-            clr_create(drw, ret.add(i), clrnames[i].as_ptr());
+            clr_create(drw, ret.add(i), clr.as_ptr());
         }
     }
     ret

@@ -1,7 +1,5 @@
 //! tiling window manager based on dwm
 
-#![allow(clippy::needless_range_loop)]
-
 use std::cmp::max;
 use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::mem::size_of_val;
@@ -479,13 +477,13 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for i in 0..BUTTONS.len() {
-            if BUTTONS[i].click == Clk::ClientWin as u32 {
-                for j in 0..modifiers.len() {
+        for button in BUTTONS {
+            if button.click == Clk::ClientWin as u32 {
+                for mod_ in modifiers {
                     xlib::XGrabButton(
                         DPY,
-                        BUTTONS[i].button,
-                        BUTTONS[i].mask | modifiers[j],
+                        button.button,
+                        button.mask | mod_,
                         (*c).win,
                         False,
                         BUTTONMASK as u32,
@@ -911,16 +909,16 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for i in 0..KEYS.len() {
+            for key in KEYS {
                 // skip modifier codes, we do that ourselves
-                if KEYS[i].keysym
+                if key.keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
                 {
-                    for j in 0..modifiers.len() {
+                    for m in modifiers {
                         xlib::XGrabKey(
                             DPY,
                             k,
-                            KEYS[i].mod_ | modifiers[j],
+                            key.mod_ | m,
                             ROOT,
                             True,
                             GrabModeAsync,
@@ -1055,8 +1053,8 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let mut x = 0;
-        for i in 0..TAGS.len() {
-            let text = TAGS[i].to_owned();
+        for (i, tag) in TAGS.iter().enumerate() {
+            let text = tag.to_owned();
             let w = textw(text.as_ptr());
             drw::setscheme(
                 DRW,
@@ -1613,8 +1611,8 @@ fn cleanup() {
             cleanupmon(MONS);
         }
 
-        for i in 0..Cur::Last as usize {
-            drw::cur_free(DRW, CURSOR[i]);
+        for cur in CURSOR {
+            drw::cur_free(DRW, cur);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
@@ -2083,8 +2081,7 @@ fn applyrules(c: *mut Client) {
             BROKEN
         };
 
-        for i in 0..RULES.len() {
-            let r = &RULES[i];
+        for r in RULES {
             if (r.title.is_null()
                 || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
