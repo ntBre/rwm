@@ -1,7 +1,7 @@
-install: dwm/libdwm.so
+install:
 	cargo install --path .
 
-test: dwm/libdwm.so
+test:
 	cargo test
 
 clippy_args :=
@@ -18,17 +18,9 @@ doc:
 fmt:
 	cargo fmt
 
-include config.mk
-
-SRC = $(addprefix dwm/,drw.c dwm.c util.c)
-
-dwm/libdwm.so: $(SRC) dwm/config.h dwm/dwm.h
-	cd dwm ; \
-	clang -fPIC -shared -o $(notdir $@ $(SRC)) $(CPPFLAGS) $(LDFLAGS)  $(INCS)
-
 rust-src := $(shell find src -name '*.rs')
 
-target/release/rwm: dwm/libdwm.so $(rust-src)
+target/release/rwm: $(rust-src)
 	cargo build --release
 
 build: target/release/rwm
