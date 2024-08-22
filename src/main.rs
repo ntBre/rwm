@@ -978,9 +978,9 @@ fn seturgent(c: *mut Client, urg: bool) {
             return;
         }
         (*wmh).flags = if urg {
-            (*wmh).flags | xlib::XUrgencyHint as i64
+            (*wmh).flags | xlib::XUrgencyHint
         } else {
-            (*wmh).flags & !(xlib::XUrgencyHint as i64)
+            (*wmh).flags & !{ xlib::XUrgencyHint }
         };
         xlib::XSetWMHints(DPY, (*c).win, wmh);
         XFree(wmh.cast());
@@ -1958,7 +1958,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
 
 fn updatewmhints(c: *mut Client) {
     log::trace!("updatewmhints");
-    const URGENT: i64 = xlib::XUrgencyHint as i64;
+    const URGENT: i64 = xlib::XUrgencyHint;
     unsafe {
         let wmh = xlib::XGetWMHints(DPY, (*c).win);
         if !wmh.is_null() {
