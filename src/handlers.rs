@@ -4,13 +4,13 @@ use std::{
 };
 
 use x11::xlib::{
-    CWBorderWidth, CWHeight, CWWidth, CurrentTime, False, KeyCode,
+    self, CWBorderWidth, CWHeight, CWWidth, CurrentTime, False, KeyCode,
     MappingKeyboard, NotifyInferior, NotifyNormal, PropertyDelete,
-    ReplayPointer, CWX, CWY, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    ReplayPointer, XEvent, XWindowAttributes, CWX, CWY, XA_WM_HINTS,
+    XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use crate::bindgen::{self, Monitor, XEvent, XWindowAttributes};
+use crate::bindgen::Monitor;
 
 use rwm::Arg;
 
@@ -29,7 +29,7 @@ use crate::{
 pub(crate) fn buttonpress(e: *mut XEvent) {
     unsafe {
         let mut arg = Arg { i: 0 };
-        let ev = &(*e).xbutton;
+        let ev = &(*e).button;
         let mut click = Clk::RootWin;
         // focus monitor if necessary
         let m = wintomon(ev.window);
@@ -69,7 +69,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             if !c.is_null() {
                 crate::focus(c);
                 restack(SELMON);
-                bindgen::XAllowEvents(DPY, ReplayPointer, CurrentTime);
+                xlib::XAllowEvents(DPY, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
@@ -93,20 +93,22 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
 
 pub(crate) fn clientmessage(e: *mut XEvent) {
     unsafe {
-        let cme = &(*e).xclient;
+        let cme = &(*e).client_message;
         let c = wintoclient(cme.window);
 
         if c.is_null() {
             return;
         }
         if cme.message_type == NETATOM[Net::WMState as usize] {
-            if cme.data.l[1] == NETATOM[Net::WMFullscreen as usize] as i64
-                || cme.data.l[2] == NETATOM[Net::WMFullscreen as usize] as i64
+            if cme.data.get_long(1)
+                == NETATOM[Net::WMFullscreen as usize] as i64
+                || cme.data.get_long(2)
+                    == NETATOM[Net::WMFullscreen as usize] as i64
             {
                 setfullscreen(
                     c,
-                    cme.data.l[0] == 1 // _NET_WM_STATE_ADD
-                        || (cme.data.l[0] == 2 // _NET_WM_STATE_TOGGLE
+                    cme.data.get_long(0) == 1 // _NET_WM_STATE_ADD
+                        || (cme.data.get_long(0) == 2 // _NET_WM_STATE_TOGGLE
                             && (*c).isfullscreen == 0),
                 );
             }
@@ -121,7 +123,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
 
 pub(crate) fn configurerequest(e: *mut XEvent) {
     unsafe {
-        let ev = &(*e).xconfigurerequest;
+        let ev = &(*e).configure_request;
         let c = wintoclient(ev.window);
         if !c.is_null() {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
@@ -162,7 +164,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                     configure(c);
                 }
                 if is_visible(c) {
-                    bindgen::XMoveResizeWindow(
+                    xlib::XMoveResizeWindow(
                         DPY, c.win, c.x, c.y, c.w as u32, c.h as u32,
                     );
                 }
@@ -177,7 +179,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
             let border_width = ev.border_width;
             let sibling = ev.above;
             let stack_mode = ev.detail;
-            let mut wc = bindgen::XWindowChanges {
+            let mut wc = xlib::XWindowChanges {
                 x,
                 y,
                 width,
@@ -186,20 +188,20 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 sibling,
                 stack_mode,
             };
-            bindgen::XConfigureWindow(
+            xlib::XConfigureWindow(
                 DPY,
                 ev.window,
                 ev.value_mask as u32,
                 &mut wc,
             );
         }
-        bindgen::XSync(DPY, False);
+        xlib::XSync(DPY, False);
     }
 }
 
 pub(crate) fn configurenotify(e: *mut XEvent) {
     unsafe {
-        let ev = &mut (*e).xconfigure;
+        let ev = &mut (*e).configure;
         /* TODO: updategeom handling sucks, needs to be simplified */
         if ev.window == ROOT {
             let dirty = SW != ev.width || SH != ev.height;
@@ -217,7 +219,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
                         }
                         c = (*c).next;
                     }
-                    bindgen::XMoveResizeWindow(
+                    xlib::XMoveResizeWindow(
                         DPY,
                         (*m).barwin,
                         (*m).wx,
@@ -236,7 +238,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
 
 pub(crate) fn destroynotify(e: *mut XEvent) {
     unsafe {
-        let ev = &(*e).xdestroywindow;
+        let ev = &(*e).destroy_window;
         let c = wintoclient(ev.window);
         if !c.is_null() {
             unmanage(c, 1);
@@ -247,7 +249,7 @@ pub(crate) fn destroynotify(e: *mut XEvent) {
 pub(crate) fn enternotify(e: *mut XEvent) {
     log::trace!("enternotify");
     unsafe {
-        let ev = &mut (*e).xcrossing;
+        let ev = &mut (*e).crossing;
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
             && ev.window != ROOT
         {
@@ -267,7 +269,7 @@ pub(crate) fn enternotify(e: *mut XEvent) {
 
 pub(crate) fn expose(e: *mut XEvent) {
     unsafe {
-        let ev = &(*e).xexpose;
+        let ev = &(*e).expose;
         if ev.count == 0 {
             let m = wintomon(ev.window);
             if !m.is_null() {
@@ -280,7 +282,7 @@ pub(crate) fn expose(e: *mut XEvent) {
 /* there are some broken focus acquiring clients needing extra handling */
 pub(crate) fn focusin(e: *mut XEvent) {
     unsafe {
-        let ev = &(*e).xfocus;
+        let ev = &(*e).focus_change;
         if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
             setfocus((*SELMON).sel);
         }
@@ -289,8 +291,8 @@ pub(crate) fn focusin(e: *mut XEvent) {
 
 pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
-        let ev = &mut (*e).xkey;
-        let keysym = bindgen::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
+        let ev = &mut (*e).key;
+        let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
         for i in 0..KEYS.len() {
             if keysym == KEYS[i].keysym
                 && cleanmask(KEYS[i].mod_) == cleanmask(ev.state)
@@ -304,8 +306,8 @@ pub(crate) fn keypress(e: *mut XEvent) {
 
 pub(crate) fn mappingnotify(e: *mut XEvent) {
     unsafe {
-        let ev = &mut (*e).xmapping;
-        bindgen::XRefreshKeyboardMapping(ev);
+        let ev = &mut (*e).mapping;
+        xlib::XRefreshKeyboardMapping(ev);
         if ev.request == MappingKeyboard {
             grabkeys();
         }
@@ -344,10 +346,9 @@ pub(crate) fn maprequest(e: *mut XEvent) {
     // first call here is always rebuilding it, so I don't think we're using it
     // in its previous state.
     unsafe {
-        let ev = &(*e).xmaprequest;
+        let ev = &(*e).map_request;
         log::trace!("maprequest: XGetWindowAttributes");
-        let res =
-            bindgen::XGetWindowAttributes(DPY, ev.window, addr_of_mut!(WA));
+        let res = xlib::XGetWindowAttributes(DPY, ev.window, addr_of_mut!(WA));
         // XGetWindowAttributes returns a zero if the function fails
         if res == 0 || WA.override_redirect != 0 {
             return;
@@ -362,7 +363,7 @@ pub(crate) fn motionnotify(e: *mut XEvent) {
     log::trace!("motionnotify");
     static mut MON: *mut Monitor = null_mut();
     unsafe {
-        let ev = &(*e).xmotion;
+        let ev = &(*e).motion;
         if ev.window != ROOT {
             return;
         }
@@ -380,7 +381,7 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
     log::trace!("propertynotify");
     unsafe {
         let mut trans: Window = 0;
-        let ev = &mut (*e).xproperty;
+        let ev = &mut (*e).property;
         if ev.window == ROOT && ev.atom == XA_WM_NAME {
             updatestatus();
         } else if ev.state == PropertyDelete {
@@ -394,9 +395,8 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
             match ev.atom {
                 XA_WM_TRANSIENT_FOR => {
                     if c.isfloating == 0
-                        && (bindgen::XGetTransientForHint(
-                            DPY, c.win, &mut trans,
-                        ) != 0)
+                        && (xlib::XGetTransientForHint(DPY, c.win, &mut trans)
+                            != 0)
                     {
                         c.isfloating = !wintoclient(trans).is_null() as c_int;
                         if c.isfloating != 0 {
@@ -430,7 +430,7 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
 pub(crate) fn unmapnotify(e: *mut XEvent) {
     log::trace!("unmapnotify");
     unsafe {
-        let ev = &(*e).xunmap;
+        let ev = &(*e).unmap;
         let c = wintoclient(ev.window);
         if !c.is_null() {
             if ev.send_event != 0 {

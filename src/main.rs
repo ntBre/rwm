@@ -14,38 +14,40 @@ mod bindgen {
 }
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, CStr};
+use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
+use x11::keysym::XK_Num_Lock;
+use x11::xft::XftColor;
 use x11::xlib::{
-    AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
+    self, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
     BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
     CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
     CWSibling, CWStackMode, CWWidth, ClientMessage, ControlMask,
-    CopyFromParent, CurrentTime, Display as XDisplay, EnterWindowMask,
-    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
-    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
-    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
-    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
-    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    XErrorEvent, XFree, XSetErrorHandler, CWX, CWY, XA_ATOM, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    CopyFromParent, CurrentTime, Display, EnterWindowMask, ExposureMask, False,
+    FocusChangeMask, GrabModeAsync, GrabModeSync, InputHint, IsViewable,
+    LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask,
+    Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc,
+    PSize, ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
+    PropModeReplace, PropertyChangeMask, RevertToPointerRoot, ShiftMask,
+    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
+    Success, True, XErrorEvent, XFree, XInternAtom, XSetErrorHandler, CWX, CWY,
+    XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
 // these are types and are okay to have for now
-use bindgen::{Atom, Client, Clr, Display, Drw, Layout, Monitor, XInternAtom};
+use bindgen::{Client, Layout, Monitor};
 
-use rwm::Arg;
+use rwm::{Arg, Cursor};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
 };
+use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
 
@@ -63,7 +65,7 @@ macro_rules! cfor {
 }
 
 /// function to be called on a startup error
-extern "C" fn xerrorstart(_: *mut XDisplay, _: *mut XErrorEvent) -> c_int {
+extern "C" fn xerrorstart(_: *mut Display, _: *mut XErrorEvent) -> c_int {
     panic!("another window manager is already running")
 }
 
@@ -78,9 +80,9 @@ const X_GRAB_KEY: u8 = 33;
 const X_COPY_AREA: u8 = 62;
 
 // from cursorfont.h
-// const XC_LEFT_PTR: u8 = 68;
-// const XC_SIZING: u8 = 120;
-// const XC_FLEUR: u8 = 52;
+const XC_LEFT_PTR: u8 = 68;
+const XC_SIZING: u8 = 120;
+const XC_FLEUR: u8 = 52;
 
 // from X.h
 // const BUTTON_RELEASE: i32 = 5;
@@ -94,7 +96,7 @@ const NORMAL_STATE: usize = 1;
 /// application wants to start as an icon
 const ICONIC_STATE: usize = 3;
 
-extern "C" fn xerror(mdpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
+extern "C" fn xerror(mdpy: *mut Display, ee: *mut XErrorEvent) -> c_int {
     unsafe {
         let e = *ee;
         if e.error_code == BadWindow
@@ -121,7 +123,7 @@ extern "C" fn xerror(mdpy: *mut XDisplay, ee: *mut XErrorEvent) -> c_int {
 
 extern "C" fn xerrordummy(
     _dpy: *mut Display,
-    _ee: *mut bindgen::XErrorEvent,
+    _ee: *mut xlib::XErrorEvent,
 ) -> c_int {
     0
 }
@@ -129,7 +131,7 @@ extern "C" fn xerrordummy(
 /// I hate to start using globals already, but I'm not sure how else to do it.
 /// maybe we can pack this stuff into a struct eventually
 static mut XERRORXLIB: Option<
-    unsafe extern "C" fn(*mut XDisplay, *mut XErrorEvent) -> i32,
+    unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
 static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
@@ -142,7 +144,7 @@ static mut DRW: *mut Drw = std::ptr::null_mut();
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
 
-static mut CURSOR: [*mut bindgen::Cur; Cur::Last as usize] =
+static mut CURSOR: [*mut Cursor; Cur::Last as usize] =
     [null_mut(); Cur::Last as usize];
 
 static mut SCHEME: *mut *mut Clr = null_mut();
@@ -174,9 +176,8 @@ static mut LRPAD: c_int = 0;
 static mut NUMLOCKMASK: c_uint = 0;
 
 type Window = u64;
-// type Atom = u64;
-// type Cursor = u64;
-// type Clr = XftColor;
+type Atom = c_ulong;
+type Clr = XftColor;
 
 fn createmon() -> *mut Monitor {
     use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
@@ -209,19 +210,19 @@ fn createmon() -> *mut Monitor {
 fn checkotherwm() {
     unsafe {
         XERRORXLIB = XSetErrorHandler(Some(xerrorstart));
-        bindgen::XSelectInput(
+        xlib::XSelectInput(
             DPY,
-            bindgen::XDefaultRootWindow(DPY),
+            xlib::XDefaultRootWindow(DPY),
             SubstructureRedirectMask,
         );
         XSetErrorHandler(Some(xerror));
-        bindgen::XSync(DPY, False);
+        xlib::XSync(DPY, False);
     }
 }
 
 fn setup() {
     unsafe {
-        let mut wa = bindgen::XSetWindowAttributes {
+        let mut wa = xlib::XSetWindowAttributes {
             background_pixmap: 0,
             background_pixel: 0,
             border_pixmap: 0,
@@ -251,10 +252,10 @@ fn setup() {
 
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
-        SCREEN = bindgen::XDefaultScreen(DPY);
-        SW = bindgen::XDisplayWidth(DPY, SCREEN);
-        SH = bindgen::XDisplayHeight(DPY, SCREEN);
-        ROOT = bindgen::XRootWindow(DPY, SCREEN);
+        SCREEN = xlib::XDefaultScreen(DPY);
+        SW = xlib::XDisplayWidth(DPY, SCREEN);
+        SH = xlib::XDisplayHeight(DPY, SCREEN);
+        ROOT = xlib::XRootWindow(DPY, SCREEN);
         DRW = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
         if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
             panic!("no fonts could be loaded");
@@ -294,12 +295,9 @@ fn setup() {
             XInternAtom(DPY, c"_NET_CLIENT_LIST".as_ptr(), False);
 
         /* init cursors */
-        CURSOR[Cur::Normal as usize] =
-            drw::cur_create(DRW, bindgen::XC_left_ptr as i32);
-        CURSOR[Cur::Resize as usize] =
-            drw::cur_create(DRW, bindgen::XC_sizing as i32);
-        CURSOR[Cur::Move as usize] =
-            drw::cur_create(DRW, bindgen::XC_fleur as i32);
+        CURSOR[Cur::Normal as usize] = drw::cur_create(DRW, XC_LEFT_PTR as i32);
+        CURSOR[Cur::Resize as usize] = drw::cur_create(DRW, XC_SIZING as i32);
+        CURSOR[Cur::Move as usize] = drw::cur_create(DRW, XC_FLEUR as i32);
 
         /* init appearance */
         SCHEME = util::ecalloc(COLORS.len(), size_of::<*mut Clr>()).cast();
@@ -312,9 +310,8 @@ fn setup() {
         updatestatus();
 
         /* supporting window for NetWMCheck */
-        WMCHECKWIN =
-            bindgen::XCreateSimpleWindow(DPY, ROOT, 0, 0, 1, 1, 0, 0, 0);
-        bindgen::XChangeProperty(
+        WMCHECKWIN = xlib::XCreateSimpleWindow(DPY, ROOT, 0, 0, 1, 1, 0, 0, 0);
+        xlib::XChangeProperty(
             DPY,
             WMCHECKWIN,
             NETATOM[Net::WMCheck as usize],
@@ -324,7 +321,7 @@ fn setup() {
             addr_of_mut!(WMCHECKWIN) as *mut c_uchar,
             1,
         );
-        bindgen::XChangeProperty(
+        xlib::XChangeProperty(
             DPY,
             WMCHECKWIN,
             NETATOM[Net::WMName as usize],
@@ -334,7 +331,7 @@ fn setup() {
             c"dwm".as_ptr() as *mut c_uchar,
             3,
         );
-        bindgen::XChangeProperty(
+        xlib::XChangeProperty(
             DPY,
             ROOT,
             NETATOM[Net::WMCheck as usize],
@@ -345,7 +342,7 @@ fn setup() {
             1,
         );
         /* EWMH support per view */
-        bindgen::XChangeProperty(
+        xlib::XChangeProperty(
             DPY,
             ROOT,
             NETATOM[Net::Supported as usize],
@@ -355,7 +352,7 @@ fn setup() {
             NETATOM.as_ptr() as *mut c_uchar,
             Net::Last as i32,
         );
-        bindgen::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
+        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
 
         // /* select events */
         wa.cursor = (*CURSOR[Cur::Normal as usize]).cursor;
@@ -367,13 +364,13 @@ fn setup() {
             | LeaveWindowMask
             | StructureNotifyMask
             | PropertyChangeMask;
-        bindgen::XChangeWindowAttributes(
+        xlib::XChangeWindowAttributes(
             DPY,
             ROOT,
             CWEventMask | CWCursor,
             &mut wa,
         );
-        bindgen::XSelectInput(DPY, ROOT, wa.event_mask);
+        xlib::XSelectInput(DPY, ROOT, wa.event_mask);
         grabkeys();
         focus(null_mut());
     }
@@ -404,16 +401,11 @@ fn focus(mut c: *mut Client) {
             let color = (*(*SCHEME.offset(Scheme::Sel as isize))
                 .offset(Col::Border as isize))
             .pixel;
-            bindgen::XSetWindowBorder(DPY, (*c).win, color);
+            xlib::XSetWindowBorder(DPY, (*c).win, color);
             setfocus(c);
         } else {
-            bindgen::XSetInputFocus(
-                DPY,
-                ROOT,
-                RevertToPointerRoot,
-                CurrentTime,
-            );
-            bindgen::XDeleteProperty(
+            xlib::XSetInputFocus(DPY, ROOT, RevertToPointerRoot, CurrentTime);
+            xlib::XDeleteProperty(
                 DPY,
                 ROOT,
                 NETATOM[Net::ActiveWindow as usize],
@@ -437,13 +429,13 @@ fn drawbars() {
 fn setfocus(c: *mut Client) {
     unsafe {
         if (*c).neverfocus == 0 {
-            bindgen::XSetInputFocus(
+            xlib::XSetInputFocus(
                 DPY,
                 (*c).win,
                 RevertToPointerRoot,
                 CurrentTime,
             );
-            bindgen::XChangeProperty(
+            xlib::XChangeProperty(
                 DPY,
                 ROOT,
                 NETATOM[Net::ActiveWindow as usize],
@@ -463,8 +455,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
     let mut protocols = std::ptr::null_mut();
     let mut exists = 0;
     unsafe {
-        if bindgen::XGetWMProtocols(DPY, (*c).win, &mut protocols, &mut n) != 0
-        {
+        if xlib::XGetWMProtocols(DPY, (*c).win, &mut protocols, &mut n) != 0 {
             while exists == 0 && n > 0 {
                 exists = (*protocols.offset(n as isize) == proto) as c_int;
                 n -= 1;
@@ -472,13 +463,13 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
             XFree(protocols.cast());
         }
         if exists != 0 {
-            let mut ev = bindgen::XEvent { type_: ClientMessage };
-            ev.xclient.window = (*c).win;
-            ev.xclient.message_type = WMATOM[WM::Protocols as usize];
-            ev.xclient.format = 32;
-            ev.xclient.data.l[0] = proto as c_long;
-            ev.xclient.data.l[1] = CurrentTime as c_long;
-            bindgen::XSendEvent(DPY, (*c).win, False, NoEventMask, &mut ev);
+            let mut ev = xlib::XEvent { type_: ClientMessage };
+            ev.client_message.window = (*c).win;
+            ev.client_message.message_type = WMATOM[WM::Protocols as usize];
+            ev.client_message.format = 32;
+            ev.client_message.data.set_long(0, proto as c_long);
+            ev.client_message.data.set_long(1, CurrentTime as c_long);
+            xlib::XSendEvent(DPY, (*c).win, False, NoEventMask, &mut ev);
         }
         exists
     }
@@ -488,9 +479,9 @@ fn grabbuttons(c: *mut Client, focused: bool) {
     unsafe {
         updatenumlockmask();
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
-        bindgen::XUngrabButton(DPY, AnyButton as u32, AnyModifier, (*c).win);
+        xlib::XUngrabButton(DPY, AnyButton as u32, AnyModifier, (*c).win);
         if !focused {
-            bindgen::XGrabButton(
+            xlib::XGrabButton(
                 DPY,
                 AnyButton as u32,
                 AnyModifier,
@@ -506,7 +497,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
         for i in 0..BUTTONS.len() {
             if BUTTONS[i].click == Clk::ClientWin as u32 {
                 for j in 0..modifiers.len() {
-                    bindgen::XGrabButton(
+                    xlib::XGrabButton(
                         DPY,
                         BUTTONS[i].button,
                         BUTTONS[i].mask | modifiers[j],
@@ -573,10 +564,10 @@ fn restack(m: *mut Monitor) {
         if (*(*m).sel).isfloating != 0
             || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
         {
-            bindgen::XRaiseWindow(DPY, (*(*m).sel).win);
+            xlib::XRaiseWindow(DPY, (*(*m).sel).win);
         }
         if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
-            let mut wc = bindgen::XWindowChanges {
+            let mut wc = xlib::XWindowChanges {
                 stack_mode: Below,
                 sibling: (*m).barwin,
                 x: Default::default(),
@@ -588,7 +579,7 @@ fn restack(m: *mut Monitor) {
             let mut c = (*m).stack;
             while !c.is_null() {
                 if (*c).isfloating == 0 && is_visible(c) {
-                    bindgen::XConfigureWindow(
+                    xlib::XConfigureWindow(
                         DPY,
                         (*c).win,
                         (CWSibling | CWStackMode) as c_uint,
@@ -599,9 +590,9 @@ fn restack(m: *mut Monitor) {
                 c = (*c).snext;
             }
         }
-        bindgen::XSync(DPY, False);
-        let mut ev = bindgen::XEvent { type_: 0 };
-        while bindgen::XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
+        xlib::XSync(DPY, False);
+        let mut ev = xlib::XEvent { type_: 0 };
+        while xlib::XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
     }
 }
 
@@ -612,7 +603,7 @@ fn showhide(c: *mut Client) {
         }
         if is_visible(c) {
             // show clients top down
-            bindgen::XMoveWindow(DPY, (*c).win, (*c).x, (*c).y);
+            xlib::XMoveWindow(DPY, (*c).win, (*c).x, (*c).y);
             if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
                 .is_none()
@@ -625,7 +616,7 @@ fn showhide(c: *mut Client) {
         } else {
             // hide clients bottom up
             showhide((*c).snext);
-            bindgen::XMoveWindow(DPY, (*c).win, width(c) * -2, (*c).y);
+            xlib::XMoveWindow(DPY, (*c).win, width(c) * -2, (*c).y);
         }
     }
 }
@@ -653,7 +644,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
         (*c).y = y;
         (*c).w = w;
         (*c).h = h;
-        let mut wc = bindgen::XWindowChanges {
+        let mut wc = xlib::XWindowChanges {
             x,
             y,
             width: w,
@@ -662,21 +653,21 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
             sibling: 0,
             stack_mode: 0,
         };
-        bindgen::XConfigureWindow(
+        xlib::XConfigureWindow(
             DPY,
             (*c).win,
             (CWX | CWY | CWWidth | CWHeight | CWBorderWidth) as u32,
             &mut wc,
         );
         configure(c);
-        bindgen::XSync(DPY, False);
+        xlib::XSync(DPY, False);
     }
 }
 
 fn configure(c: *mut Client) {
     log::trace!("configure");
     unsafe {
-        let mut ce = bindgen::XConfigureEvent {
+        let mut ce = xlib::XConfigureEvent {
             type_: x11::xlib::ConfigureNotify,
             serial: 0,
             send_event: 0,
@@ -691,12 +682,12 @@ fn configure(c: *mut Client) {
             above: XNONE as u64,
             override_redirect: False,
         };
-        bindgen::XSendEvent(
+        xlib::XSendEvent(
             DPY,
             (*c).win,
             False,
             StructureNotifyMask,
-            &mut ce as *mut bindgen::XConfigureEvent as *mut bindgen::XEvent,
+            &mut ce as *mut xlib::XConfigureEvent as *mut xlib::XEvent,
         );
     }
 }
@@ -801,7 +792,7 @@ fn applysizehints(
 fn updatesizehints(c: *mut Client) {
     log::trace!("updatesizehints");
     let mut msize: i64 = 0;
-    let mut size = bindgen::XSizeHints {
+    let mut size = xlib::XSizeHints {
         flags: Default::default(),
         x: Default::default(),
         y: Default::default(),
@@ -813,15 +804,14 @@ fn updatesizehints(c: *mut Client) {
         max_height: Default::default(),
         width_inc: Default::default(),
         height_inc: Default::default(),
-        min_aspect: bindgen::XSizeHints__bindgen_ty_1 { x: 0, y: 0 },
-        max_aspect: bindgen::XSizeHints__bindgen_ty_1 { x: 0, y: 0 },
+        min_aspect: xlib::AspectRatio { x: 0, y: 0 },
+        max_aspect: xlib::AspectRatio { x: 0, y: 0 },
         base_width: Default::default(),
         base_height: Default::default(),
         win_gravity: Default::default(),
     };
     unsafe {
-        if bindgen::XGetWMNormalHints(DPY, (*c).win, &mut size, &mut msize) == 0
-        {
+        if xlib::XGetWMNormalHints(DPY, (*c).win, &mut size, &mut msize) == 0 {
             /* size is uninitialized, ensure that size.flags aren't used */
             size.flags = PSize;
         }
@@ -925,9 +915,9 @@ fn grabkeys() {
         updatenumlockmask();
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
-        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
-        bindgen::XDisplayKeycodes(DPY, &mut start, &mut end);
-        let syms = bindgen::XGetKeyboardMapping(
+        xlib::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
+        xlib::XDisplayKeycodes(DPY, &mut start, &mut end);
+        let syms = xlib::XGetKeyboardMapping(
             DPY,
             start as u8,
             end - start + 1,
@@ -943,7 +933,7 @@ fn grabkeys() {
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
                 {
                     for j in 0..modifiers.len() {
-                        bindgen::XGrabKey(
+                        xlib::XGrabKey(
                             DPY,
                             k,
                             KEYS[i].mod_ | modifiers[j],
@@ -963,22 +953,19 @@ fn grabkeys() {
 fn updatenumlockmask() {
     unsafe {
         NUMLOCKMASK = 0;
-        let modmap = bindgen::XGetModifierMapping(DPY);
+        let modmap = xlib::XGetModifierMapping(DPY);
         for i in 0..8 {
             for j in 0..(*modmap).max_keypermod {
                 if *(*modmap)
                     .modifiermap
                     .offset((i * (*modmap).max_keypermod + j) as isize)
-                    == bindgen::XKeysymToKeycode(
-                        DPY,
-                        bindgen::XK_Num_Lock as u64,
-                    )
+                    == xlib::XKeysymToKeycode(DPY, XK_Num_Lock as u64)
                 {
                     NUMLOCKMASK = 1 << i;
                 }
             }
         }
-        bindgen::XFreeModifiermap(modmap);
+        xlib::XFreeModifiermap(modmap);
     }
 }
 
@@ -986,16 +973,16 @@ fn seturgent(c: *mut Client, urg: bool) {
     log::trace!("seturgent");
     unsafe {
         (*c).isurgent = urg as c_int;
-        let wmh = bindgen::XGetWMHints(DPY, (*c).win);
+        let wmh = xlib::XGetWMHints(DPY, (*c).win);
         if wmh.is_null() {
             return;
         }
         (*wmh).flags = if urg {
-            (*wmh).flags | bindgen::XUrgencyHint as i64
+            (*wmh).flags | xlib::XUrgencyHint as i64
         } else {
-            (*wmh).flags & !(bindgen::XUrgencyHint as i64)
+            (*wmh).flags & !(xlib::XUrgencyHint as i64)
         };
-        bindgen::XSetWMHints(DPY, (*c).win, wmh);
+        xlib::XSetWMHints(DPY, (*c).win, wmh);
         XFree(wmh.cast());
     }
 }
@@ -1011,15 +998,10 @@ fn unfocus(c: *mut Client, setfocus: bool) {
         let color = (*(*SCHEME.offset(Scheme::Norm as isize))
             .offset(Col::Border as isize))
         .pixel;
-        bindgen::XSetWindowBorder(DPY, (*c).win, color);
+        xlib::XSetWindowBorder(DPY, (*c).win, color);
         if setfocus {
-            bindgen::XSetInputFocus(
-                DPY,
-                ROOT,
-                RevertToPointerRoot,
-                CurrentTime,
-            );
-            bindgen::XDeleteProperty(
+            xlib::XSetInputFocus(DPY, ROOT, RevertToPointerRoot, CurrentTime);
+            xlib::XDeleteProperty(
                 DPY,
                 ROOT,
                 NETATOM[Net::ActiveWindow as usize],
@@ -1190,13 +1172,13 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
             return 0;
         }
         *text = '\0' as i8;
-        let mut name = bindgen::XTextProperty {
+        let mut name = xlib::XTextProperty {
             value: std::ptr::null_mut(),
             encoding: 0,
             format: 0,
             nitems: 0,
         };
-        let c = bindgen::XGetTextProperty(DPY, w, &mut name, atom);
+        let c = xlib::XGetTextProperty(DPY, w, &mut name, atom);
         if c == 0 || name.nitems == 0 {
             return 0;
         }
@@ -1205,7 +1187,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
         let mut list: *mut *mut i8 = std::ptr::null_mut();
         if name.encoding == XA_STRING {
             libc::strncpy(text, name.value as *mut _, size as usize - 1);
-        } else if bindgen::XmbTextPropertyToTextList(
+        } else if xlib::XmbTextPropertyToTextList(
             DPY,
             &name,
             &mut list,
@@ -1215,17 +1197,17 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
             && !(*list).is_null()
         {
             libc::strncpy(text, *list, size as usize - 1);
-            bindgen::XFreeStringList(list);
+            xlib::XFreeStringList(list);
         }
         let p = text.offset(size as isize - 1);
         *p = '\0' as i8;
-        bindgen::XFree(name.value as *mut _);
+        xlib::XFree(name.value as *mut _);
     }
     1
 }
 
 fn updatebars() {
-    let mut wa = bindgen::XSetWindowAttributes {
+    let mut wa = xlib::XSetWindowAttributes {
         override_redirect: True,
         background_pixmap: ParentRelative as u64,
         event_mask: ButtonPressMask | ExposureMask,
@@ -1243,7 +1225,7 @@ fn updatebars() {
         colormap: 0,
         cursor: 0,
     };
-    let mut ch = bindgen::XClassHint {
+    let mut ch = xlib::XClassHint {
         res_name: c"rwm".as_ptr().cast_mut(),
         res_class: c"rwm".as_ptr().cast_mut(),
     };
@@ -1254,7 +1236,7 @@ fn updatebars() {
             if (*m).barwin != 0 {
                 continue;
             }
-            (*m).barwin = bindgen::XCreateWindow(
+            (*m).barwin = xlib::XCreateWindow(
                 DPY,
                 ROOT,
                 (*m).wx as c_int,
@@ -1262,19 +1244,19 @@ fn updatebars() {
                 (*m).ww as c_uint,
                 BH as c_uint,
                 0,
-                bindgen::XDefaultDepth(DPY, SCREEN),
+                xlib::XDefaultDepth(DPY, SCREEN),
                 CopyFromParent as c_uint,
-                bindgen::XDefaultVisual(DPY, SCREEN),
+                xlib::XDefaultVisual(DPY, SCREEN),
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
             );
-            bindgen::XDefineCursor(
+            xlib::XDefineCursor(
                 DPY,
                 (*m).barwin,
                 (*CURSOR[Cur::Normal as usize]).cursor,
             );
-            bindgen::XMapRaised(DPY, (*m).barwin);
-            bindgen::XSetClassHint(DPY, (*m).barwin, &mut ch);
+            xlib::XMapRaised(DPY, (*m).barwin);
+            xlib::XSetClassHint(DPY, (*m).barwin, &mut ch);
             m = (*m).next;
         }
     }
@@ -1283,11 +1265,12 @@ fn updatebars() {
 fn updategeom() -> i32 {
     unsafe {
         let mut dirty = 0;
-        if bindgen::XineramaIsActive(DPY) != 0 {
+        if x11::xinerama::XineramaIsActive(DPY) != 0 {
             log::trace!("updategeom: xinerama active");
 
             let mut nn = 0;
-            let info = bindgen::XineramaQueryScreens(DPY as *mut _, &mut nn);
+            let info =
+                x11::xinerama::XineramaQueryScreens(DPY as *mut _, &mut nn);
 
             let mut n = 0;
             let mut m = MONS;
@@ -1297,9 +1280,11 @@ fn updategeom() -> i32 {
             }
 
             // only consider unique geometries as separate screens
-            let unique: *mut bindgen::XineramaScreenInfo =
-                ecalloc(nn as usize, size_of::<bindgen::XineramaScreenInfo>())
-                    .cast();
+            let unique: *mut x11::xinerama::XineramaScreenInfo = ecalloc(
+                nn as usize,
+                size_of::<x11::xinerama::XineramaScreenInfo>(),
+            )
+            .cast();
             // Safety: we obviously just constructed this with this size. don't
             // forget to free it later!
             let unique = std::slice::from_raw_parts_mut(unique, nn as usize);
@@ -1312,13 +1297,13 @@ fn updategeom() -> i32 {
                     libc::memcpy(
                         (&mut unique[j]) as *mut _ as *mut _,
                         info.offset(i as isize).cast(),
-                        size_of::<bindgen::XineramaScreenInfo>(),
+                        size_of::<x11::xinerama::XineramaScreenInfo>(),
                     );
                     j += 1;
                 }
                 i += 1;
             }
-            bindgen::XFree(info.cast());
+            xlib::XFree(info.cast());
             nn = j as i32;
 
             // new monitors if nn > n
@@ -1513,7 +1498,7 @@ fn getrootptr(x: *mut c_int, y: *mut c_int) -> c_int {
         let mut di = 0;
         let mut dui = 0;
         let mut dummy = 0;
-        bindgen::XQueryPointer(
+        xlib::XQueryPointer(
             DPY, ROOT, &mut dummy, &mut dummy, x, y, &mut di, &mut di, &mut dui,
         )
     }
@@ -1531,8 +1516,8 @@ fn cleanupmon(mon: *mut Monitor) {
             }
             (*m).next = (*mon).next;
         }
-        bindgen::XUnmapWindow(DPY, (*mon).barwin);
-        bindgen::XDestroyWindow(DPY, (*mon).barwin);
+        xlib::XUnmapWindow(DPY, (*mon).barwin);
+        xlib::XDestroyWindow(DPY, (*mon).barwin);
         libc::free(mon.cast());
     }
 }
@@ -1599,9 +1584,9 @@ fn updatebarpos(m: *mut Monitor) {
 }
 
 fn isuniquegeom(
-    unique: &mut [bindgen::XineramaScreenInfo],
+    unique: &mut [x11::xinerama::XineramaScreenInfo],
     mut n: usize,
-    info: *mut bindgen::XineramaScreenInfo,
+    info: *mut x11::xinerama::XineramaScreenInfo,
 ) -> c_int {
     unsafe {
         assert!(!info.is_null());
@@ -1638,7 +1623,7 @@ fn cleanup() {
             m = (*m).next;
         }
 
-        bindgen::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
+        xlib::XUngrabKey(DPY, AnyKey, AnyModifier, ROOT);
 
         while !MONS.is_null() {
             cleanupmon(MONS);
@@ -1655,20 +1640,16 @@ fn cleanup() {
         }
         libc::free(SCHEME.cast());
 
-        bindgen::XDestroyWindow(DPY, WMCHECKWIN);
+        xlib::XDestroyWindow(DPY, WMCHECKWIN);
         drw::free(DRW);
-        bindgen::XSync(DPY, False);
-        bindgen::XSetInputFocus(
+        xlib::XSync(DPY, False);
+        xlib::XSetInputFocus(
             DPY,
             PointerRoot as u64,
             RevertToPointerRoot,
             CurrentTime,
         );
-        bindgen::XDeleteProperty(
-            DPY,
-            ROOT,
-            NETATOM[Net::ActiveWindow as usize],
-        );
+        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ActiveWindow as usize]);
     }
 
     log::trace!("finished cleanup");
@@ -1678,7 +1659,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
     log::trace!("unmanage");
     unsafe {
         let m = (*c).mon;
-        let mut wc = bindgen::XWindowChanges {
+        let mut wc = xlib::XWindowChanges {
             x: 0,
             y: 0,
             width: 0,
@@ -1691,28 +1672,20 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         detachstack(c);
         if destroyed == 0 {
             wc.border_width = (*c).oldbw;
-            bindgen::XGrabServer(DPY); /* avoid race conditions */
-            bindgen::XSetErrorHandler(Some(xerrordummy));
-            bindgen::XSelectInput(DPY, (*c).win, NoEventMask);
-            bindgen::XConfigureWindow(
+            xlib::XGrabServer(DPY); /* avoid race conditions */
+            xlib::XSetErrorHandler(Some(xerrordummy));
+            xlib::XSelectInput(DPY, (*c).win, NoEventMask);
+            xlib::XConfigureWindow(
                 DPY,
                 (*c).win,
                 CWBorderWidth as u32,
                 &mut wc,
             ); /* restore border */
-            bindgen::XUngrabButton(
-                DPY,
-                AnyButton as u32,
-                AnyModifier,
-                (*c).win,
-            );
+            xlib::XUngrabButton(DPY, AnyButton as u32, AnyModifier, (*c).win);
             setclientstate(c, WITHDRAWN_STATE);
-            bindgen::XSync(DPY, False);
-            // xerror exists, but I'm using it somewhere else with X11
-            // arguments. just remove prefix on xerror after switching to X11
-            // types everywhere
-            bindgen::XSetErrorHandler(Some(bindgen::xerror));
-            bindgen::XUngrabServer(DPY);
+            xlib::XSync(DPY, False);
+            xlib::XSetErrorHandler(Some(xerror));
+            xlib::XUngrabServer(DPY);
         }
         libc::free(c.cast());
         focus(null_mut());
@@ -1723,12 +1696,12 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 
 fn updateclientlist() {
     unsafe {
-        bindgen::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
+        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
         let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
-                bindgen::XChangeProperty(
+                xlib::XChangeProperty(
                     DPY,
                     ROOT,
                     NETATOM[Net::ClientList as usize],
@@ -1749,7 +1722,7 @@ fn setclientstate(c: *mut Client, state: usize) {
     let mut data: [c_long; 2] = [state as c_long, XNONE as c_long];
     let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
-        bindgen::XChangeProperty(
+        xlib::XChangeProperty(
             DPY,
             (*c).win,
             WMATOM[WM::State as usize],
@@ -1763,11 +1736,10 @@ fn setclientstate(c: *mut Client, state: usize) {
 }
 
 static HANDLER: LazyLock<
-    [fn(*mut bindgen::XEvent); x11::xlib::LASTEvent as usize],
+    [fn(*mut xlib::XEvent); x11::xlib::LASTEvent as usize],
 > = LazyLock::new(|| {
-    fn dh(_ev: *mut bindgen::XEvent) {}
-    let mut ret =
-        [dh as fn(*mut bindgen::XEvent); x11::xlib::LASTEvent as usize];
+    fn dh(_ev: *mut xlib::XEvent) {}
+    let mut ret = [dh as fn(*mut xlib::XEvent); x11::xlib::LASTEvent as usize];
     ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
     ret[x11::xlib::ClientMessage as usize] = handlers::clientmessage;
     ret[x11::xlib::ConfigureRequest as usize] = handlers::configurerequest;
@@ -1788,10 +1760,10 @@ static HANDLER: LazyLock<
 /// main event loop
 fn run() {
     unsafe {
-        bindgen::XSync(DPY, False);
-        let mut ev: MaybeUninit<bindgen::XEvent> = MaybeUninit::uninit();
-        while RUNNING && bindgen::XNextEvent(DPY, ev.as_mut_ptr()) == 0 {
-            let mut ev: bindgen::XEvent = ev.assume_init();
+        xlib::XSync(DPY, False);
+        let mut ev: MaybeUninit<xlib::XEvent> = MaybeUninit::uninit();
+        while RUNNING && xlib::XNextEvent(DPY, ev.as_mut_ptr()) == 0 {
+            let mut ev: xlib::XEvent = ev.assume_init();
             if let Some(handler) = HANDLER.get(ev.type_ as usize) {
                 handler(&mut ev);
             }
@@ -1804,9 +1776,9 @@ fn scan() {
     let mut d1 = 0;
     let mut d2 = 0;
     let mut wins: *mut Window = std::ptr::null_mut();
-    let mut wa: MaybeUninit<bindgen::XWindowAttributes> = MaybeUninit::uninit();
+    let mut wa: MaybeUninit<xlib::XWindowAttributes> = MaybeUninit::uninit();
     unsafe {
-        if bindgen::XQueryTree(
+        if xlib::XQueryTree(
             DPY,
             ROOT,
             &mut d1,
@@ -1816,13 +1788,13 @@ fn scan() {
         ) != 0
         {
             for i in 0..num {
-                if bindgen::XGetWindowAttributes(
+                if xlib::XGetWindowAttributes(
                     DPY,
                     *wins.offset(i as isize),
                     wa.as_mut_ptr(),
                 ) == 0
                     || (*wa.as_mut_ptr()).override_redirect != 0
-                    || bindgen::XGetTransientForHint(
+                    || xlib::XGetTransientForHint(
                         DPY,
                         *wins.offset(i as isize),
                         &mut d1,
@@ -1838,7 +1810,7 @@ fn scan() {
             }
             for i in 0..num {
                 // now the transients
-                if bindgen::XGetWindowAttributes(
+                if xlib::XGetWindowAttributes(
                     DPY,
                     *wins.offset(i as isize),
                     wa.as_mut_ptr(),
@@ -1846,7 +1818,7 @@ fn scan() {
                 {
                     continue;
                 }
-                if bindgen::XGetTransientForHint(
+                if xlib::XGetTransientForHint(
                     DPY,
                     *wins.offset(i as isize),
                     &mut d1,
@@ -1865,7 +1837,7 @@ fn scan() {
     }
 }
 
-fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
+fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
     log::trace!("manage");
     let mut trans = 0;
     unsafe {
@@ -1884,7 +1856,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
 
         updatetitle(c);
         log::trace!("manage: XGetTransientForHint");
-        if bindgen::XGetTransientForHint(DPY, w, &mut trans) != 0 {
+        if xlib::XGetTransientForHint(DPY, w, &mut trans) != 0 {
             let t = wintoclient(trans);
             if !t.is_null() {
                 (*c).mon = (*t).mon;
@@ -1910,7 +1882,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         (*c).bw = config::BORDERPX as i32;
 
         log::trace!("manage: XWindowChanges");
-        let mut wc = bindgen::XWindowChanges {
+        let mut wc = xlib::XWindowChanges {
             x: 0,
             y: 0,
             width: 0,
@@ -1920,7 +1892,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             stack_mode: 0,
         };
         log::trace!("manage: XConfigureWindow");
-        bindgen::XConfigureWindow(DPY, w, CWBorderWidth as u32, &mut wc);
+        xlib::XConfigureWindow(DPY, w, CWBorderWidth as u32, &mut wc);
         log::trace!(
             "manage: XSetWindowBorder with DPY = {DPY:?} and w = {w:?}"
         );
@@ -1931,12 +1903,12 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
         let pixel = border.pixel;
         log::trace!("pixel = {pixel:?}");
-        bindgen::XSetWindowBorder(DPY, w, pixel);
+        xlib::XSetWindowBorder(DPY, w, pixel);
         configure(c); // propagates border width, if size doesn't change
         updatewindowtype(c);
         updatesizehints(c);
         updatewmhints(c);
-        bindgen::XSelectInput(
+        xlib::XSelectInput(
             DPY,
             w,
             EnterWindowMask
@@ -1950,11 +1922,11 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             (*c).isfloating = (*c).oldstate;
         }
         if (*c).isfloating != 0 {
-            bindgen::XRaiseWindow(DPY, (*c).win);
+            xlib::XRaiseWindow(DPY, (*c).win);
         }
         attach(c);
         attachstack(c);
-        bindgen::XChangeProperty(
+        xlib::XChangeProperty(
             DPY,
             ROOT,
             NETATOM[Net::ClientList as usize],
@@ -1965,7 +1937,7 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
             1,
         );
         // some windows require this
-        bindgen::XMoveResizeWindow(
+        xlib::XMoveResizeWindow(
             DPY,
             (*c).win,
             (*c).x + 2 * SW,
@@ -1979,20 +1951,20 @@ fn manage(w: Window, wa: *mut bindgen::XWindowAttributes) {
         }
         (*(*c).mon).sel = c;
         arrange((*c).mon);
-        bindgen::XMapWindow(DPY, (*c).win);
+        xlib::XMapWindow(DPY, (*c).win);
         focus(std::ptr::null_mut());
     }
 }
 
 fn updatewmhints(c: *mut Client) {
     log::trace!("updatewmhints");
-    const URGENT: i64 = bindgen::XUrgencyHint as i64;
+    const URGENT: i64 = xlib::XUrgencyHint as i64;
     unsafe {
-        let wmh = bindgen::XGetWMHints(DPY, (*c).win);
+        let wmh = xlib::XGetWMHints(DPY, (*c).win);
         if !wmh.is_null() {
             if c == (*SELMON).sel && (*wmh).flags & URGENT != 0 {
                 (*wmh).flags &= !URGENT;
-                bindgen::XSetWMHints(DPY, (*c).win, wmh);
+                xlib::XSetWMHints(DPY, (*c).win, wmh);
             } else {
                 (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
             }
@@ -2001,7 +1973,7 @@ fn updatewmhints(c: *mut Client) {
             } else {
                 (*c).neverfocus = 0;
             }
-            bindgen::XFree(wmh.cast());
+            xlib::XFree(wmh.cast());
         }
     }
 }
@@ -2023,7 +1995,7 @@ fn updatewindowtype(c: *mut Client) {
 fn setfullscreen(c: *mut Client, fullscreen: bool) {
     unsafe {
         if fullscreen && (*c).isfullscreen == 0 {
-            bindgen::XChangeProperty(
+            xlib::XChangeProperty(
                 DPY,
                 (*c).win,
                 NETATOM[Net::WMState as usize],
@@ -2048,9 +2020,9 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 (*(*c).mon).mw,
                 (*(*c).mon).mh,
             );
-            bindgen::XRaiseWindow(DPY, (*c).win);
+            xlib::XRaiseWindow(DPY, (*c).win);
         } else if !fullscreen && (*c).isfullscreen != 0 {
-            bindgen::XChangeProperty(
+            xlib::XChangeProperty(
                 DPY,
                 (*c).win,
                 NETATOM[Net::WMState as usize],
@@ -2080,7 +2052,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
     let mut da = 0;
     let mut atom: Atom = 0;
     unsafe {
-        if bindgen::XGetWindowProperty(
+        if xlib::XGetWindowProperty(
             DPY,
             (*c).win,
             prop,
@@ -2108,14 +2080,14 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
 fn applyrules(c: *mut Client) {
     log::trace!("applyrules");
     unsafe {
-        let mut ch = bindgen::XClassHint {
+        let mut ch = xlib::XClassHint {
             res_name: std::ptr::null_mut(),
             res_class: std::ptr::null_mut(),
         };
         // rule matching
         (*c).isfloating = 0;
         (*c).tags = 0;
-        bindgen::XGetClassHint(DPY, (*c).win, &mut ch);
+        xlib::XGetClassHint(DPY, (*c).win, &mut ch);
         let class = if !ch.res_class.is_null() {
             CStr::from_ptr(ch.res_class)
         } else {
@@ -2148,10 +2120,10 @@ fn applyrules(c: *mut Client) {
             }
         }
         if !ch.res_class.is_null() {
-            bindgen::XFree(ch.res_class.cast());
+            xlib::XFree(ch.res_class.cast());
         }
         if !ch.res_name.is_null() {
-            bindgen::XFree(ch.res_name.cast());
+            xlib::XFree(ch.res_name.cast());
         }
         (*c).tags = if (*c).tags & TAGMASK != 0 {
             (*c).tags & TAGMASK
@@ -2201,7 +2173,7 @@ fn getstate(w: Window) -> c_long {
     let mut extra = 0;
     let mut real = 0;
     unsafe {
-        let cond = bindgen::XGetWindowProperty(
+        let cond = xlib::XGetWindowProperty(
             DPY,
             w,
             WMATOM[WM::State as usize],
@@ -2237,7 +2209,7 @@ mod util;
 fn main() {
     env_logger::init();
     unsafe {
-        DPY = bindgen::XOpenDisplay(std::ptr::null_mut());
+        DPY = xlib::XOpenDisplay(std::ptr::null_mut());
         if DPY.is_null() {
             die("rwm: cannot open display");
         }
@@ -2248,6 +2220,6 @@ fn main() {
     run();
     cleanup();
     unsafe {
-        bindgen::XCloseDisplay(DPY);
+        xlib::XCloseDisplay(DPY);
     }
 }

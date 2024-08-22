@@ -2,16 +2,21 @@ use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
-use fontconfig_sys::FcMatchPattern;
-use x11::xlib::{CapButt, False, JoinMiter, LineSolid};
-
-use crate::bindgen::{
-    self, Clr, Cur, Display, Drw, FcChar8, FcCharSet, FcPattern, Fnt, Window,
-    XftFont,
+use fontconfig_sys as fcfg;
+use fontconfig_sys::constants::{FC_CHARSET, FC_SCALABLE};
+use fontconfig_sys::{
+    FcChar8, FcCharSet, FcCharSetAddChar, FcCharSetCreate, FcMatchPattern,
+    FcNameParse, FcPattern, FcPatternDestroy, FcPatternDuplicate,
 };
+use x11::xft::{self, XftFont};
+use x11::xlib::{self, CapButt, Display, False, JoinMiter, LineSolid, GC};
+
+use crate::bindgen::{Drawable, Window};
 use crate::die;
 use crate::enums::Col;
 use crate::util::{between, ecalloc};
+use crate::Clr;
+use rwm::Cursor as Cur;
 
 // defined in drw.c
 const UTF_SIZ: usize = 4;
@@ -23,6 +28,30 @@ const UTFMAX: [c_long; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
 
 // defined in /usr/include/fontconfig/fontconfig.h
 const FC_TRUE: i32 = 1;
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Fnt {
+    pub dpy: *mut Display,
+    pub h: ::std::os::raw::c_uint,
+    pub xfont: *mut XftFont,
+    pub pattern: *mut FcPattern,
+    pub next: *mut Fnt,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Drw {
+    pub w: ::std::os::raw::c_uint,
+    pub h: ::std::os::raw::c_uint,
+    pub dpy: *mut Display,
+    pub screen: ::std::os::raw::c_int,
+    pub root: Window,
+    pub drawable: Drawable,
+    pub gc: GC,
+    pub scheme: *mut Clr,
+    pub fonts: *mut Fnt,
+}
 
 fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
     unsafe {
@@ -96,15 +125,15 @@ pub(crate) fn create(
         (*drw).root = root;
         (*drw).w = w;
         (*drw).h = h;
-        (*drw).drawable = bindgen::XCreatePixmap(
+        (*drw).drawable = xlib::XCreatePixmap(
             dpy,
             root,
             w,
             h,
-            bindgen::XDefaultDepth(dpy, screen) as u32,
+            xlib::XDefaultDepth(dpy, screen) as u32,
         );
-        (*drw).gc = bindgen::XCreateGC(dpy, root, 0, std::ptr::null_mut());
-        bindgen::XSetLineAttributes(
+        (*drw).gc = xlib::XCreateGC(dpy, root, 0, std::ptr::null_mut());
+        xlib::XSetLineAttributes(
             dpy,
             (*drw).gc,
             1,
@@ -118,8 +147,8 @@ pub(crate) fn create(
 
 pub(crate) fn free(drw: *mut Drw) {
     unsafe {
-        bindgen::XFreePixmap((*drw).dpy, (*drw).drawable);
-        bindgen::XFreeGC((*drw).dpy, (*drw).gc);
+        xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
+        xlib::XFreeGC((*drw).dpy, (*drw).gc);
         fontset_free((*drw).fonts);
         libc::free(drw.cast());
     }
@@ -138,7 +167,7 @@ pub(crate) fn rect(
         if drw.is_null() || (*drw).scheme.is_null() {
             return;
         }
-        bindgen::XSetForeground(
+        xlib::XSetForeground(
             (*drw).dpy,
             (*drw).gc,
             if invert != 0 {
@@ -148,7 +177,7 @@ pub(crate) fn rect(
             },
         );
         if filled != 0 {
-            bindgen::XFillRectangle(
+            xlib::XFillRectangle(
                 (*drw).dpy,
                 (*drw).drawable,
                 (*drw).gc,
@@ -158,7 +187,7 @@ pub(crate) fn rect(
                 h,
             );
         } else {
-            bindgen::XDrawRectangle(
+            xlib::XDrawRectangle(
                 (*drw).dpy,
                 (*drw).drawable,
                 (*drw).gc,
@@ -180,7 +209,7 @@ pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
         if cur.is_null() {
             return std::ptr::null_mut();
         }
-        (*cur).cursor = bindgen::XCreateFontCursor((*drw).dpy, shape as c_uint);
+        (*cur).cursor = xlib::XCreateFontCursor((*drw).dpy, shape as c_uint);
         cur
     }
 }
@@ -191,7 +220,7 @@ pub(crate) fn cur_free(drw: *mut Drw, cursor: *mut Cur) {
     }
 
     unsafe {
-        bindgen::XFreeCursor((*drw).dpy, (*cursor).cursor);
+        xlib::XFreeCursor((*drw).dpy, (*cursor).cursor);
         libc::free(cursor.cast());
     }
 }
@@ -254,8 +283,7 @@ fn xfont_create(
              * FcNameParse; using the latter results in the desired fallback
              * behaviour whereas the former just results in missing-character
              * rectangles being drawn, at least with some fonts. */
-            xfont =
-                bindgen::XftFontOpenName((*drw).dpy, (*drw).screen, fontname);
+            xfont = xft::XftFontOpenName((*drw).dpy, (*drw).screen, fontname);
             if xfont.is_null() {
                 eprintln!(
                     "error, cannot load font from name: '{:?}'",
@@ -263,17 +291,17 @@ fn xfont_create(
                 );
                 return null_mut();
             }
-            pattern = bindgen::FcNameParse(fontname as *mut FcChar8);
+            pattern = FcNameParse(fontname as *mut FcChar8);
             if pattern.is_null() {
                 eprintln!(
                     "error, cannot parse font name to pattern: '{:?}'",
                     CStr::from_ptr(fontname)
                 );
-                bindgen::XftFontClose((*drw).dpy, xfont);
+                xft::XftFontClose((*drw).dpy, xfont);
                 return null_mut();
             }
         } else if !fontpattern.is_null() {
-            let xfont = bindgen::XftFontOpenPattern((*drw).dpy, fontpattern);
+            let xfont = xft::XftFontOpenPattern((*drw).dpy, fontpattern.cast());
             if xfont.is_null() {
                 eprintln!("error, cannot load font from pattern");
                 return null_mut();
@@ -300,9 +328,9 @@ fn xfont_free(font: *mut Fnt) {
     }
     unsafe {
         if !(*font).pattern.is_null() {
-            bindgen::FcPatternDestroy((*font).pattern);
+            FcPatternDestroy((*font).pattern.cast());
         }
-        bindgen::XftFontClose((*font).dpy, (*font).xfont);
+        xft::XftFontClose((*font).dpy, (*font).xfont);
         libc::free(font.cast());
     }
 }
@@ -312,10 +340,10 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
         return;
     }
     unsafe {
-        if bindgen::XftColorAllocName(
+        if xft::XftColorAllocName(
             (*drw).dpy,
-            bindgen::XDefaultVisual((*drw).dpy, (*drw).screen),
-            bindgen::XDefaultColormap((*drw).dpy, (*drw).screen),
+            xlib::XDefaultVisual((*drw).dpy, (*drw).screen),
+            xlib::XDefaultColormap((*drw).dpy, (*drw).screen),
             clrname,
             dest,
         ) == 0
@@ -336,8 +364,7 @@ pub(crate) fn scm_create(
     if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
         return null_mut();
     }
-    let ret: *mut Clr =
-        ecalloc(clrcount, size_of::<bindgen::XftColor>()).cast();
+    let ret: *mut Clr = ecalloc(clrcount, size_of::<xft::XftColor>()).cast();
     if ret.is_null() {
         return null_mut();
     }
@@ -385,7 +412,7 @@ pub(crate) fn text(
         let mut ellipsis_w: c_uint = 0;
         let mut ellipsis_len: c_uint;
 
-        let mut d: *mut bindgen::XftDraw = null_mut();
+        let mut d: *mut xft::XftDraw = null_mut();
 
         let mut usedfont: *mut Fnt;
         let mut curfont: *mut Fnt;
@@ -403,7 +430,7 @@ pub(crate) fn text(
         let mut fcpattern: *mut FcPattern;
         let mut match_: *mut FcPattern;
 
-        let mut result: bindgen::XftResult = 0;
+        let mut result: xft::FcResult = xft::FcResult::NoMatch;
 
         let mut charexists: c_int = 0;
         let mut overflow: c_int = 0;
@@ -430,7 +457,7 @@ pub(crate) fn text(
         if render == 0 {
             w = if invert != 0 { invert } else { !invert } as u32;
         } else {
-            bindgen::XSetForeground(
+            xlib::XSetForeground(
                 drw.dpy,
                 drw.gc,
                 (*drw
@@ -438,12 +465,12 @@ pub(crate) fn text(
                     .add(if invert != 0 { Col::Fg } else { Col::Bg } as usize))
                 .pixel,
             );
-            bindgen::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
-            d = bindgen::XftDrawCreate(
+            xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
+            d = xft::XftDrawCreate(
                 drw.dpy,
                 drw.drawable,
-                bindgen::XDefaultVisual(drw.dpy, drw.screen),
-                bindgen::XDefaultColormap(drw.dpy, drw.screen),
+                xlib::XDefaultVisual(drw.dpy, drw.screen),
+                xlib::XDefaultColormap(drw.dpy, drw.screen),
             );
             x += lpad as i32;
             w -= lpad;
@@ -476,7 +503,7 @@ pub(crate) fn text(
                 curfont = drw.fonts;
                 while !curfont.is_null() {
                     charexists = (charexists != 0
-                        || bindgen::XftCharExists(
+                        || xft::XftCharExists(
                             drw.dpy,
                             (*curfont).xfont,
                             utf8codepoint as u32,
@@ -529,7 +556,7 @@ pub(crate) fn text(
                     ty = y
                         + (h - (*usedfont).h) as i32 / 2
                         + (*(*usedfont).xfont).ascent;
-                    bindgen::XftDrawStringUtf8(
+                    xft::XftDrawStringUtf8(
                         d,
                         drw.scheme.add(if invert != 0 {
                             Col::Bg
@@ -539,7 +566,7 @@ pub(crate) fn text(
                         (*usedfont).xfont,
                         x,
                         ty,
-                        utf8str as *const bindgen::XftChar8,
+                        utf8str as *const c_uchar,
                         utf8strlen,
                     );
                 }
@@ -579,48 +606,45 @@ pub(crate) fn text(
                     }
                 }
 
-                fccharset = bindgen::FcCharSetCreate();
-                bindgen::FcCharSetAddChar(fccharset, utf8codepoint as u32);
+                fccharset = FcCharSetCreate();
+                FcCharSetAddChar(fccharset, utf8codepoint as u32);
 
                 if (*drw.fonts).pattern.is_null() {
                     // refer to the comment in xfont_create for more information
                     die("the first font in the cache must be loaded from a font string");
                 }
 
-                fcpattern = bindgen::FcPatternDuplicate((*drw.fonts).pattern);
-                bindgen::FcPatternAddCharSet(
+                fcpattern = FcPatternDuplicate((*drw.fonts).pattern);
+                fcfg::FcPatternAddCharSet(
                     fcpattern,
                     // cast &[u8] to *u8 and then to *i8, hopefully okay
-                    bindgen::FC_CHARSET.as_ptr() as *const _,
+                    FC_CHARSET.as_ptr() as *const _,
                     fccharset,
                 );
-                bindgen::FcPatternAddBool(
+                fcfg::FcPatternAddBool(
                     fcpattern,
                     // same as above: &[u8] -> *u8 -> *i8
-                    bindgen::FC_SCALABLE.as_ptr() as *const _,
+                    FC_SCALABLE.as_ptr() as *const _,
                     FC_TRUE,
                 );
 
-                bindgen::FcConfigSubstitute(
-                    null_mut(),
-                    fcpattern,
-                    FcMatchPattern,
-                );
-                bindgen::FcDefaultSubstitute(fcpattern);
-                match_ = bindgen::XftFontMatch(
+                fcfg::FcConfigSubstitute(null_mut(), fcpattern, FcMatchPattern);
+                fcfg::FcDefaultSubstitute(fcpattern);
+                match_ = xft::XftFontMatch(
                     drw.dpy,
                     drw.screen,
-                    fcpattern,
+                    fcpattern.cast(),
                     &mut result,
-                );
+                )
+                .cast();
 
-                bindgen::FcCharSetDestroy(fccharset);
-                bindgen::FcPatternDestroy(fcpattern);
+                fcfg::FcCharSetDestroy(fccharset);
+                fcfg::FcPatternDestroy(fcpattern);
 
                 if !match_.is_null() {
                     usedfont = xfont_create(drw, null_mut(), match_);
                     if !usedfont.is_null()
-                        && bindgen::XftCharExists(
+                        && xft::XftCharExists(
                             drw.dpy,
                             (*usedfont).xfont,
                             utf8codepoint as u32,
@@ -643,7 +667,7 @@ pub(crate) fn text(
             }
         }
         if !d.is_null() {
-            bindgen::XftDrawDestroy(d);
+            xft::XftDrawDestroy(d);
         }
 
         x + if render != 0 { w } else { 0 } as i32
@@ -662,10 +686,10 @@ fn font_getexts(
             return;
         }
         let mut ext = MaybeUninit::uninit();
-        bindgen::XftTextExtentsUtf8(
+        xft::XftTextExtentsUtf8(
             (*font).dpy,
             (*font).xfont,
-            text as *const bindgen::XftChar8,
+            text as *const c_uchar,
             len as i32,
             ext.as_mut_ptr(),
         );
@@ -691,7 +715,7 @@ pub(crate) fn map(
         return;
     }
     unsafe {
-        bindgen::XCopyArea(
+        xlib::XCopyArea(
             (*drw).dpy,
             (*drw).drawable,
             win,
@@ -703,7 +727,7 @@ pub(crate) fn map(
             x,
             y,
         );
-        bindgen::XSync((*drw).dpy, False);
+        xlib::XSync((*drw).dpy, False);
     }
 }
 
@@ -715,14 +739,14 @@ pub(crate) fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
         (*drw).w = w;
         (*drw).h = h;
         if (*drw).drawable != 0 {
-            bindgen::XFreePixmap((*drw).dpy, (*drw).drawable);
+            xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
         }
-        (*drw).drawable = bindgen::XCreatePixmap(
+        (*drw).drawable = xlib::XCreatePixmap(
             (*drw).dpy,
             (*drw).root,
             w,
             h,
-            bindgen::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
+            xlib::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
         );
     }
 }

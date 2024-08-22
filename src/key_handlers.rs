@@ -6,23 +6,21 @@ use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::{
     ButtonRelease, ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask,
     Expose, ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest,
-    MotionNotify, SubstructureRedirectMask,
-};
-
-use crate::bindgen::{xerror, xerrordummy, Client, Layout, Monitor, XEvent};
-use crate::bindgen::{
-    XCheckMaskEvent, XConnectionNumber, XGrabPointer, XGrabServer, XKillClient,
-    XMaskEvent, XMoveResizeWindow, XSetCloseDownMode, XSetErrorHandler, XSync,
+    MotionNotify, SubstructureRedirectMask, XCheckMaskEvent, XConnectionNumber,
+    XEvent, XGrabPointer, XGrabServer, XKillClient, XMaskEvent,
+    XMoveResizeWindow, XSetCloseDownMode, XSetErrorHandler, XSync,
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
+
+use crate::bindgen::{Client, Layout, Monitor};
 use crate::config::{DMENUCMD, DMENUMON, LOCK_FULLSCREEN, SNAP};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, BH, CURSOR, DPY, HANDLER, MONS,
-    MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
+    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, BH, CURSOR,
+    DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
 };
 use rwm::Arg;
 
@@ -353,12 +351,12 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                     HANDLER[ev.type_ as usize](&mut ev);
                 }
                 MOTION_NOTIFY => {
-                    if ev.xmotion.time - lasttime <= 1000 / 60 {
+                    if ev.motion.time - lasttime <= 1000 / 60 {
                         continue;
                     }
-                    lasttime = ev.xmotion.time;
-                    let mut nx = ocx + (ev.xmotion.x - x);
-                    let mut ny = ocy + (ev.xmotion.y - y);
+                    lasttime = ev.motion.time;
+                    let mut nx = ocx + (ev.motion.x - x);
+                    let mut ny = ocy + (ev.motion.y - y);
                     if ((*SELMON).wx - nx).abs() < SNAP as c_int {
                         nx = (*SELMON).wx;
                     } else if (((*SELMON).wx + (*SELMON).ww) - (nx + width(c)))
@@ -463,12 +461,12 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
                     HANDLER[ev.type_ as usize](&mut ev);
                 }
                 MOTION_NOTIFY => {
-                    if ev.xmotion.time - lasttime <= 1000 / 60 {
+                    if ev.motion.time - lasttime <= 1000 / 60 {
                         continue;
                     }
-                    lasttime = ev.xmotion.time;
-                    let nw = max(ev.xmotion.x - ocx - 2 * c.bw + 1, 1);
-                    let nh = max(ev.xmotion.y - ocy - 2 * c.bw + 1, 1);
+                    lasttime = ev.motion.time;
+                    let nw = max(ev.motion.x - ocx - 2 * c.bw + 1, 1);
+                    let nh = max(ev.motion.y - ocy - 2 * c.bw + 1, 1);
                     if (*c.mon).wx + nw >= (*SELMON).wx
                         && (*c.mon).wx + nw <= (*SELMON).wx + (*SELMON).ww
                         && (*c.mon).wy + nh >= (*SELMON).wy
