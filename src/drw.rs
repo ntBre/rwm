@@ -34,7 +34,7 @@ const FC_TRUE: i32 = 1;
 #[derive(Debug, Copy, Clone)]
 pub struct Fnt {
     pub dpy: *mut Display,
-    pub h: ::std::os::raw::c_uint,
+    pub h: c_uint,
     pub xfont: *mut XftFont,
     pub pattern: *mut FcPattern,
     pub next: *mut Fnt,
@@ -43,10 +43,10 @@ pub struct Fnt {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Drw {
-    pub w: ::std::os::raw::c_uint,
-    pub h: ::std::os::raw::c_uint,
+    pub w: c_uint,
+    pub h: c_uint,
     pub dpy: *mut Display,
-    pub screen: ::std::os::raw::c_int,
+    pub screen: c_int,
     pub root: Window,
     pub drawable: Drawable,
     pub gc: GC,

@@ -18,12 +18,12 @@ use rwm::{Arg, Button, Key};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Rule {
-    pub class: *const ::std::os::raw::c_char,
-    pub instance: *const ::std::os::raw::c_char,
-    pub title: *const ::std::os::raw::c_char,
-    pub tags: ::std::os::raw::c_uint,
-    pub isfloating: ::std::os::raw::c_int,
-    pub monitor: ::std::os::raw::c_int,
+    pub class: *const c_char,
+    pub instance: *const c_char,
+    pub title: *const c_char,
+    pub tags: c_uint,
+    pub isfloating: c_int,
+    pub monitor: c_int,
 }
 
 // appearance
