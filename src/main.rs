@@ -389,7 +389,7 @@ fn setup() {
             utf8string,
             8,
             PropModeReplace,
-            c"dwm".as_ptr() as *mut c_uchar,
+            c"rwm".as_ptr() as *mut c_uchar,
             3,
         );
         xlib::XChangeProperty(

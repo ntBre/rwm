@@ -547,7 +547,7 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
                 (*arg).v as *const *const c_char,
             );
             die(&format!(
-                "dwm: execvp '{:?}' failed:",
+                "rwm: execvp '{:?}' failed:",
                 *(((*arg).v as *const *const c_char).offset(0)),
             ));
         }
