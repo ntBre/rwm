@@ -12,18 +12,7 @@ use crate::{
     key_handlers::*,
     layouts::{monocle, tile},
 };
-use rwm::{Arg, Button, Key, Layout};
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct Rule {
-    pub class: *const c_char,
-    pub instance: *const c_char,
-    pub title: *const c_char,
-    pub tags: c_uint,
-    pub isfloating: c_int,
-    pub monitor: c_int,
-}
+use rwm::{Arg, Button, Key, Layout, Rule};
 
 // appearance
 
@@ -53,26 +42,6 @@ pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
 // tagging
 pub const TAGS: [&CStr; 9] =
     [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"];
-
-impl Rule {
-    const fn new(
-        class: &'static CStr,
-        instance: *const i8,
-        title: *const i8,
-        tags: c_uint,
-        isfloating: c_int,
-        monitor: c_int,
-    ) -> Self {
-        Self {
-            class: class.as_ptr(),
-            instance,
-            title,
-            tags,
-            isfloating,
-            monitor,
-        }
-    }
-}
 
 pub const RULES: [Rule; 2] = [
     Rule::new(c"Gimp", null(), null(), 0, 1, -1),

@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_uint, c_void};
+use std::ffi::{c_char, c_int, c_uint, c_void, CStr};
 
 use x11::xlib::KeySym;
 
@@ -66,6 +66,37 @@ impl Key {
 }
 
 unsafe impl Sync for Key {}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Rule {
+    pub class: *const c_char,
+    pub instance: *const c_char,
+    pub title: *const c_char,
+    pub tags: c_uint,
+    pub isfloating: c_int,
+    pub monitor: c_int,
+}
+
+impl Rule {
+    pub const fn new(
+        class: &'static CStr,
+        instance: *const i8,
+        title: *const i8,
+        tags: c_uint,
+        isfloating: c_int,
+        monitor: c_int,
+    ) -> Self {
+        Self {
+            class: class.as_ptr(),
+            instance,
+            title,
+            tags,
+            isfloating,
+            monitor,
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
