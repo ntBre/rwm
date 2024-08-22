@@ -2,17 +2,6 @@
 
 #![allow(clippy::needless_range_loop)]
 
-mod bindgen {
-    #![allow(non_upper_case_globals)]
-    #![allow(non_camel_case_types)]
-    #![allow(non_snake_case)]
-    #![allow(improper_ctypes)]
-    #![allow(clippy::upper_case_acronyms)]
-    #![allow(unused)]
-
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-}
-
 use std::cmp::max;
 use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::mem::size_of_val;
