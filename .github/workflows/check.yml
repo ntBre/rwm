@@ -38,9 +38,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev
-      - name: Build dwm shared library
-        run: |
-          make dwm/libdwm.so
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
