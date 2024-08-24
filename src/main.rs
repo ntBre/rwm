@@ -526,6 +526,7 @@ fn arrange(mut m: *mut Monitor) {
             m = MONS;
             while !m.is_null() {
                 arrangemon(m);
+                m = (*m).next;
             }
         }
     }
