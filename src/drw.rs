@@ -245,10 +245,8 @@ pub(crate) fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
             return null_mut();
         }
 
-        let fontcount = fonts.len();
-        for i in 1..=fontcount {
-            let cur =
-                xfont_create(drw, fonts[fontcount - i].as_ptr(), null_mut());
+        for font in fonts.iter().rev() {
+            let cur = xfont_create(drw, font.as_ptr(), null_mut());
             if !cur.is_null() {
                 (*cur).next = ret;
                 ret = cur;
