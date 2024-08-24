@@ -242,8 +242,7 @@ fn setup() {
         SH = xlib::XDisplayHeight(DPY, SCREEN);
         ROOT = xlib::XRootWindow(DPY, SCREEN);
         DRW = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
-        if drw::fontset_create(DRW, &CONFIG.fonts, CONFIG.fonts.len()).is_null()
-        {
+        if drw::fontset_create(DRW, &CONFIG.fonts).is_null() {
             panic!("no fonts could be loaded");
         }
         LRPAD = (*(*DRW).fonts).h as i32;

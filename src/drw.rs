@@ -235,11 +235,7 @@ pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     }
 }
 
-pub(crate) fn fontset_create(
-    drw: *mut Drw,
-    fonts: &[CString],
-    fontcount: usize,
-) -> *mut Fnt {
+pub(crate) fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
     log::trace!("fontset_create");
     unsafe {
         let mut ret: *mut Fnt = null_mut();
@@ -249,6 +245,7 @@ pub(crate) fn fontset_create(
             return null_mut();
         }
 
+        let fontcount = fonts.len();
         for i in 1..=fontcount {
             let cur =
                 xfont_create(drw, fonts[fontcount - i].as_ptr(), null_mut());
