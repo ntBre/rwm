@@ -50,7 +50,7 @@ pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
         }
 
         let mw = if n > (*m).nmaster {
-            if (*m).nmaster > 0 {
+            if (*m).nmaster != 0 {
                 ((*m).ww as f32 * (*m).mfact) as c_uint
             } else {
                 0
