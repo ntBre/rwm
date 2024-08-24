@@ -10,7 +10,7 @@ use x11::xlib::{
     XA_WM_NAME, XA_WM_NORMAL_HINTS, XA_WM_TRANSIENT_FOR,
 };
 
-use rwm::{Arg, Monitor, Window};
+use rwm::{Arg, Window};
 
 use crate::{
     arrange, cleanmask,
@@ -20,8 +20,8 @@ use crate::{
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
     restack, setclientstate, setfocus, setfullscreen, seturgent, textw,
     unfocus, unmanage, updatebars, updategeom, updatestatus, updatetitle,
-    updatewindowtype, updatewmhints, width, wintoclient, wintomon, BH, DPY,
-    DRW, MONS, NETATOM, ROOT, SELMON, SH, STEXT, SW, WITHDRAWN_STATE,
+    updatewindowtype, updatewmhints, width, wintoclient, wintomon, Monitor, BH,
+    DPY, DRW, MONS, NETATOM, ROOT, SELMON, SH, STEXT, SW, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
@@ -71,7 +71,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for button in BUTTONS {
+        for button in *BUTTONS {
             if click as u32 == button.click
                 && button.func.is_some()
                 && button.button == ev.button
@@ -291,7 +291,7 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
         let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
-        for key in KEYS {
+        for key in *KEYS {
             if keysym == key.keysym
                 && cleanmask(key.mod_) == cleanmask(ev.state)
                 && key.func.is_some()

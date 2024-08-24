@@ -10,6 +10,12 @@ lock_fullscreen = true
 fonts = ["monospace:size=10"]
 tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
+layouts = [
+     { symbol = "[]=", arrange = "tile" },
+     { symbol = "><>" },
+     { symbol = "[M]", arrange = "monocle" },
+]
+
 [colors]
 norm = ["#bbbbbb", "#222222", "#444444"]
 sel = ["#eeeeee", "#005577", "#005577"]

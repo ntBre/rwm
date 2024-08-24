@@ -12,16 +12,17 @@ use x11::xlib::{
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
 
-use crate::config::{CONFIG, DMENUCMD, DMENUMON};
+use crate::config::{Layout, CONFIG, DMENUCMD, DMENUMON};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, BH, CURSOR,
-    DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
+    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, Client,
+    Monitor, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK,
+    WMATOM, XNONE,
 };
-use rwm::{Arg, Client, Layout, Monitor};
+use rwm::Arg;
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
@@ -175,7 +176,7 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),
-            (*(*SELMON).lt[(*SELMON).sellt as usize]).symbol,
+            (*(*SELMON).lt[(*SELMON).sellt as usize]).symbol.as_ptr(),
             size_of_val(&(*SELMON).ltsymbol),
         );
         if !(*SELMON).sel.is_null() {

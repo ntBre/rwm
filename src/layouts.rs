@@ -2,8 +2,7 @@ use std::{cmp::min, ffi::c_uint};
 
 use libc::c_int;
 
-use crate::{height, is_visible, nexttiled, resize};
-use rwm::Monitor;
+use crate::{height, is_visible, nexttiled, resize, Monitor};
 
 pub(crate) fn monocle(m: *mut Monitor) {
     unsafe {

@@ -1,7 +1,7 @@
 //! tiling window manager based on dwm
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
+use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr, CString};
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
@@ -26,9 +26,9 @@ use x11::xlib::{
     XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
-use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
+use rwm::{Arg, Cursor, Window};
 
-use config::{BUTTONS, CONFIG, KEYS, LAYOUTS, RULES};
+use config::{Layout, BUTTONS, CONFIG, KEYS, RULES};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -44,6 +44,73 @@ macro_rules! cfor {
             $step;
         }
     };
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Monitor {
+    pub ltsymbol: [c_char; 16usize],
+    pub mfact: f32,
+    pub nmaster: c_int,
+    pub num: c_int,
+    pub by: c_int,
+    pub mx: c_int,
+    pub my: c_int,
+    pub mw: c_int,
+    pub mh: c_int,
+    pub wx: c_int,
+    pub wy: c_int,
+    pub ww: c_int,
+    pub wh: c_int,
+    pub seltags: c_uint,
+    pub sellt: c_uint,
+    pub tagset: [c_uint; 2usize],
+    pub showbar: bool,
+    pub topbar: bool,
+    pub clients: *mut Client,
+    pub sel: *mut Client,
+    pub stack: *mut Client,
+    pub next: *mut Monitor,
+    pub barwin: Window,
+    pub lt: [*const Layout; 2usize],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct Client {
+    pub name: [c_char; 256usize],
+    pub mina: f32,
+    pub maxa: f32,
+    pub x: c_int,
+    pub y: c_int,
+    pub w: c_int,
+    pub h: c_int,
+    pub oldx: c_int,
+    pub oldy: c_int,
+    pub oldw: c_int,
+    pub oldh: c_int,
+    pub basew: c_int,
+    pub baseh: c_int,
+    pub incw: c_int,
+    pub inch: c_int,
+    pub maxw: c_int,
+    pub maxh: c_int,
+    pub minw: c_int,
+    pub minh: c_int,
+    pub hintsvalid: c_int,
+    pub bw: c_int,
+    pub oldbw: c_int,
+    pub tags: c_uint,
+    pub isfixed: c_int,
+    pub isfloating: c_int,
+    pub isurgent: c_int,
+    pub neverfocus: c_int,
+    pub oldstate: c_int,
+    pub isfullscreen: c_int,
+    pub next: *mut Client,
+    pub snext: *mut Client,
+    pub mon: *mut Monitor,
+    pub win: Window,
 }
 
 /// function to be called on a startup error
@@ -178,11 +245,11 @@ fn createmon() -> *mut Monitor {
         (*m).nmaster = CONFIG.nmaster;
         (*m).showbar = CONFIG.showbar;
         (*m).topbar = CONFIG.topbar;
-        (*m).lt[0] = &LAYOUTS[0];
-        (*m).lt[1] = &LAYOUTS[1 % LAYOUTS.len()];
+        (*m).lt[0] = &CONFIG.layouts[0];
+        (*m).lt[1] = &CONFIG.layouts[1 % CONFIG.layouts.len()];
         libc::strncpy(
             &mut (*m).ltsymbol as *mut _,
-            LAYOUTS[0].symbol,
+            CONFIG.layouts[0].symbol.as_ptr(),
             size_of_val(&(*m).ltsymbol),
         );
     }
@@ -484,7 +551,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for button in BUTTONS {
+        for button in *BUTTONS {
             if button.click == Clk::ClientWin as u32 {
                 for mod_ in modifiers {
                     xlib::XGrabButton(
@@ -536,12 +603,12 @@ fn arrangemon(m: *mut Monitor) {
     unsafe {
         libc::strncpy(
             (*m).ltsymbol.as_mut_ptr(),
-            (*(*m).lt[(*m).sellt as usize]).symbol,
+            (*(*m).lt[(*m).sellt as usize]).symbol.as_ptr(),
             size_of_val(&(*m).ltsymbol),
         );
         let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
         if let Some(arrange) = arrange {
-            (arrange)(m);
+            (arrange.into_fn())(m);
         }
     }
 }
@@ -930,7 +997,7 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for key in KEYS {
+            for key in *KEYS {
                 // skip modifier codes, we do that ourselves
                 if key.keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
@@ -1624,7 +1691,7 @@ fn cleanup() {
         let a = Arg { ui: !0 };
         view(&a);
         (*SELMON).lt[(*SELMON).sellt as usize] =
-            &Layout { symbol: c"".as_ptr(), arrange: None };
+            &Layout { symbol: CString::new("").unwrap(), arrange: None };
 
         let mut m = MONS;
         while !m.is_null() {
