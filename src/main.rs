@@ -1586,9 +1586,8 @@ fn updatebarpos(m: *mut Monitor) {
         (*m).wh = (*m).mh;
         if (*m).showbar != 0 {
             (*m).wh -= BH;
-            (*m).by =
-                if (*m).topbar != 0 { (*m).wy } else { (*m).wy + (*m).wh };
-            (*m).wy = if (*m).topbar != 0 { (*m).wy + BH } else { (*m).wy };
+            (*m).by = if (*m).topbar { (*m).wy } else { (*m).wy + (*m).wh };
+            (*m).wy = if (*m).topbar { (*m).wy + BH } else { (*m).wy };
         } else {
             (*m).by = -BH;
         }

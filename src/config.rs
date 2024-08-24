@@ -22,8 +22,7 @@ pub const BORDERPX: c_uint = 3;
 pub const SNAP: c_uint = 32;
 /// 0 means no bar
 pub const SHOWBAR: c_int = 1;
-/// 0 means bottom bar
-pub const TOPBAR: c_int = 1;
+pub const TOPBAR: bool = true;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
 const DMENUFONT: &CStr = c"monospace:size=12";
 const COL_GRAY1: &CStr = c"#222222";

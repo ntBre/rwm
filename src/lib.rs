@@ -125,7 +125,7 @@ pub struct Monitor {
     pub sellt: c_uint,
     pub tagset: [c_uint; 2usize],
     pub showbar: c_int,
-    pub topbar: c_int,
+    pub topbar: bool,
     pub clients: *mut Client,
     pub sel: *mut Client,
     pub stack: *mut Client,
