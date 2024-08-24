@@ -12,7 +12,7 @@ use x11::xlib::{
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
 
-use crate::config::{DMENUCMD, DMENUMON, LOCK_FULLSCREEN, SNAP};
+use crate::config::{CONFIG, DMENUCMD, DMENUMON, LOCK_FULLSCREEN};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
@@ -356,19 +356,19 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                     lasttime = ev.motion.time;
                     let mut nx = ocx + (ev.motion.x - x);
                     let mut ny = ocy + (ev.motion.y - y);
-                    if ((*SELMON).wx - nx).abs() < SNAP as c_int {
+                    if ((*SELMON).wx - nx).abs() < CONFIG.snap as c_int {
                         nx = (*SELMON).wx;
                     } else if (((*SELMON).wx + (*SELMON).ww) - (nx + width(c)))
                         .abs()
-                        < SNAP as c_int
+                        < CONFIG.snap as c_int
                     {
                         nx = (*SELMON).wx + (*SELMON).ww - width(c);
                     }
-                    if ((*SELMON).wy - ny).abs() < SNAP as c_int {
+                    if ((*SELMON).wy - ny).abs() < CONFIG.snap as c_int {
                         ny = (*SELMON).wy;
                     } else if (((*SELMON).wy + (*SELMON).wh) - (ny + height(c)))
                         .abs()
-                        < SNAP as c_int
+                        < CONFIG.snap as c_int
                     {
                         ny = (*SELMON).wy + (*SELMON).wh - height(c);
                     }
@@ -376,8 +376,8 @@ pub(crate) unsafe extern "C" fn movemouse(_arg: *const Arg) {
                         && (*(*SELMON).lt[(*SELMON).sellt as usize])
                             .arrange
                             .is_some()
-                        && ((nx - c.x).abs() > SNAP as c_int
-                            || (ny - c.y).abs() > SNAP as c_int)
+                        && ((nx - c.x).abs() > CONFIG.snap as c_int
+                            || (ny - c.y).abs() > CONFIG.snap as c_int)
                     {
                         togglefloating(null_mut());
                     }
@@ -474,8 +474,8 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
                         && (*(*SELMON).lt[(*SELMON).sellt as usize])
                             .arrange
                             .is_some()
-                        && ((nw - c.w).abs() > SNAP as c_int
-                            || (nh - c.h).abs() > SNAP as c_int)
+                        && ((nw - c.w).abs() > CONFIG.snap as c_int
+                            || (nh - c.h).abs() > CONFIG.snap as c_int)
                     {
                         togglefloating(null_mut());
                     }

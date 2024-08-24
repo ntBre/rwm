@@ -1,10 +1,13 @@
 use std::{
+    error::Error,
     ffi::{c_float, c_int, c_uint, CStr},
+    path::Path,
     ptr::{null, null_mut},
     sync::LazyLock,
 };
 
 use libc::c_char;
+use serde::Deserialize;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
@@ -14,14 +17,58 @@ use crate::{
 };
 use rwm::{Arg, Button, Key, Layout, Rule};
 
+impl Default for Config {
+    fn default() -> Self {
+        Self { borderpx: 3, snap: 32, showbar: true, topbar: true }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct Config {
+    /// Border pixel of windows
+    pub borderpx: c_uint,
+
+    /// Snap pixel
+    pub snap: c_uint,
+
+    /// Whether to show the bar
+    pub showbar: bool,
+
+    /// Whether to show the bar at the top or bottom
+    pub topbar: bool,
+}
+
+impl Config {
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
+        let s = std::fs::read_to_string(path)?;
+        Ok(toml::from_str(&s)?)
+    }
+}
+
+/// Attempt to load a config file on first usage from `$XDG_CONFIG_HOME`, then
+/// `$HOME`, before falling back to the default config.
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    let mut home = std::env::var("XDG_CONFIG_HOME");
+    if home.is_err() {
+        home = std::env::var("HOME");
+    }
+    if home.is_err() {
+        log::warn!("unable to determine config directory");
+        return Config::default();
+    }
+    let config_path = Path::new(&home.unwrap())
+        .join(".config")
+        .join("rwm")
+        .join("config.toml");
+
+    Config::load(config_path).unwrap_or_else(|e| {
+        log::error!("failed to read config file: {e:?}");
+        Config::default()
+    })
+});
+
 // appearance
 
-/// Border pixel of windows
-pub const BORDERPX: c_uint = 3;
-// Snap pixel
-pub const SNAP: c_uint = 32;
-pub const SHOWBAR: bool = true;
-pub const TOPBAR: bool = true;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
 const DMENUFONT: &CStr = c"monospace:size=12";
 const COL_GRAY1: &CStr = c"#222222";
@@ -259,3 +306,13 @@ pub static BUTTONS: [Button; 11] = [
     Button::new(Clk::TagBar, MODKEY, Button1, tag, Arg { i: 0 }),
     Button::new(Clk::TagBar, MODKEY, Button3, toggletag, Arg { i: 0 }),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_config() {
+        Config::load("example.toml").unwrap();
+    }
+}

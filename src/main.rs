@@ -29,7 +29,7 @@ use x11::xlib::{
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
 use config::{
-    BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
+    BUTTONS, COLORS, CONFIG, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
 };
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -165,7 +165,7 @@ type Clr = XftColor;
 fn createmon() -> *mut Monitor {
     log::trace!("createmon");
 
-    use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
+    use config::{CONFIG, MFACT, NMASTER};
 
     // I thought about trying to create a Monitor directly, followed by
     // Box::into_raw(Box::new(m)), but we use libc::free to free the Monitors
@@ -178,8 +178,8 @@ fn createmon() -> *mut Monitor {
         (*m).tagset[1] = 1;
         (*m).mfact = MFACT;
         (*m).nmaster = NMASTER;
-        (*m).showbar = SHOWBAR;
-        (*m).topbar = TOPBAR;
+        (*m).showbar = CONFIG.showbar;
+        (*m).topbar = CONFIG.topbar;
         (*m).lt[0] = &LAYOUTS[0];
         (*m).lt[1] = &LAYOUTS[1 % LAYOUTS.len()];
         libc::strncpy(
@@ -1890,7 +1890,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         }
         (*c).x = max((*c).x, (*(*c).mon).wx as i32);
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
-        (*c).bw = config::BORDERPX as i32;
+        (*c).bw = CONFIG.borderpx as i32;
 
         log::trace!("manage: XWindowChanges");
         let mut wc = xlib::XWindowChanges {
@@ -2218,6 +2218,8 @@ mod util;
 
 fn main() {
     env_logger::init();
+    // a bit weird but demand config load at startup
+    let _ = CONFIG;
     unsafe {
         DPY = xlib::XOpenDisplay(std::ptr::null_mut());
         if DPY.is_null() {
