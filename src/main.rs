@@ -28,9 +28,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
-use config::{
-    BUTTONS, COLORS, CONFIG, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, TAGS,
-};
+use config::{BUTTONS, COLORS, CONFIG, FONTS, KEYS, LAYOUTS, RULES, TAGS};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -165,7 +163,7 @@ type Clr = XftColor;
 fn createmon() -> *mut Monitor {
     log::trace!("createmon");
 
-    use config::{CONFIG, MFACT, NMASTER};
+    use config::CONFIG;
 
     // I thought about trying to create a Monitor directly, followed by
     // Box::into_raw(Box::new(m)), but we use libc::free to free the Monitors
@@ -176,8 +174,8 @@ fn createmon() -> *mut Monitor {
     unsafe {
         (*m).tagset[0] = 1;
         (*m).tagset[1] = 1;
-        (*m).mfact = MFACT;
-        (*m).nmaster = NMASTER;
+        (*m).mfact = CONFIG.mfact;
+        (*m).nmaster = CONFIG.nmaster;
         (*m).showbar = CONFIG.showbar;
         (*m).topbar = CONFIG.topbar;
         (*m).lt[0] = &LAYOUTS[0];
@@ -736,7 +734,7 @@ fn applysizehints(
         if *w < BH {
             *w = BH;
         }
-        if RESIZE_HINTS != 0
+        if CONFIG.resize_hints
             || (*c).isfloating != 0
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange

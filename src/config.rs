@@ -19,7 +19,16 @@ use rwm::{Arg, Button, Key, Layout, Rule};
 
 impl Default for Config {
     fn default() -> Self {
-        Self { borderpx: 3, snap: 32, showbar: true, topbar: true }
+        Self {
+            borderpx: 3,
+            snap: 32,
+            showbar: true,
+            topbar: true,
+            mfact: 0.5,
+            nmaster: 1,
+            resize_hints: false,
+            lock_fullscreen: true,
+        }
     }
 }
 
@@ -36,6 +45,18 @@ pub struct Config {
 
     /// Whether to show the bar at the top or bottom
     pub topbar: bool,
+
+    /// Factor of master area size [0.05..0.95]
+    pub mfact: c_float,
+
+    /// Number of clients in master area
+    pub nmaster: c_int,
+
+    /// Respect size hints in tiled resizals
+    pub resize_hints: bool,
+
+    /// Force focus on the fullscreen window
+    pub lock_fullscreen: bool,
 }
 
 impl Config {
@@ -94,15 +115,6 @@ pub const RULES: [Rule; 2] = [
 ];
 
 // layouts
-
-/// Factor of master area size [0.05..0.95]
-pub const MFACT: c_float = 0.5;
-/// Number of clients in master area
-pub const NMASTER: c_int = 1;
-/// 1 means respect size hints in tiled resizals
-pub const RESIZE_HINTS: c_int = 0;
-/// 1 will force focus on the fullscreen window
-pub const LOCK_FULLSCREEN: c_int = 1;
 
 pub const LAYOUTS: [Layout; 3] = [
     Layout { symbol: c"[]=".as_ptr(), arrange: Some(tile) },

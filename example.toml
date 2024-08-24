@@ -2,3 +2,7 @@ borderpx = 3
 snap = 32
 showbar = true
 topbar = true
+mfact = 0.5
+nmaster = 1
+resize_hints = false
+lock_fullscreen = true

@@ -12,7 +12,7 @@ use x11::xlib::{
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
 
-use crate::config::{CONFIG, DMENUCMD, DMENUMON, LOCK_FULLSCREEN};
+use crate::config::{CONFIG, DMENUCMD, DMENUMON};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
@@ -45,7 +45,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
         let mut i: *mut Client;
 
         if (*SELMON).sel.is_null()
-            || ((*(*SELMON).sel).isfullscreen != 0 && LOCK_FULLSCREEN != 0)
+            || ((*(*SELMON).sel).isfullscreen != 0 && CONFIG.lock_fullscreen)
         {
             return;
         }
