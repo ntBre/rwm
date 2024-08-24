@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr};
+use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr, CString};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
@@ -237,7 +237,7 @@ pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
 
 pub(crate) fn fontset_create(
     drw: *mut Drw,
-    fonts: &[&CStr],
+    fonts: &[CString],
     fontcount: usize,
 ) -> *mut Fnt {
     log::trace!("fontset_create");

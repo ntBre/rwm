@@ -6,3 +6,5 @@ mfact = 0.5
 nmaster = 1
 resize_hints = false
 lock_fullscreen = true
+
+fonts = ["monospace:size=10"]

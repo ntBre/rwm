@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    ffi::{c_float, c_int, c_uint, CStr},
+    ffi::{c_float, c_int, c_uint, CStr, CString},
     path::Path,
     ptr::{null, null_mut},
     sync::LazyLock,
@@ -28,6 +28,7 @@ impl Default for Config {
             nmaster: 1,
             resize_hints: false,
             lock_fullscreen: true,
+            fonts: vec![c"monospace:size=10".into()],
         }
     }
 }
@@ -57,6 +58,8 @@ pub struct Config {
 
     /// Force focus on the fullscreen window
     pub lock_fullscreen: bool,
+
+    pub fonts: Vec<CString>,
 }
 
 impl Config {
@@ -90,7 +93,6 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 
 // appearance
 
-pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
 const DMENUFONT: &CStr = c"monospace:size=12";
 const COL_GRAY1: &CStr = c"#222222";
 const COL_GRAY2: &CStr = c"#444444";

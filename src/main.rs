@@ -28,7 +28,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
-use config::{BUTTONS, COLORS, CONFIG, FONTS, KEYS, LAYOUTS, RULES, TAGS};
+use config::{BUTTONS, COLORS, CONFIG, KEYS, LAYOUTS, RULES, TAGS};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -242,7 +242,8 @@ fn setup() {
         SH = xlib::XDisplayHeight(DPY, SCREEN);
         ROOT = xlib::XRootWindow(DPY, SCREEN);
         DRW = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
-        if drw::fontset_create(DRW, &FONTS, FONTS.len()).is_null() {
+        if drw::fontset_create(DRW, &CONFIG.fonts, CONFIG.fonts.len()).is_null()
+        {
             panic!("no fonts could be loaded");
         }
         LRPAD = (*(*DRW).fonts).h as i32;
