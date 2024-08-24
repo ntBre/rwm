@@ -1,11 +1,11 @@
-borderpx = 3
-snap = 32
-showbar = true
-topbar = true
-mfact = 0.5
-nmaster = 1
-resize_hints = false
-lock_fullscreen = true
+let borderpx = 3;
+let snap = 32;
+let showbar = true;
+let topbar = true;
+let mfact = 0.5;
+let nmaster = 1;
+let resize_hints = false;
+let lock_fullscreen = true;
 
-fonts = ["monospace:size=10"]
-tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+let fonts = ["monospace:size=10"];
+let tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];

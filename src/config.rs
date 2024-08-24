@@ -6,8 +6,8 @@ use std::{
     sync::LazyLock,
 };
 
+use fig::Fig;
 use libc::c_char;
-use serde::Deserialize;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
@@ -36,7 +36,6 @@ impl Default for Config {
     }
 }
 
-#[derive(Deserialize)]
 pub struct Config {
     /// Border pixel of windows
     pub borderpx: c_uint,
@@ -67,10 +66,54 @@ pub struct Config {
     pub tags: Vec<CString>,
 }
 
+impl TryFrom<Fig> for Config {
+    type Error = Box<dyn Error>;
+
+    fn try_from(Fig { variables: mut v }: Fig) -> Result<Self, Self::Error> {
+        let mut get =
+            |name| v.remove(name).ok_or(format!("failed to find {name}"));
+        let num = |val: fig::Value| {
+            val.as_number().cloned().ok_or("unable to parse number")
+        };
+        let bool = |val: fig::Value| {
+            val.as_bool().cloned().ok_or("unable to parse bool")
+        };
+        let str_list = |val: fig::Value| {
+            val.as_list()
+                .cloned()
+                .ok_or("unable to parse list")
+                .map(|vec| {
+                    vec.into_iter()
+                        .map(|v| {
+                            v.as_str().cloned().map(|s| {
+                                CString::new(s)
+                                    .expect("failed to convert to CString")
+                            })
+                        })
+                        .collect::<Option<Vec<CString>>>()
+                        .ok_or("unable to convert to strings")
+                })?
+        };
+        Ok(Self {
+            borderpx: num(get("borderpx")?)? as c_uint,
+            snap: num(get("snap")?)? as c_uint,
+            showbar: bool(get("showbar")?)?,
+            topbar: bool(get("topbar")?)?,
+            mfact: num(get("mfact")?)?,
+            nmaster: num(get("nmaster")?)? as c_int,
+            resize_hints: bool(get("resize_hints")?)?,
+            lock_fullscreen: bool(get("lock_fullscreen")?)?,
+            fonts: str_list(get("fonts")?)?,
+            tags: str_list(get("tags")?)?,
+        })
+    }
+}
+
 impl Config {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
         let s = std::fs::read_to_string(path)?;
-        Ok(toml::from_str(&s)?)
+        let f = fig::Fig::parse(&s)?;
+        Self::try_from(f)
     }
 }
 
