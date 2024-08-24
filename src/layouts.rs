@@ -30,6 +30,7 @@ pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
 }
 
 pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
+    log::trace!("tile");
     unsafe {
         let mut i;
         let mut n;
