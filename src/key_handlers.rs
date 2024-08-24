@@ -131,12 +131,13 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
 /// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
     unsafe {
-        if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
+        if (*arg).ui & *TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize]
+        {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
-        if (*arg).ui & TAGMASK != 0 {
-            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
+        if (*arg).ui & *TAGMASK != 0 {
+            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & *TAGMASK;
         }
         focus(null_mut());
         arrange(SELMON);
@@ -207,8 +208,8 @@ pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
     unsafe {
-        if !(*SELMON).sel.is_null() && (*arg).ui & TAGMASK != 0 {
-            (*(*SELMON).sel).tags = (*arg).ui & TAGMASK;
+        if !(*SELMON).sel.is_null() && (*arg).ui & *TAGMASK != 0 {
+            (*(*SELMON).sel).tags = (*arg).ui & *TAGMASK;
             focus(null_mut());
             arrange(SELMON);
         }
@@ -279,7 +280,7 @@ pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
     unsafe {
         let newtagset = (*SELMON).tagset[(*SELMON).seltags as usize]
-            ^ ((*arg).ui & TAGMASK);
+            ^ ((*arg).ui & *TAGMASK);
 
         if newtagset != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
@@ -559,7 +560,7 @@ pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
         if (*SELMON).sel.is_null() {
             return;
         }
-        let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui & TAGMASK);
+        let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui & *TAGMASK);
         if newtags != 0 {
             (*(*SELMON).sel).tags = newtags;
             focus(null_mut());

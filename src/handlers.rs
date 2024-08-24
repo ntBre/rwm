@@ -14,7 +14,7 @@ use rwm::{Arg, Monitor, Window};
 
 use crate::{
     arrange, cleanmask,
-    config::{BUTTONS, KEYS, TAGS},
+    config::{BUTTONS, CONFIG, KEYS},
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -41,17 +41,17 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(TAGS[i].as_ptr());
+                x += textw(CONFIG.tags[i].as_ptr());
                 // condition
                 if ev.x < x {
                     break;
                 }
                 i += 1;
-                if i >= TAGS.len() {
+                if i >= CONFIG.tags.len() {
                     break;
                 }
             }
-            if i < TAGS.len() {
+            if i < CONFIG.tags.len() {
                 click = Clk::TagBar;
                 arg = Arg { ui: 1 << i };
             } else if ev.x < x + textw(addr_of!((*SELMON).ltsymbol) as *const _)

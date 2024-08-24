@@ -28,7 +28,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
-use config::{BUTTONS, COLORS, CONFIG, KEYS, LAYOUTS, RULES, TAGS};
+use config::{BUTTONS, COLORS, CONFIG, KEYS, LAYOUTS, RULES};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -898,12 +898,13 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 fn view(arg: *const Arg) {
     log::trace!("view");
     unsafe {
-        if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
+        if (*arg).ui & *TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize]
+        {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
-        if ((*arg).ui & TAGMASK) != 0 {
-            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
+        if ((*arg).ui & *TAGMASK) != 0 {
+            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & *TAGMASK;
         }
         focus(null_mut());
         arrange(SELMON);
@@ -1076,7 +1077,7 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let mut x = 0;
-        for (i, tag) in TAGS.iter().enumerate() {
+        for (i, tag) in CONFIG.tags.iter().enumerate() {
             let text = tag.to_owned();
             let w = textw(text.as_ptr());
             drw::setscheme(
@@ -2133,8 +2134,8 @@ fn applyrules(c: *mut Client) {
         if !ch.res_name.is_null() {
             xlib::XFree(ch.res_name.cast());
         }
-        (*c).tags = if (*c).tags & TAGMASK != 0 {
-            (*c).tags & TAGMASK
+        (*c).tags = if (*c).tags & *TAGMASK != 0 {
+            (*c).tags & *TAGMASK
         } else {
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize]
         };
@@ -2142,7 +2143,7 @@ fn applyrules(c: *mut Client) {
 }
 
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-const TAGMASK: u32 = (1 << TAGS.len()) - 1;
+static TAGMASK: LazyLock<u32> = LazyLock::new(|| (1 << CONFIG.tags.len()) - 1);
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 

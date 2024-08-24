@@ -29,6 +29,9 @@ impl Default for Config {
             resize_hints: false,
             lock_fullscreen: true,
             fonts: vec![c"monospace:size=10".into()],
+            tags: [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"]
+                .map(CString::from)
+                .to_vec(),
         }
     }
 }
@@ -60,6 +63,8 @@ pub struct Config {
     pub lock_fullscreen: bool,
 
     pub fonts: Vec<CString>,
+
+    pub tags: Vec<CString>,
 }
 
 impl Config {
@@ -106,10 +111,6 @@ pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
     ret[Scheme::Sel as usize] = [COL_GRAY4, COL_CYAN, COL_CYAN];
     ret
 });
-
-// tagging
-pub const TAGS: [&CStr; 9] =
-    [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"];
 
 pub const RULES: [Rule; 2] = [
     Rule::new(c"Gimp", null(), null(), 0, 1, -1),
