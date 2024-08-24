@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     error::Error,
     ffi::{c_float, c_int, c_uint, CStr, CString},
     path::Path,
@@ -7,7 +8,7 @@ use std::{
 };
 
 use libc::c_char;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
@@ -32,6 +33,15 @@ impl Default for Config {
             tags: [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"]
                 .map(CString::from)
                 .to_vec(),
+            colors: {
+                let mut ret =
+                    std::array::from_fn(|_| [c""; 3].map(CString::from));
+                ret[Scheme::Norm as usize] =
+                    [COL_GRAY3, COL_GRAY1, COL_GRAY2].map(CString::from);
+                ret[Scheme::Sel as usize] =
+                    [COL_GRAY4, COL_CYAN, COL_CYAN].map(CString::from);
+                ret
+            },
         }
     }
 }
@@ -65,6 +75,25 @@ pub struct Config {
     pub fonts: Vec<CString>,
 
     pub tags: Vec<CString>,
+
+    #[serde(deserialize_with = "map_colors")]
+    pub colors: [[CString; 3]; 2],
+}
+
+fn map_colors<'de, D>(deserializer: D) -> Result<[[CString; 3]; 2], D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let mut map: HashMap<String, [CString; 3]> =
+        HashMap::deserialize(deserializer)?;
+    let mut ret = std::array::from_fn(|_| [c""; 3].map(CString::from));
+    ret[Scheme::Norm as usize] = map.remove("norm").ok_or_else(|| {
+        serde::de::Error::custom("Must provide a `norm` color")
+    })?;
+    ret[Scheme::Sel as usize] = map.remove("sel").ok_or_else(|| {
+        serde::de::Error::custom("Must provide a `sel` color")
+    })?;
+    Ok(ret)
 }
 
 impl Config {
@@ -104,13 +133,6 @@ const COL_GRAY2: &CStr = c"#444444";
 const COL_GRAY3: &CStr = c"#bbbbbb";
 const COL_GRAY4: &CStr = c"#eeeeee";
 const COL_CYAN: &CStr = c"#005577";
-
-pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
-    let mut ret = [[c""; 3]; 2];
-    ret[Scheme::Norm as usize] = [COL_GRAY3, COL_GRAY1, COL_GRAY2];
-    ret[Scheme::Sel as usize] = [COL_GRAY4, COL_CYAN, COL_CYAN];
-    ret
-});
 
 pub const RULES: [Rule; 2] = [
     Rule::new(c"Gimp", null(), null(), 0, 1, -1),

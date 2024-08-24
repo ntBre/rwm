@@ -367,7 +367,7 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
 
 pub(crate) fn scm_create(
     drw: *mut Drw,
-    clrnames: &[&CStr],
+    clrnames: &[CString],
     clrcount: usize,
 ) -> *mut Clr {
     if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
