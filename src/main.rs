@@ -163,6 +163,8 @@ type Atom = c_ulong;
 type Clr = XftColor;
 
 fn createmon() -> *mut Monitor {
+    log::trace!("createmon");
+
     use config::{MFACT, NMASTER, SHOWBAR, TOPBAR};
 
     // I thought about trying to create a Monitor directly, followed by
@@ -191,6 +193,7 @@ fn createmon() -> *mut Monitor {
 }
 
 fn checkotherwm() {
+    log::trace!("checkotherwm");
     unsafe {
         XERRORXLIB = XSetErrorHandler(Some(xerrorstart));
         xlib::XSelectInput(
@@ -204,6 +207,7 @@ fn checkotherwm() {
 }
 
 fn setup() {
+    log::trace!("setup");
     unsafe {
         let mut wa = xlib::XSetWindowAttributes {
             background_pixmap: 0,
@@ -400,6 +404,7 @@ fn focus(mut c: *mut Client) {
 }
 
 fn drawbars() {
+    log::trace!("drawbars");
     unsafe {
         let mut m = MONS;
         while !m.is_null() {
@@ -410,6 +415,7 @@ fn drawbars() {
 }
 
 fn setfocus(c: *mut Client) {
+    log::trace!("setfocus");
     unsafe {
         if (*c).neverfocus == 0 {
             xlib::XSetInputFocus(
@@ -434,6 +440,7 @@ fn setfocus(c: *mut Client) {
 }
 
 fn sendevent(c: *mut Client, proto: Atom) -> c_int {
+    log::trace!("sendevent");
     let mut n = 0;
     let mut protocols = std::ptr::null_mut();
     let mut exists = 0;
@@ -459,6 +466,7 @@ fn sendevent(c: *mut Client, proto: Atom) -> c_int {
 }
 
 fn grabbuttons(c: *mut Client, focused: bool) {
+    log::trace!("grabbuttons");
     unsafe {
         updatenumlockmask();
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
@@ -524,6 +532,7 @@ fn arrange(mut m: *mut Monitor) {
 }
 
 fn arrangemon(m: *mut Monitor) {
+    log::trace!("arrangemon");
     unsafe {
         libc::strncpy(
             (*m).ltsymbol.as_mut_ptr(),
@@ -538,6 +547,7 @@ fn arrangemon(m: *mut Monitor) {
 }
 
 fn restack(m: *mut Monitor) {
+    log::trace!("restack");
     drawbar(m);
     unsafe {
         if (*m).sel.is_null() {
@@ -579,6 +589,7 @@ fn restack(m: *mut Monitor) {
 }
 
 fn showhide(c: *mut Client) {
+    log::trace!("showhide");
     unsafe {
         if c.is_null() {
             return;
@@ -611,12 +622,14 @@ fn resize(
     mut h: i32,
     interact: c_int,
 ) {
+    log::trace!("resize");
     if applysizehints(c, &mut x, &mut y, &mut w, &mut h, interact) != 0 {
         resizeclient(c, x, y, w, h);
     }
 }
 
 fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
+    log::trace!("resizeclient");
     unsafe {
         (*c).oldx = (*c).x;
         (*c).oldy = (*c).y;
@@ -682,6 +695,7 @@ fn applysizehints(
     h: &mut i32,
     interact: c_int,
 ) -> c_int {
+    log::trace!("applysizehints");
     unsafe {
         let m = (*c).mon;
         let interact = interact != 0;
@@ -852,6 +866,7 @@ fn updatesizehints(c: *mut Client) {
 }
 
 fn pop(c: *mut Client) {
+    log::trace!("pop");
     detach(c);
     attach(c);
     focus(c);
@@ -872,6 +887,7 @@ fn detach(c: *mut Client) {
 }
 
 fn nexttiled(mut c: *mut Client) -> *mut Client {
+    log::trace!("nexttiled");
     unsafe {
         cfor!((; !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)); c = (*c).next) {});
         c
@@ -879,6 +895,7 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 }
 
 fn view(arg: *const Arg) {
+    log::trace!("view");
     unsafe {
         if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
             return;
@@ -893,6 +910,7 @@ fn view(arg: *const Arg) {
 }
 
 fn grabkeys() {
+    log::trace!("grabkeys");
     unsafe {
         updatenumlockmask();
         let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
@@ -933,6 +951,7 @@ fn grabkeys() {
 }
 
 fn updatenumlockmask() {
+    log::trace!("updatenumlockmask");
     unsafe {
         NUMLOCKMASK = 0;
         let modmap = xlib::XGetModifierMapping(DPY);
@@ -993,6 +1012,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
 }
 
 fn updatestatus() {
+    log::trace!("updatestatus");
     unsafe {
         if gettextprop(
             ROOT,
@@ -1012,10 +1032,12 @@ fn updatestatus() {
 }
 
 fn textw(x: *const c_char) -> c_int {
+    log::trace!("textw");
     unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
 }
 
 fn drawbar(m: *mut Monitor) {
+    log::trace!("drawbar");
     unsafe {
         let mut tw = 0;
         let boxs = (*(*DRW).fonts).h / 9;
@@ -1149,6 +1171,7 @@ fn drawbar(m: *mut Monitor) {
 }
 
 fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
+    log::trace!("gettextprop");
     unsafe {
         if text.is_null() || size == 0 {
             return 0;
@@ -1189,6 +1212,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
 }
 
 fn updatebars() {
+    log::trace!("updatebars");
     let mut wa = xlib::XSetWindowAttributes {
         override_redirect: True,
         background_pixmap: ParentRelative as u64,
@@ -1245,6 +1269,7 @@ fn updatebars() {
 }
 
 fn updategeom() -> i32 {
+    log::trace!("updategeom");
     unsafe {
         let mut dirty = 0;
         if x11::xinerama::XineramaIsActive(DPY) != 0 {
@@ -1384,6 +1409,7 @@ fn updategeom() -> i32 {
 }
 
 fn wintomon(w: Window) -> *mut Monitor {
+    log::trace!("wintomon");
     unsafe {
         let mut x = 0;
         let mut y = 0;
@@ -1424,6 +1450,7 @@ fn wintoclient(w: u64) -> *mut Client {
 }
 
 fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
+    log::trace!("recttomon");
     unsafe {
         let mut r = SELMON;
         let mut area = 0;
