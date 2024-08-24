@@ -5,7 +5,7 @@ use libc::c_int;
 use crate::{height, is_visible, nexttiled, resize};
 use rwm::Monitor;
 
-pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
+pub(crate) fn monocle(m: *mut Monitor) {
     unsafe {
         let mut n = 0;
         let mut c;
@@ -29,7 +29,7 @@ pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
     }
 }
 
-pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
+pub(crate) fn tile(m: *mut Monitor) {
     log::trace!("tile");
     unsafe {
         let mut i;
