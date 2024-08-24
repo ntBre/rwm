@@ -28,7 +28,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
-use config::{BUTTONS, COLORS, CONFIG, KEYS, LAYOUTS, RULES};
+use config::{BUTTONS, CONFIG, KEYS, LAYOUTS, RULES};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -285,9 +285,10 @@ fn setup() {
         CURSOR[Cur::Move as usize] = drw::cur_create(DRW, XC_FLEUR as i32);
 
         /* init appearance */
-        SCHEME = util::ecalloc(COLORS.len(), size_of::<*mut Clr>()).cast();
-        for i in 0..COLORS.len() {
-            *SCHEME.add(i) = drw::scm_create(DRW, &COLORS[i], 3);
+        SCHEME =
+            util::ecalloc(CONFIG.COLORS.len(), size_of::<*mut Clr>()).cast();
+        for i in 0..CONFIG.COLORS.len() {
+            *SCHEME.add(i) = drw::scm_create(DRW, &CONFIG.COLORS[i], 3);
         }
 
         /* init bars */
@@ -1644,7 +1645,7 @@ fn cleanup() {
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
-        for i in 0..COLORS.len() {
+        for i in 0..CONFIG.COLORS.len() {
             let tmp: *mut Clr = *SCHEME.add(i);
             libc::free(tmp.cast());
         }

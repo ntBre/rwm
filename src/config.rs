@@ -6,7 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
-use fig::Fig;
+use fig::{Fig, Value};
 use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
@@ -32,6 +32,7 @@ impl Default for Config {
             tags: [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"]
                 .map(CString::from)
                 .to_vec(),
+            COLORS: default_colors(),
         }
     }
 }
@@ -64,14 +65,33 @@ pub struct Config {
     pub fonts: Vec<CString>,
 
     pub tags: Vec<CString>,
+
+    pub COLORS: [[CString; 3]; 2],
+}
+
+fn get(
+    v: &mut std::collections::HashMap<String, fig::Value>,
+    name: &str,
+) -> Result<Value, String> {
+    v.remove(name).ok_or(format!("failed to find {name}"))
+}
+
+fn get_colors(
+    v: &mut std::collections::HashMap<String, fig::Value>,
+) -> Result<[[CString; 3]; 2], Box<dyn Error>> {
+    let colors = get(v, "colors")?;
+    let mut colors =
+        colors.try_into_map().map_err(|_| "colors must be a map")?;
+    let norm = get(&mut colors, "SchemeNorm")?
+        .try_into_list()
+        .map_err(|_| "SchemeNorm must be a list")?;
+    todo!();
 }
 
 impl TryFrom<Fig> for Config {
     type Error = Box<dyn Error>;
 
     fn try_from(Fig { variables: mut v }: Fig) -> Result<Self, Self::Error> {
-        let mut get =
-            |name| v.remove(name).ok_or(format!("failed to find {name}"));
         let num = |val: fig::Value| {
             val.as_number().cloned().ok_or("unable to parse number")
         };
@@ -95,16 +115,17 @@ impl TryFrom<Fig> for Config {
                 })?
         };
         Ok(Self {
-            borderpx: num(get("borderpx")?)? as c_uint,
-            snap: num(get("snap")?)? as c_uint,
-            showbar: bool(get("showbar")?)?,
-            topbar: bool(get("topbar")?)?,
-            mfact: num(get("mfact")?)?,
-            nmaster: num(get("nmaster")?)? as c_int,
-            resize_hints: bool(get("resize_hints")?)?,
-            lock_fullscreen: bool(get("lock_fullscreen")?)?,
-            fonts: str_list(get("fonts")?)?,
-            tags: str_list(get("tags")?)?,
+            borderpx: num(get(&mut v, "borderpx")?)? as c_uint,
+            snap: num(get(&mut v, "snap")?)? as c_uint,
+            showbar: bool(get(&mut v, "showbar")?)?,
+            topbar: bool(get(&mut v, "topbar")?)?,
+            mfact: num(get(&mut v, "mfact")?)?,
+            nmaster: num(get(&mut v, "nmaster")?)? as c_int,
+            resize_hints: bool(get(&mut v, "resize_hints")?)?,
+            lock_fullscreen: bool(get(&mut v, "lock_fullscreen")?)?,
+            fonts: str_list(get(&mut v, "fonts")?)?,
+            tags: str_list(get(&mut v, "tags")?)?,
+            COLORS: get_colors(&mut v)?,
         })
     }
 }
@@ -131,7 +152,7 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     let config_path = Path::new(&home.unwrap())
         .join(".config")
         .join("rwm")
-        .join("config.toml");
+        .join("config.fig");
 
     Config::load(config_path).unwrap_or_else(|e| {
         log::error!("failed to read config file: {e:?}");
@@ -142,18 +163,23 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 // appearance
 
 const DMENUFONT: &CStr = c"monospace:size=12";
+
 const COL_GRAY1: &CStr = c"#222222";
 const COL_GRAY2: &CStr = c"#444444";
 const COL_GRAY3: &CStr = c"#bbbbbb";
 const COL_GRAY4: &CStr = c"#eeeeee";
 const COL_CYAN: &CStr = c"#005577";
 
-pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
-    let mut ret = [[c""; 3]; 2];
-    ret[Scheme::Norm as usize] = [COL_GRAY3, COL_GRAY1, COL_GRAY2];
-    ret[Scheme::Sel as usize] = [COL_GRAY4, COL_CYAN, COL_CYAN];
+fn default_colors() -> [[CString; 3]; 2] {
+    let mut ret = std::array::from_fn(|_| {
+        std::array::from_fn(|_| CString::new("").unwrap())
+    });
+    ret[Scheme::Norm as usize] =
+        [COL_GRAY3, COL_GRAY1, COL_GRAY2].map(CString::from);
+    ret[Scheme::Sel as usize] =
+        [COL_GRAY4, COL_CYAN, COL_CYAN].map(CString::from);
     ret
-});
+}
 
 pub const RULES: [Rule; 2] = [
     Rule::new(c"Gimp", null(), null(), 0, 1, -1),
@@ -371,6 +397,6 @@ mod tests {
 
     #[test]
     fn load_config() {
-        Config::load("example.toml").unwrap();
+        Config::load("example.fig").unwrap();
     }
 }

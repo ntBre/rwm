@@ -1,0 +1,19 @@
+let borderpx = 3;
+let snap = 32;
+let showbar = true;
+let topbar = true;
+let mfact = 0.5;
+let nmaster = 1;
+let resize_hints = false;
+let lock_fullscreen = true;
+
+let fonts = ["monospace:size=10"];
+let tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+let gray1 = "#222222";
+let gray2 = "#444444";
+let gray3 = "#bbbbbb";
+let gray4 = "#eeeeee";
+let cyan = "#005577";
+
+let colors = {SchemeNorm: [gray3, gray1, gray2], SchemeSel: [gray4, cyan, cyan]};
