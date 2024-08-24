@@ -20,8 +20,7 @@ use rwm::{Arg, Button, Key, Layout, Rule};
 pub const BORDERPX: c_uint = 3;
 // Snap pixel
 pub const SNAP: c_uint = 32;
-/// 0 means no bar
-pub const SHOWBAR: c_int = 1;
+pub const SHOWBAR: bool = true;
 pub const TOPBAR: bool = true;
 pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
 const DMENUFONT: &CStr = c"monospace:size=12";

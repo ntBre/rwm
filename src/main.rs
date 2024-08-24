@@ -1047,7 +1047,7 @@ fn drawbar(m: *mut Monitor) {
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if (*m).showbar == 0 {
+        if !(*m).showbar {
             return;
         }
 
@@ -1584,7 +1584,7 @@ fn updatebarpos(m: *mut Monitor) {
     unsafe {
         (*m).wy = (*m).my;
         (*m).wh = (*m).mh;
-        if (*m).showbar != 0 {
+        if (*m).showbar {
             (*m).wh -= BH;
             (*m).by = if (*m).topbar { (*m).wy } else { (*m).wy + (*m).wh };
             (*m).wy = if (*m).topbar { (*m).wy + BH } else { (*m).wy };

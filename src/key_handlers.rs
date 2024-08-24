@@ -25,7 +25,7 @@ use rwm::{Arg, Client, Layout, Monitor};
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
-        (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
+        (*SELMON).showbar = !(*SELMON).showbar;
         updatebarpos(SELMON);
         XMoveResizeWindow(
             DPY,
