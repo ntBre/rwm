@@ -889,7 +889,9 @@ fn detach(c: *mut Client) {
 fn nexttiled(mut c: *mut Client) -> *mut Client {
     log::trace!("nexttiled");
     unsafe {
-        cfor!((; !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)); c = (*c).next) {});
+        while !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)) {
+            c = (*c).next;
+        }
         c
     }
 }
