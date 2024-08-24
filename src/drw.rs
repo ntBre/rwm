@@ -308,7 +308,8 @@ fn xfont_create(
                 return null_mut();
             }
         } else if !fontpattern.is_null() {
-            let xfont = xft::XftFontOpenPattern((*drw).dpy, fontpattern.cast());
+            log::trace!("xfont_create: XftFontOpenPattern");
+            xfont = xft::XftFontOpenPattern((*drw).dpy, fontpattern.cast());
             if xfont.is_null() {
                 eprintln!("error, cannot load font from pattern");
                 return null_mut();
