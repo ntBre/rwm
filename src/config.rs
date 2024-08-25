@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     error::Error,
     ffi::{c_float, c_int, c_uint, CString},
     path::Path,
@@ -113,6 +114,12 @@ fn get_colors(
     Ok(ret)
 }
 
+fn get_keys(
+    _v: &mut std::collections::HashMap<String, Value>,
+) -> Result<Vec<Key>, Infallible> {
+    Ok(default_keys().to_vec())
+}
+
 impl TryFrom<Fig> for Config {
     type Error = Box<dyn Error>;
 
@@ -154,7 +161,7 @@ impl TryFrom<Fig> for Config {
             fonts: str_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
-            keys: default_keys().to_vec(),
+            keys: get_keys(&mut v)?,
         })
     }
 }
