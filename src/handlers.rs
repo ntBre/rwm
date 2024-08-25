@@ -71,7 +71,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for button in &BUTTONS {
+        for button in &*BUTTONS {
             if click as u32 == button.click
                 && button.func.is_some()
                 && button.button == ev.button
@@ -291,7 +291,7 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
         let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
-        for key in &KEYS {
+        for key in &*KEYS {
             if keysym == key.keysym
                 && cleanmask(key.mod_) == cleanmask(ev.state)
                 && key.func.is_some()

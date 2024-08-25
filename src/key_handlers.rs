@@ -1,20 +1,19 @@
 use std::cmp::max;
 use std::ffi::c_int;
+use std::process::Command;
 use std::ptr::null_mut;
 
-use libc::{c_char, sigaction, SIGCHLD, SIG_DFL};
 use x11::xlib::{
     ButtonRelease, ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask,
     Expose, ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest,
-    MotionNotify, SubstructureRedirectMask, XCheckMaskEvent, XConnectionNumber,
-    XEvent, XGrabPointer, XGrabServer, XKillClient, XMaskEvent,
-    XMoveResizeWindow, XSetCloseDownMode, XSetErrorHandler, XSync,
-    XUngrabPointer, XUngrabServer, XWarpPointer,
+    MotionNotify, SubstructureRedirectMask, XCheckMaskEvent, XEvent,
+    XGrabPointer, XGrabServer, XKillClient, XMaskEvent, XMoveResizeWindow,
+    XSetCloseDownMode, XSetErrorHandler, XSync, XUngrabPointer, XUngrabServer,
+    XWarpPointer,
 };
 
-use crate::config::{CONFIG, DMENUCMD, DMENUMON, LAYOUTS};
+use crate::config::{CONFIG, DMENUCMD, LAYOUTS};
 use crate::enums::{Cur, WM};
-use crate::util::die;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
@@ -527,35 +526,19 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
 
 pub(crate) fn spawn(arg: *const Arg) {
     unsafe {
-        if (*arg).v().cast() == DMENUCMD.0.as_ptr() {
+        let mut argv = (*arg).v();
+        if argv == *DMENUCMD {
             log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
-            DMENUMON[0] = '0' as c_char + (*SELMON).num as c_char;
+            argv.push("-m".into());
+            argv.push((*SELMON).num.to_string());
         }
-        if libc::fork() == 0 {
-            if !DPY.is_null() {
-                libc::close(XConnectionNumber(DPY));
-            }
-            libc::setsid();
 
-            let mut sa = sigaction {
-                sa_sigaction: SIG_DFL,
-                // this is probably not strictly safe, but I'd rather not
-                // MaybeUninit the whole sigaction if I can avoid it
-                sa_mask: std::mem::zeroed(),
-                sa_flags: 0,
-                sa_restorer: None,
-            };
-            libc::sigemptyset(&mut sa.sa_mask);
-            libc::sigaction(SIGCHLD, &sa, null_mut());
+        let mut cmd = Command::new(argv[0].clone());
+        let cmd = if argv.len() > 1 { cmd.args(&argv[1..]) } else { &mut cmd };
 
-            // trying to emulate ((char **)arg->v)[0]: casting arg->v to a
-            // char ** and then accessing the first string (char *)
-            libc::execvp(*(((*arg).v()).offset(0)), (*arg).v());
-            die(&format!(
-                "rwm: execvp '{:?}' failed:",
-                *(((*arg).v()).offset(0)),
-            ));
-        }
+        let Ok(_) = cmd.spawn() else {
+            panic!("rwm: spawn '{:?}' failed", argv[0]);
+        };
     }
 }
 

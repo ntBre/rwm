@@ -15,7 +15,7 @@ pub enum Arg {
     Ui(c_uint),
     F(f32),
     /// Argument for execvp in spawn
-    V(*const *const c_char),
+    V(Vec<String>),
     /// CONFIG.layouts index for setlayout
     L(Option<usize>),
 }
@@ -36,7 +36,7 @@ impl Arg {
         I => i => c_int,
         Ui => ui => c_uint,
         F => f => f32,
-        V => v => *const *const c_char,
+        V => v => Vec<String>,
         L => l => Option<usize>,
     }
 }

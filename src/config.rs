@@ -1,13 +1,12 @@
 use std::{
     error::Error,
-    ffi::{c_float, c_int, c_uint, CStr, CString},
+    ffi::{c_float, c_int, c_uint, CString},
     path::Path,
-    ptr::{null, null_mut},
+    ptr::null,
     sync::LazyLock,
 };
 
 use fig::{Fig, Value};
-use libc::c_char;
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
@@ -188,22 +187,22 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 
 // appearance
 
-const DMENUFONT: &CStr = c"monospace:size=12";
+const DMENUFONT: &str = "monospace:size=12";
 
-const COL_GRAY1: &CStr = c"#222222";
-const COL_GRAY2: &CStr = c"#444444";
-const COL_GRAY3: &CStr = c"#bbbbbb";
-const COL_GRAY4: &CStr = c"#eeeeee";
-const COL_CYAN: &CStr = c"#005577";
+const COL_GRAY1: &str = "#222222";
+const COL_GRAY2: &str = "#444444";
+const COL_GRAY3: &str = "#bbbbbb";
+const COL_GRAY4: &str = "#eeeeee";
+const COL_CYAN: &str = "#005577";
 
 fn default_colors() -> [[CString; 3]; 2] {
     let mut ret = std::array::from_fn(|_| {
         std::array::from_fn(|_| CString::new("").unwrap())
     });
     ret[Scheme::Norm as usize] =
-        [COL_GRAY3, COL_GRAY1, COL_GRAY2].map(CString::from);
+        [COL_GRAY3, COL_GRAY1, COL_GRAY2].map(|s| CString::new(s).unwrap());
     ret[Scheme::Sel as usize] =
-        [COL_GRAY4, COL_CYAN, COL_CYAN].map(CString::from);
+        [COL_GRAY4, COL_CYAN, COL_CYAN].map(|s| CString::new(s).unwrap());
     ret
 }
 
@@ -223,31 +222,23 @@ pub const LAYOUTS: [Layout; 3] = [
 // key definitions
 pub const MODKEY: c_uint = Mod4Mask;
 
-/// This type is needed just to implement Sync for this raw pointer
-pub struct DmenuCmd(pub [*const c_char; 14]);
-
-unsafe impl Sync for DmenuCmd {}
-
-pub static mut DMENUMON: [c_char; 2] = ['0' as c_char, '\0' as c_char];
-
 // commands
-pub static DMENUCMD: DmenuCmd = DmenuCmd([
-    c"dmenu_run".as_ptr(),
-    c"-m".as_ptr(),
-    unsafe { DMENUMON.as_ptr() },
-    c"-fn".as_ptr(),
-    DMENUFONT.as_ptr(),
-    c"-nb".as_ptr(),
-    COL_GRAY1.as_ptr(),
-    c"-nf".as_ptr(),
-    COL_GRAY3.as_ptr(),
-    c"-sb".as_ptr(),
-    COL_CYAN.as_ptr(),
-    c"-sf".as_ptr(),
-    COL_GRAY4.as_ptr(),
-    null_mut(),
-]);
-pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
+pub static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
+    vec![
+        "dmenu_run".into(),
+        "-fn".into(),
+        DMENUFONT.into(),
+        "-nb".into(),
+        COL_GRAY1.into(),
+        "-nf".into(),
+        COL_GRAY3.into(),
+        "-sb".into(),
+        COL_CYAN.into(),
+        "-sf".into(),
+        COL_GRAY4.into(),
+    ]
+});
+pub static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
@@ -257,90 +248,94 @@ use x11::keysym::{
 
 const S_MOD: c_uint = MODKEY | ShiftMask;
 
-pub static KEYS: [Key; 60] = [
-    Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.0.as_ptr().cast())),
-    Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.as_ptr().cast())),
-    Key::new(MODKEY, XK_b, togglebar, Arg::I(0)),
-    Key::new(MODKEY, XK_j, focusstack, Arg::I(1)),
-    Key::new(MODKEY, XK_k, focusstack, Arg::I(-1)),
-    Key::new(MODKEY, XK_i, incnmaster, Arg::I(1)),
-    Key::new(MODKEY, XK_d, incnmaster, Arg::I(-1)),
-    Key::new(MODKEY, XK_h, setmfact, Arg::F(-0.05)),
-    Key::new(MODKEY, XK_l, setmfact, Arg::F(0.05)),
-    Key::new(MODKEY, XK_Return, zoom, Arg::I(0)),
-    Key::new(MODKEY, XK_Tab, view, Arg::Ui(0)),
-    Key::new(S_MOD, XK_c, killclient, Arg::I(0)),
-    Key::new(MODKEY, XK_t, setlayout, Arg::L(Some(0))),
-    Key::new(MODKEY, XK_f, setlayout, Arg::L(Some(1))),
-    Key::new(MODKEY, XK_m, setlayout, Arg::L(Some(2))),
-    Key::new(MODKEY, XK_space, setlayout, Arg::L(None)),
-    Key::new(S_MOD, XK_space, togglefloating, Arg::I(0)),
-    Key::new(MODKEY, XK_0, view, Arg::Ui(!0)),
-    Key::new(S_MOD, XK_0, tag, Arg::Ui(!0)),
-    Key::new(MODKEY, XK_comma, focusmon, Arg::I(-1)),
-    Key::new(MODKEY, XK_period, focusmon, Arg::I(1)),
-    Key::new(S_MOD, XK_comma, tagmon, Arg::I(-1)),
-    Key::new(S_MOD, XK_period, tagmon, Arg::I(1)),
-    Key::new(MODKEY, XK_1, view, Arg::Ui(1 << 0)),
-    Key::new(MODKEY | ControlMask, XK_1, toggleview, Arg::Ui(1 << 0)),
-    Key::new(S_MOD, XK_1, tag, Arg::Ui(1 << 0)),
-    Key::new(S_MOD | ControlMask, XK_1, toggletag, Arg::Ui(1 << 0)),
-    Key::new(MODKEY, XK_2, view, Arg::Ui(1 << 1)),
-    Key::new(MODKEY | ControlMask, XK_2, toggleview, Arg::Ui(1 << 1)),
-    Key::new(S_MOD, XK_2, tag, Arg::Ui(1 << 1)),
-    Key::new(S_MOD | ControlMask, XK_2, toggletag, Arg::Ui(1 << 1)),
-    Key::new(MODKEY, XK_3, view, Arg::Ui(1 << 2)),
-    Key::new(MODKEY | ControlMask, XK_3, toggleview, Arg::Ui(1 << 2)),
-    Key::new(S_MOD, XK_3, tag, Arg::Ui(1 << 2)),
-    Key::new(S_MOD | ControlMask, XK_3, toggletag, Arg::Ui(1 << 2)),
-    Key::new(MODKEY, XK_4, view, Arg::Ui(1 << 3)),
-    Key::new(MODKEY | ControlMask, XK_4, toggleview, Arg::Ui(1 << 3)),
-    Key::new(S_MOD, XK_4, tag, Arg::Ui(1 << 3)),
-    Key::new(S_MOD | ControlMask, XK_4, toggletag, Arg::Ui(1 << 3)),
-    Key::new(MODKEY, XK_5, view, Arg::Ui(1 << 4)),
-    Key::new(MODKEY | ControlMask, XK_5, toggleview, Arg::Ui(1 << 4)),
-    Key::new(S_MOD, XK_5, tag, Arg::Ui(1 << 4)),
-    Key::new(S_MOD | ControlMask, XK_5, toggletag, Arg::Ui(1 << 4)),
-    Key::new(MODKEY, XK_6, view, Arg::Ui(1 << 5)),
-    Key::new(MODKEY | ControlMask, XK_6, toggleview, Arg::Ui(1 << 5)),
-    Key::new(S_MOD, XK_6, tag, Arg::Ui(1 << 5)),
-    Key::new(S_MOD | ControlMask, XK_6, toggletag, Arg::Ui(1 << 5)),
-    Key::new(MODKEY, XK_7, view, Arg::Ui(1 << 6)),
-    Key::new(MODKEY | ControlMask, XK_7, toggleview, Arg::Ui(1 << 6)),
-    Key::new(S_MOD, XK_7, tag, Arg::Ui(1 << 6)),
-    Key::new(S_MOD | ControlMask, XK_7, toggletag, Arg::Ui(1 << 6)),
-    Key::new(MODKEY, XK_8, view, Arg::Ui(1 << 7)),
-    Key::new(MODKEY | ControlMask, XK_8, toggleview, Arg::Ui(1 << 7)),
-    Key::new(S_MOD, XK_8, tag, Arg::Ui(1 << 7)),
-    Key::new(S_MOD | ControlMask, XK_8, toggletag, Arg::Ui(1 << 7)),
-    Key::new(MODKEY, XK_9, view, Arg::Ui(1 << 8)),
-    Key::new(MODKEY | ControlMask, XK_9, toggleview, Arg::Ui(1 << 8)),
-    Key::new(S_MOD, XK_9, tag, Arg::Ui(1 << 8)),
-    Key::new(S_MOD | ControlMask, XK_9, toggletag, Arg::Ui(1 << 8)),
-    Key::new(S_MOD, XK_q, quit, Arg::I(0)),
-];
+pub static KEYS: LazyLock<[Key; 60]> = LazyLock::new(|| {
+    [
+        Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.clone())),
+        Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.to_vec())),
+        Key::new(MODKEY, XK_b, togglebar, Arg::I(0)),
+        Key::new(MODKEY, XK_j, focusstack, Arg::I(1)),
+        Key::new(MODKEY, XK_k, focusstack, Arg::I(-1)),
+        Key::new(MODKEY, XK_i, incnmaster, Arg::I(1)),
+        Key::new(MODKEY, XK_d, incnmaster, Arg::I(-1)),
+        Key::new(MODKEY, XK_h, setmfact, Arg::F(-0.05)),
+        Key::new(MODKEY, XK_l, setmfact, Arg::F(0.05)),
+        Key::new(MODKEY, XK_Return, zoom, Arg::I(0)),
+        Key::new(MODKEY, XK_Tab, view, Arg::Ui(0)),
+        Key::new(S_MOD, XK_c, killclient, Arg::I(0)),
+        Key::new(MODKEY, XK_t, setlayout, Arg::L(Some(0))),
+        Key::new(MODKEY, XK_f, setlayout, Arg::L(Some(1))),
+        Key::new(MODKEY, XK_m, setlayout, Arg::L(Some(2))),
+        Key::new(MODKEY, XK_space, setlayout, Arg::L(None)),
+        Key::new(S_MOD, XK_space, togglefloating, Arg::I(0)),
+        Key::new(MODKEY, XK_0, view, Arg::Ui(!0)),
+        Key::new(S_MOD, XK_0, tag, Arg::Ui(!0)),
+        Key::new(MODKEY, XK_comma, focusmon, Arg::I(-1)),
+        Key::new(MODKEY, XK_period, focusmon, Arg::I(1)),
+        Key::new(S_MOD, XK_comma, tagmon, Arg::I(-1)),
+        Key::new(S_MOD, XK_period, tagmon, Arg::I(1)),
+        Key::new(MODKEY, XK_1, view, Arg::Ui(1 << 0)),
+        Key::new(MODKEY | ControlMask, XK_1, toggleview, Arg::Ui(1 << 0)),
+        Key::new(S_MOD, XK_1, tag, Arg::Ui(1 << 0)),
+        Key::new(S_MOD | ControlMask, XK_1, toggletag, Arg::Ui(1 << 0)),
+        Key::new(MODKEY, XK_2, view, Arg::Ui(1 << 1)),
+        Key::new(MODKEY | ControlMask, XK_2, toggleview, Arg::Ui(1 << 1)),
+        Key::new(S_MOD, XK_2, tag, Arg::Ui(1 << 1)),
+        Key::new(S_MOD | ControlMask, XK_2, toggletag, Arg::Ui(1 << 1)),
+        Key::new(MODKEY, XK_3, view, Arg::Ui(1 << 2)),
+        Key::new(MODKEY | ControlMask, XK_3, toggleview, Arg::Ui(1 << 2)),
+        Key::new(S_MOD, XK_3, tag, Arg::Ui(1 << 2)),
+        Key::new(S_MOD | ControlMask, XK_3, toggletag, Arg::Ui(1 << 2)),
+        Key::new(MODKEY, XK_4, view, Arg::Ui(1 << 3)),
+        Key::new(MODKEY | ControlMask, XK_4, toggleview, Arg::Ui(1 << 3)),
+        Key::new(S_MOD, XK_4, tag, Arg::Ui(1 << 3)),
+        Key::new(S_MOD | ControlMask, XK_4, toggletag, Arg::Ui(1 << 3)),
+        Key::new(MODKEY, XK_5, view, Arg::Ui(1 << 4)),
+        Key::new(MODKEY | ControlMask, XK_5, toggleview, Arg::Ui(1 << 4)),
+        Key::new(S_MOD, XK_5, tag, Arg::Ui(1 << 4)),
+        Key::new(S_MOD | ControlMask, XK_5, toggletag, Arg::Ui(1 << 4)),
+        Key::new(MODKEY, XK_6, view, Arg::Ui(1 << 5)),
+        Key::new(MODKEY | ControlMask, XK_6, toggleview, Arg::Ui(1 << 5)),
+        Key::new(S_MOD, XK_6, tag, Arg::Ui(1 << 5)),
+        Key::new(S_MOD | ControlMask, XK_6, toggletag, Arg::Ui(1 << 5)),
+        Key::new(MODKEY, XK_7, view, Arg::Ui(1 << 6)),
+        Key::new(MODKEY | ControlMask, XK_7, toggleview, Arg::Ui(1 << 6)),
+        Key::new(S_MOD, XK_7, tag, Arg::Ui(1 << 6)),
+        Key::new(S_MOD | ControlMask, XK_7, toggletag, Arg::Ui(1 << 6)),
+        Key::new(MODKEY, XK_8, view, Arg::Ui(1 << 7)),
+        Key::new(MODKEY | ControlMask, XK_8, toggleview, Arg::Ui(1 << 7)),
+        Key::new(S_MOD, XK_8, tag, Arg::Ui(1 << 7)),
+        Key::new(S_MOD | ControlMask, XK_8, toggletag, Arg::Ui(1 << 7)),
+        Key::new(MODKEY, XK_9, view, Arg::Ui(1 << 8)),
+        Key::new(MODKEY | ControlMask, XK_9, toggleview, Arg::Ui(1 << 8)),
+        Key::new(S_MOD, XK_9, tag, Arg::Ui(1 << 8)),
+        Key::new(S_MOD | ControlMask, XK_9, toggletag, Arg::Ui(1 << 8)),
+        Key::new(S_MOD, XK_q, quit, Arg::I(0)),
+    ]
+});
 
 // button definitions
 
-pub static BUTTONS: [Button; 11] = [
-    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::L(None)),
-    Button::new(Clk::LtSymbol, 0, Button3, setlayout, Arg::L(Some(2))),
-    Button::new(Clk::WinTitle, 0, Button2, zoom, Arg::I(0)),
-    Button::new(
-        Clk::StatusText,
-        0,
-        Button2,
-        spawn,
-        Arg::V(TERMCMD.as_ptr().cast()),
-    ),
-    Button::new(Clk::ClientWin, MODKEY, Button1, movemouse, Arg::I(0)),
-    Button::new(Clk::ClientWin, MODKEY, Button2, togglefloating, Arg::I(0)),
-    Button::new(Clk::ClientWin, MODKEY, Button3, resizemouse, Arg::I(0)),
-    Button::new(Clk::TagBar, 0, Button1, view, Arg::I(0)),
-    Button::new(Clk::TagBar, 0, Button3, toggleview, Arg::I(0)),
-    Button::new(Clk::TagBar, MODKEY, Button1, tag, Arg::I(0)),
-    Button::new(Clk::TagBar, MODKEY, Button3, toggletag, Arg::I(0)),
-];
+pub static BUTTONS: LazyLock<[Button; 11]> = LazyLock::new(|| {
+    [
+        Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::L(None)),
+        Button::new(Clk::LtSymbol, 0, Button3, setlayout, Arg::L(Some(2))),
+        Button::new(Clk::WinTitle, 0, Button2, zoom, Arg::I(0)),
+        Button::new(
+            Clk::StatusText,
+            0,
+            Button2,
+            spawn,
+            Arg::V(TERMCMD.to_vec()),
+        ),
+        Button::new(Clk::ClientWin, MODKEY, Button1, movemouse, Arg::I(0)),
+        Button::new(Clk::ClientWin, MODKEY, Button2, togglefloating, Arg::I(0)),
+        Button::new(Clk::ClientWin, MODKEY, Button3, resizemouse, Arg::I(0)),
+        Button::new(Clk::TagBar, 0, Button1, view, Arg::I(0)),
+        Button::new(Clk::TagBar, 0, Button3, toggleview, Arg::I(0)),
+        Button::new(Clk::TagBar, MODKEY, Button1, tag, Arg::I(0)),
+        Button::new(Clk::TagBar, MODKEY, Button3, toggletag, Arg::I(0)),
+    ]
+});
 
 #[cfg(test)]
 mod tests {
