@@ -165,6 +165,7 @@ pub(crate) fn killclient(_arg: *const Arg) {
 }
 
 pub(crate) fn setlayout(arg: *const Arg) {
+    log::trace!("setlayout: {arg:?}");
     unsafe {
         if arg.is_null()
             || (*arg).v().is_null()
@@ -189,6 +190,7 @@ pub(crate) fn setlayout(arg: *const Arg) {
 }
 
 pub(crate) fn togglefloating(_arg: *const Arg) {
+    log::trace!("togglefloating: {_arg:?}");
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
