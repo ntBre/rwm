@@ -76,6 +76,8 @@ fn get(
     v.remove(name).ok_or(format!("failed to find {name}"))
 }
 
+/// Extract colors from a fig Map<Str, List<Str>>. The two Str keys should be
+/// `SchemeNorm` and `SchemeSel`, and the two Lists should be of length 3.
 fn get_colors(
     v: &mut std::collections::HashMap<String, fig::Value>,
 ) -> Result<[[CString; 3]; 2], Box<dyn Error>> {
