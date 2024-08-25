@@ -32,7 +32,7 @@ impl Default for Config {
                 .map(CString::from)
                 .to_vec(),
             colors: default_colors(),
-            keys: default_keys(),
+            keys: default_keys().to_vec(),
         }
     }
 }
@@ -68,7 +68,7 @@ pub struct Config {
 
     pub colors: [[CString; 3]; 2],
 
-    pub keys: [Key; 60],
+    pub keys: Vec<Key>,
 }
 
 fn get(
@@ -154,7 +154,7 @@ impl TryFrom<Fig> for Config {
             fonts: str_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
-            keys: default_keys(),
+            keys: default_keys().to_vec(),
         })
     }
 }
