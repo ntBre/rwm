@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use std::ffi::{c_char, c_int, c_uint, CStr};
 
 use x11::xlib::KeySym;
 
@@ -14,7 +14,8 @@ pub enum Arg {
     I(c_int),
     Ui(c_uint),
     F(f32),
-    V(*const c_void),
+    /// Argument for execvp in spawn
+    V(*const *const c_char),
     /// CONFIG.layouts index for setlayout
     L(Option<usize>),
 }
@@ -35,7 +36,7 @@ impl Arg {
         I => i => c_int,
         Ui => ui => c_uint,
         F => f => f32,
-        V => v => *const c_void,
+        V => v => *const *const c_char,
         L => l => Option<usize>,
     }
 }

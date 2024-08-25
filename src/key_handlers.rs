@@ -550,13 +550,10 @@ pub(crate) fn spawn(arg: *const Arg) {
 
             // trying to emulate ((char **)arg->v)[0]: casting arg->v to a
             // char ** and then accessing the first string (char *)
-            libc::execvp(
-                *(((*arg).v() as *const *const c_char).offset(0)),
-                (*arg).v() as *const *const c_char,
-            );
+            libc::execvp(*(((*arg).v()).offset(0)), (*arg).v());
             die(&format!(
                 "rwm: execvp '{:?}' failed:",
-                *(((*arg).v() as *const *const c_char).offset(0)),
+                *(((*arg).v()).offset(0)),
             ));
         }
     }
