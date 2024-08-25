@@ -1,7 +1,5 @@
 use std::ffi::{c_char, c_int, c_uint, CStr};
 
-use x11::xlib::KeySym;
-
 use enums::Clk;
 
 pub mod enums;
@@ -68,28 +66,6 @@ unsafe impl Sync for Button {}
 pub struct Cursor {
     pub cursor: x11::xlib::Cursor,
 }
-
-#[repr(C)]
-#[derive(Clone)]
-pub struct Key {
-    pub mod_: c_uint,
-    pub keysym: KeySym,
-    pub func: Option<fn(*const Arg)>,
-    pub arg: Arg,
-}
-
-impl Key {
-    pub const fn new(
-        mod_: c_uint,
-        keysym: u32,
-        func: fn(*const Arg),
-        arg: Arg,
-    ) -> Self {
-        Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
-    }
-}
-
-unsafe impl Sync for Key {}
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
