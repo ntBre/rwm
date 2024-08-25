@@ -255,14 +255,11 @@ use x11::keysym::{
     XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
 };
 
+const S_MOD: c_uint = MODKEY | ShiftMask;
+
 pub static KEYS: [Key; 60] = [
     Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.0.as_ptr().cast())),
-    Key::new(
-        MODKEY | ShiftMask,
-        XK_Return,
-        spawn,
-        Arg::V(TERMCMD.as_ptr().cast()),
-    ),
+    Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.as_ptr().cast())),
     Key::new(MODKEY, XK_b, togglebar, Arg::I(0)),
     Key::new(MODKEY, XK_j, focusstack, Arg::I(1)),
     Key::new(MODKEY, XK_k, focusstack, Arg::I(-1)),
@@ -272,21 +269,21 @@ pub static KEYS: [Key; 60] = [
     Key::new(MODKEY, XK_l, setmfact, Arg::F(0.05)),
     Key::new(MODKEY, XK_Return, zoom, Arg::I(0)),
     Key::new(MODKEY, XK_Tab, view, Arg::Ui(0)),
-    Key::new(MODKEY | ShiftMask, XK_c, killclient, Arg::I(0)),
+    Key::new(S_MOD, XK_c, killclient, Arg::I(0)),
     Key::new(MODKEY, XK_t, setlayout, Arg::L(Some(0))),
     Key::new(MODKEY, XK_f, setlayout, Arg::L(Some(1))),
     Key::new(MODKEY, XK_m, setlayout, Arg::L(Some(2))),
     Key::new(MODKEY, XK_space, setlayout, Arg::L(None)),
-    Key::new(MODKEY | ShiftMask, XK_space, togglefloating, Arg::I(0)),
+    Key::new(S_MOD, XK_space, togglefloating, Arg::I(0)),
     Key::new(MODKEY, XK_0, view, Arg::Ui(!0)),
-    Key::new(MODKEY | ShiftMask, XK_0, tag, Arg::Ui(!0)),
+    Key::new(S_MOD, XK_0, tag, Arg::Ui(!0)),
     Key::new(MODKEY, XK_comma, focusmon, Arg::I(-1)),
     Key::new(MODKEY, XK_period, focusmon, Arg::I(1)),
-    Key::new(MODKEY | ShiftMask, XK_comma, tagmon, Arg::I(-1)),
-    Key::new(MODKEY | ShiftMask, XK_period, tagmon, Arg::I(1)),
+    Key::new(S_MOD, XK_comma, tagmon, Arg::I(-1)),
+    Key::new(S_MOD, XK_period, tagmon, Arg::I(1)),
     Key::new(MODKEY, XK_1, view, Arg::Ui(1 << 0)),
     Key::new(MODKEY | ControlMask, XK_1, toggleview, Arg::Ui(1 << 0)),
-    Key::new(MODKEY | ShiftMask, XK_1, tag, Arg::Ui(1 << 0)),
+    Key::new(S_MOD, XK_1, tag, Arg::Ui(1 << 0)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_1,
@@ -295,7 +292,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_2, view, Arg::Ui(1 << 1)),
     Key::new(MODKEY | ControlMask, XK_2, toggleview, Arg::Ui(1 << 1)),
-    Key::new(MODKEY | ShiftMask, XK_2, tag, Arg::Ui(1 << 1)),
+    Key::new(S_MOD, XK_2, tag, Arg::Ui(1 << 1)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_2,
@@ -304,7 +301,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_3, view, Arg::Ui(1 << 2)),
     Key::new(MODKEY | ControlMask, XK_3, toggleview, Arg::Ui(1 << 2)),
-    Key::new(MODKEY | ShiftMask, XK_3, tag, Arg::Ui(1 << 2)),
+    Key::new(S_MOD, XK_3, tag, Arg::Ui(1 << 2)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_3,
@@ -313,7 +310,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_4, view, Arg::Ui(1 << 3)),
     Key::new(MODKEY | ControlMask, XK_4, toggleview, Arg::Ui(1 << 3)),
-    Key::new(MODKEY | ShiftMask, XK_4, tag, Arg::Ui(1 << 3)),
+    Key::new(S_MOD, XK_4, tag, Arg::Ui(1 << 3)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_4,
@@ -322,7 +319,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_5, view, Arg::Ui(1 << 4)),
     Key::new(MODKEY | ControlMask, XK_5, toggleview, Arg::Ui(1 << 4)),
-    Key::new(MODKEY | ShiftMask, XK_5, tag, Arg::Ui(1 << 4)),
+    Key::new(S_MOD, XK_5, tag, Arg::Ui(1 << 4)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_5,
@@ -331,7 +328,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_6, view, Arg::Ui(1 << 5)),
     Key::new(MODKEY | ControlMask, XK_6, toggleview, Arg::Ui(1 << 5)),
-    Key::new(MODKEY | ShiftMask, XK_6, tag, Arg::Ui(1 << 5)),
+    Key::new(S_MOD, XK_6, tag, Arg::Ui(1 << 5)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_6,
@@ -340,7 +337,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_7, view, Arg::Ui(1 << 6)),
     Key::new(MODKEY | ControlMask, XK_7, toggleview, Arg::Ui(1 << 6)),
-    Key::new(MODKEY | ShiftMask, XK_7, tag, Arg::Ui(1 << 6)),
+    Key::new(S_MOD, XK_7, tag, Arg::Ui(1 << 6)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_7,
@@ -349,7 +346,7 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_8, view, Arg::Ui(1 << 7)),
     Key::new(MODKEY | ControlMask, XK_8, toggleview, Arg::Ui(1 << 7)),
-    Key::new(MODKEY | ShiftMask, XK_8, tag, Arg::Ui(1 << 7)),
+    Key::new(S_MOD, XK_8, tag, Arg::Ui(1 << 7)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_8,
@@ -358,14 +355,14 @@ pub static KEYS: [Key; 60] = [
     ),
     Key::new(MODKEY, XK_9, view, Arg::Ui(1 << 8)),
     Key::new(MODKEY | ControlMask, XK_9, toggleview, Arg::Ui(1 << 8)),
-    Key::new(MODKEY | ShiftMask, XK_9, tag, Arg::Ui(1 << 8)),
+    Key::new(S_MOD, XK_9, tag, Arg::Ui(1 << 8)),
     Key::new(
         MODKEY | ControlMask | ShiftMask,
         XK_9,
         toggletag,
         Arg::Ui(1 << 8),
     ),
-    Key::new(MODKEY | ShiftMask, XK_q, quit, Arg::I(0)),
+    Key::new(S_MOD, XK_q, quit, Arg::I(0)),
 ];
 
 // button definitions
