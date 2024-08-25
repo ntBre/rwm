@@ -9,12 +9,32 @@ pub mod enums;
 pub type Window = u64;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub union Arg {
-    pub i: c_int,
-    pub ui: c_uint,
-    pub f: f32,
-    pub v: *const c_void,
+#[derive(Copy, Clone, Debug)]
+pub enum Arg {
+    I(c_int),
+    Ui(c_uint),
+    F(f32),
+    V(*const c_void),
+}
+
+macro_rules! arg_getters {
+    ($($field:ident => $fn:ident => $ty:ty$(,)*)*) => {
+        $(pub fn $fn(self) -> $ty {
+            if let Self::$field(x) = self {
+                return x;
+            }
+            panic!("{self:?}");
+        })*
+    }
+}
+
+impl Arg {
+    arg_getters! {
+        I => i => c_int,
+        Ui => ui => c_uint,
+        F => f => f32,
+        V => v => *const c_void,
+    }
 }
 
 #[repr(C)]

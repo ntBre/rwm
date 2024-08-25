@@ -49,7 +49,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
         {
             return;
         }
-        if (*arg).i > 0 {
+        if (*arg).i() > 0 {
             cfor!((c = (*(*SELMON).sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
             if c.is_null() {
                 cfor!((c = (*SELMON).clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
@@ -78,7 +78,7 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
-        (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i(), 0);
         arrange(SELMON);
     }
 }
@@ -94,10 +94,10 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
         {
             return;
         }
-        let f = if (*arg).f < 1.0 {
-            (*arg).f + (*SELMON).mfact
+        let f = if (*arg).f() < 1.0 {
+            (*arg).f() + (*SELMON).mfact
         } else {
-            (*arg).f - 1.0
+            (*arg).f() - 1.0
         };
         if !(0.05..=0.95).contains(&f) {
             return;
@@ -131,13 +131,15 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
 /// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
     unsafe {
-        if (*arg).ui & *TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize]
+        if (*arg).ui() & *TAGMASK
+            == (*SELMON).tagset[(*SELMON).seltags as usize]
         {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
-        if (*arg).ui & *TAGMASK != 0 {
-            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & *TAGMASK;
+        if (*arg).ui() & *TAGMASK != 0 {
+            (*SELMON).tagset[(*SELMON).seltags as usize] =
+                (*arg).ui() & *TAGMASK;
         }
         focus(null_mut());
         arrange(SELMON);
@@ -165,13 +167,13 @@ pub(crate) unsafe extern "C" fn killclient(_arg: *const Arg) {
 pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
     unsafe {
         if arg.is_null()
-            || (*arg).v.is_null()
-            || (*arg).v.cast() != (*SELMON).lt[(*SELMON).sellt as usize]
+            || (*arg).v().is_null()
+            || (*arg).v().cast() != (*SELMON).lt[(*SELMON).sellt as usize]
         {
             (*SELMON).sellt ^= 1;
         }
-        if !arg.is_null() && !(*arg).v.is_null() {
-            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
+        if !arg.is_null() && !(*arg).v().is_null() {
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v() as *mut Layout;
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),
@@ -208,8 +210,8 @@ pub(crate) unsafe extern "C" fn togglefloating(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn tag(arg: *const Arg) {
     unsafe {
-        if !(*SELMON).sel.is_null() && (*arg).ui & *TAGMASK != 0 {
-            (*(*SELMON).sel).tags = (*arg).ui & *TAGMASK;
+        if !(*SELMON).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {
+            (*(*SELMON).sel).tags = (*arg).ui() & *TAGMASK;
             focus(null_mut());
             arrange(SELMON);
         }
@@ -239,7 +241,7 @@ pub(crate) unsafe extern "C" fn focusmon(arg: *const Arg) {
         if (*MONS).next.is_null() {
             return;
         }
-        let m = dirtomon((*arg).i);
+        let m = dirtomon((*arg).i());
         if m == SELMON {
             return;
         }
@@ -273,14 +275,14 @@ pub(crate) unsafe extern "C" fn tagmon(arg: *const Arg) {
         if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
             return;
         }
-        sendmon((*SELMON).sel, dirtomon((*arg).i));
+        sendmon((*SELMON).sel, dirtomon((*arg).i()));
     }
 }
 
 pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
     unsafe {
         let newtagset = (*SELMON).tagset[(*SELMON).seltags as usize]
-            ^ ((*arg).ui & *TAGMASK);
+            ^ ((*arg).ui() & *TAGMASK);
 
         if newtagset != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
@@ -519,7 +521,7 @@ pub(crate) unsafe extern "C" fn resizemouse(_arg: *const Arg) {
 
 pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
     unsafe {
-        if (*arg).v.cast() == DMENUCMD.0.as_ptr() {
+        if (*arg).v().cast() == DMENUCMD.0.as_ptr() {
             log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
             DMENUMON[0] = '0' as c_char + (*SELMON).num as c_char;
         }
@@ -543,12 +545,12 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
             // trying to emulate ((char **)arg->v)[0]: casting arg->v to a
             // char ** and then accessing the first string (char *)
             libc::execvp(
-                *(((*arg).v as *const *const c_char).offset(0)),
-                (*arg).v as *const *const c_char,
+                *(((*arg).v() as *const *const c_char).offset(0)),
+                (*arg).v() as *const *const c_char,
             );
             die(&format!(
                 "rwm: execvp '{:?}' failed:",
-                *(((*arg).v as *const *const c_char).offset(0)),
+                *(((*arg).v() as *const *const c_char).offset(0)),
             ));
         }
     }
@@ -560,7 +562,7 @@ pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
         if (*SELMON).sel.is_null() {
             return;
         }
-        let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui & *TAGMASK);
+        let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui() & *TAGMASK);
         if newtags != 0 {
             (*(*SELMON).sel).tags = newtags;
             focus(null_mut());

@@ -26,7 +26,7 @@ use crate::{
 
 pub(crate) fn buttonpress(e: *mut XEvent) {
     unsafe {
-        let mut arg = Arg { i: 0 };
+        let mut arg = Arg::I(0);
         let ev = &(*e).button;
         let mut click = Clk::RootWin;
         // focus monitor if necessary
@@ -53,7 +53,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
             }
             if i < CONFIG.tags.len() {
                 click = Clk::TagBar;
-                arg = Arg { ui: 1 << i };
+                arg = Arg::Ui(1 << i);
             } else if ev.x < x + textw(addr_of!((*SELMON).ltsymbol) as *const _)
             {
                 click = Clk::LtSymbol;
@@ -78,7 +78,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 && cleanmask(button.mask) == cleanmask(ev.state)
             {
                 let f = button.func.unwrap();
-                let a = if click == Clk::TagBar && button.arg.i == 0 {
+                let a = if click == Clk::TagBar && button.arg.i() == 0 {
                     &arg
                 } else {
                     &button.arg

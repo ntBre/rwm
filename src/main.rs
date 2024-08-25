@@ -899,13 +899,15 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
 fn view(arg: *const Arg) {
     log::trace!("view");
     unsafe {
-        if (*arg).ui & *TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize]
+        if (*arg).ui() & *TAGMASK
+            == (*SELMON).tagset[(*SELMON).seltags as usize]
         {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
-        if ((*arg).ui & *TAGMASK) != 0 {
-            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & *TAGMASK;
+        if ((*arg).ui() & *TAGMASK) != 0 {
+            (*SELMON).tagset[(*SELMON).seltags as usize] =
+                (*arg).ui() & *TAGMASK;
         }
         focus(null_mut());
         arrange(SELMON);
@@ -1621,7 +1623,7 @@ fn cleanup() {
     log::trace!("entering cleanup");
 
     unsafe {
-        let a = Arg { ui: !0 };
+        let a = Arg::Ui(!0);
         view(&a);
         (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
