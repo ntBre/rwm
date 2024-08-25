@@ -271,7 +271,7 @@ pub static KEYS: [Key; 60] = [
     Key::new(MODKEY, XK_h, setmfact, Arg::F(-0.05)),
     Key::new(MODKEY, XK_l, setmfact, Arg::F(0.05)),
     Key::new(MODKEY, XK_Return, zoom, Arg::I(0)),
-    Key::new(MODKEY, XK_Tab, view, Arg::I(0)),
+    Key::new(MODKEY, XK_Tab, view, Arg::Ui(0)),
     Key::new(MODKEY | ShiftMask, XK_c, killclient, Arg::I(0)),
     Key::new(
         MODKEY,
@@ -291,7 +291,7 @@ pub static KEYS: [Key; 60] = [
         setlayout,
         Arg::V(&LAYOUTS[2] as *const _ as *const _),
     ),
-    Key::new(MODKEY, XK_space, setlayout, Arg::I(0)),
+    Key::new(MODKEY, XK_space, setlayout, Arg::V(null())),
     Key::new(MODKEY | ShiftMask, XK_space, togglefloating, Arg::I(0)),
     Key::new(MODKEY, XK_0, view, Arg::Ui(!0)),
     Key::new(MODKEY | ShiftMask, XK_0, tag, Arg::Ui(!0)),
@@ -386,7 +386,7 @@ pub static KEYS: [Key; 60] = [
 // button definitions
 
 pub static BUTTONS: [Button; 11] = [
-    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::I(0)),
+    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::V(null())),
     Button::new(
         Clk::LtSymbol,
         0,
