@@ -113,8 +113,11 @@ impl TryFrom<Fig> for Config {
     type Error = Box<dyn Error>;
 
     fn try_from(Fig { variables: mut v }: Fig) -> Result<Self, Self::Error> {
-        let num = |val: fig::Value| {
-            val.as_number().cloned().ok_or("unable to parse number")
+        let float = |val: fig::Value| {
+            val.as_float().cloned().ok_or("unable to parse number")
+        };
+        let int = |val: fig::Value| {
+            val.try_into_int().map_err(|_| "unable to parse int")
         };
         let bool = |val: fig::Value| {
             val.as_bool().cloned().ok_or("unable to parse bool")
@@ -136,12 +139,12 @@ impl TryFrom<Fig> for Config {
                 })?
         };
         Ok(Self {
-            borderpx: num(get(&mut v, "borderpx")?)? as c_uint,
-            snap: num(get(&mut v, "snap")?)? as c_uint,
+            borderpx: int(get(&mut v, "borderpx")?)? as c_uint,
+            snap: int(get(&mut v, "snap")?)? as c_uint,
             showbar: bool(get(&mut v, "showbar")?)?,
             topbar: bool(get(&mut v, "topbar")?)?,
-            mfact: num(get(&mut v, "mfact")?)?,
-            nmaster: num(get(&mut v, "nmaster")?)? as c_int,
+            mfact: float(get(&mut v, "mfact")?)?,
+            nmaster: int(get(&mut v, "nmaster")?)? as c_int,
             resize_hints: bool(get(&mut v, "resize_hints")?)?,
             lock_fullscreen: bool(get(&mut v, "lock_fullscreen")?)?,
             fonts: str_list(get(&mut v, "fonts")?)?,
