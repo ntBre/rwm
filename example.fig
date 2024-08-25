@@ -17,3 +17,22 @@ let gray4 = "#eeeeee";
 let cyan = "#005577";
 
 let colors = {SchemeNorm: [gray3, gray1, gray2], SchemeSel: [gray4, cyan, cyan]};
+
+# TODO take these from a built-in fig script
+let MODKEY = 64;
+let ShiftMask = 1;
+let XK_p = 112;
+
+let dmenufont = "monospace:size=12";
+let dmenucmd = [
+	"dmenu_run",
+	"-fn", dmenufont,
+	"-nb", gray1,
+	"-nf", gray3,
+	"-sb", cyan,
+	"-sf", gray4,
+];
+
+let keys = [
+	[MODKEY, XK_p, "spawn", {v: dmenucmd}],
+];
