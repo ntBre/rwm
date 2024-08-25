@@ -32,6 +32,7 @@ impl Default for Config {
                 .map(CString::from)
                 .to_vec(),
             colors: default_colors(),
+            keys: default_keys(),
         }
     }
 }
@@ -66,6 +67,8 @@ pub struct Config {
     pub tags: Vec<CString>,
 
     pub colors: [[CString; 3]; 2],
+
+    pub keys: [Key; 60],
 }
 
 fn get(
@@ -151,6 +154,7 @@ impl TryFrom<Fig> for Config {
             fonts: str_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
+            keys: default_keys(),
         })
     }
 }
@@ -248,7 +252,7 @@ use x11::keysym::{
 
 const S_MOD: c_uint = MODKEY | ShiftMask;
 
-pub static KEYS: LazyLock<[Key; 60]> = LazyLock::new(|| {
+pub fn default_keys() -> [Key; 60] {
     [
         Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.clone())),
         Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.to_vec())),
@@ -311,7 +315,7 @@ pub static KEYS: LazyLock<[Key; 60]> = LazyLock::new(|| {
         Key::new(S_MOD | ControlMask, XK_9, toggletag, Arg::Ui(1 << 8)),
         Key::new(S_MOD, XK_q, quit, Arg::I(0)),
     ]
-});
+}
 
 // button definitions
 

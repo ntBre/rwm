@@ -28,7 +28,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
 
-use config::{BUTTONS, CONFIG, KEYS, LAYOUTS, RULES};
+use config::{BUTTONS, CONFIG, LAYOUTS, RULES};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -932,7 +932,7 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for key in &*KEYS {
+            for key in &CONFIG.keys {
                 // skip modifier codes, we do that ourselves
                 if key.keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64

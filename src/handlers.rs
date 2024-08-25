@@ -14,7 +14,7 @@ use rwm::{Arg, Monitor, Window};
 
 use crate::{
     arrange, cleanmask,
-    config::{BUTTONS, CONFIG, KEYS},
+    config::{BUTTONS, CONFIG},
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, grabkeys, height, is_visible, manage, recttomon, resizeclient,
@@ -291,7 +291,7 @@ pub(crate) fn keypress(e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
         let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
-        for key in &*KEYS {
+        for key in &CONFIG.keys {
             if keysym == key.keysym
                 && cleanmask(key.mod_) == cleanmask(ev.state)
                 && key.func.is_some()
