@@ -9,7 +9,7 @@ pub mod enums;
 pub type Window = u64;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum Arg {
     I(c_int),
     Ui(c_uint),
@@ -22,9 +22,9 @@ pub enum Arg {
 
 macro_rules! arg_getters {
     ($($field:ident => $fn:ident => $ty:ty$(,)*)*) => {
-        $(pub fn $fn(self) -> $ty {
+        $(pub fn $fn(&self) -> $ty {
             if let Self::$field(x) = self {
-                return x;
+                return x.clone();
             }
             panic!("{self:?}");
         })*
@@ -42,7 +42,7 @@ impl Arg {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
@@ -70,7 +70,7 @@ pub struct Cursor {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,

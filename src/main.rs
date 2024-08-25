@@ -484,7 +484,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for button in BUTTONS {
+        for button in &BUTTONS {
             if button.click == Clk::ClientWin as u32 {
                 for mod_ in modifiers {
                     xlib::XGrabButton(
@@ -932,7 +932,7 @@ fn grabkeys() {
             return;
         }
         for k in start..=end {
-            for key in KEYS {
+            for key in &KEYS {
                 // skip modifier codes, we do that ourselves
                 if key.keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
