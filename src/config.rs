@@ -32,7 +32,7 @@ impl Default for Config {
             tags: [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"]
                 .map(CString::from)
                 .to_vec(),
-            COLORS: default_colors(),
+            colors: default_colors(),
         }
     }
 }
@@ -66,7 +66,7 @@ pub struct Config {
 
     pub tags: Vec<CString>,
 
-    pub COLORS: [[CString; 3]; 2],
+    pub colors: [[CString; 3]; 2],
 }
 
 fn get(
@@ -85,7 +85,28 @@ fn get_colors(
     let norm = get(&mut colors, "SchemeNorm")?
         .try_into_list()
         .map_err(|_| "SchemeNorm must be a list")?;
-    todo!();
+    let sel = get(&mut colors, "SchemeSel")?
+        .try_into_list()
+        .map_err(|_| "SchemeSel must be a list")?;
+    let mut ret = default_colors();
+    let str_err = |_| "failed to convert color";
+    let [n0, n1, n2] = &norm[..] else {
+        return Err("not enough colors for SchemeNorm".into());
+    };
+    ret[Scheme::Norm as usize] = [
+        CString::new(n0.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(n1.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(n2.clone().try_into_str().map_err(str_err)?)?,
+    ];
+    let [s0, s1, s2] = &sel[..] else {
+        return Err("not enough colors for SchemeSel".into());
+    };
+    ret[Scheme::Sel as usize] = [
+        CString::new(s0.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(s1.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(s2.clone().try_into_str().map_err(str_err)?)?,
+    ];
+    Ok(ret)
 }
 
 impl TryFrom<Fig> for Config {
@@ -125,7 +146,7 @@ impl TryFrom<Fig> for Config {
             lock_fullscreen: bool(get(&mut v, "lock_fullscreen")?)?,
             fonts: str_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
-            COLORS: get_colors(&mut v)?,
+            colors: get_colors(&mut v)?,
         })
     }
 }
