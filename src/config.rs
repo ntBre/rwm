@@ -18,6 +18,7 @@ use crate::{
 };
 use rwm::{Arg, Button, Layout, Rule};
 
+mod fig_env;
 pub mod key;
 
 impl Default for Config {
@@ -179,6 +180,7 @@ impl Config {
     pub fn load(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
         let s = std::fs::read_to_string(path)?;
         let mut f = fig::Fig::new();
+        f.variables = fig_env::FIG_ENV.clone();
         f.parse(&s)?;
         Self::try_from(f)
     }

@@ -34,29 +34,29 @@ pub(crate) fn conv<T: Clone>(opt: Option<&T>) -> Result<T, FigError> {
     }
 }
 
-static FUNC_MAP: LazyLock<HashMap<&str, fn(*const Arg)>> =
-    LazyLock::new(|| {
-        use crate::key_handlers::*;
-        type FN = fn(*const Arg);
-        HashMap::from([
-            ("focusmon", focusmon as FN),
-            ("focusstack", focusstack as FN),
-            ("incnmaster", incnmaster as FN),
-            ("killclient", killclient as FN),
-            ("quit", quit as FN),
-            ("setlayout", setlayout as FN),
-            ("setmfact", setmfact as FN),
-            ("spawn", spawn as FN),
-            ("tag", tag as FN),
-            ("tagmon", tagmon as FN),
-            ("togglebar", togglebar as FN),
-            ("togglefloating", togglefloating as FN),
-            ("toggletag", toggletag as FN),
-            ("toggleview", toggleview as FN),
-            ("view", view as FN),
-            ("zoom", zoom as FN),
-        ])
-    });
+type FnMap = HashMap<&'static str, fn(*const Arg)>;
+static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
+    use crate::key_handlers::*;
+    type FN = fn(*const Arg);
+    HashMap::from([
+        ("focusmon", focusmon as FN),
+        ("focusstack", focusstack as FN),
+        ("incnmaster", incnmaster as FN),
+        ("killclient", killclient as FN),
+        ("quit", quit as FN),
+        ("setlayout", setlayout as FN),
+        ("setmfact", setmfact as FN),
+        ("spawn", spawn as FN),
+        ("tag", tag as FN),
+        ("tagmon", tagmon as FN),
+        ("togglebar", togglebar as FN),
+        ("togglefloating", togglefloating as FN),
+        ("toggletag", toggletag as FN),
+        ("toggleview", toggleview as FN),
+        ("view", view as FN),
+        ("zoom", zoom as FN),
+    ])
+});
 
 impl TryFrom<Value> for Key {
     type Error = FigError;
@@ -95,7 +95,7 @@ impl TryFrom<Value> for Key {
                     v.into_iter().map(|v| conv(v.as_str())).collect();
                 Arg::V(v?)
             }
-            "l" => Arg::L(arg[0].1.as_int().map(|i| *i as usize).clone()),
+            "l" => Arg::L(arg[0].1.as_int().map(|i| *i as usize)),
             _ => {
                 log::error!("Unrecognized Key arg type: {key:?}");
                 return err;
