@@ -43,7 +43,7 @@ pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<unsafe extern "C" fn(arg: *const Arg)>,
+    pub func: Option<fn(*const Arg)>,
     pub arg: Arg,
 }
 
@@ -52,7 +52,7 @@ impl Button {
         click: Clk,
         mask: c_uint,
         button: c_uint,
-        func: unsafe extern "C" fn(arg: *const Arg),
+        func: fn(*const Arg),
         arg: Arg,
     ) -> Self {
         Self { click: click as c_uint, mask, button, func: Some(func), arg }
@@ -70,7 +70,7 @@ pub struct Cursor {
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
-    pub func: Option<unsafe extern "C" fn(arg1: *const Arg)>,
+    pub func: Option<fn(*const Arg)>,
     pub arg: Arg,
 }
 
@@ -78,7 +78,7 @@ impl Key {
     pub const fn new(
         mod_: c_uint,
         keysym: u32,
-        func: unsafe extern "C" fn(arg1: *const Arg),
+        func: fn(*const Arg),
         arg: Arg,
     ) -> Self {
         Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
