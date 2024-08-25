@@ -12,7 +12,7 @@ use x11::xlib::{
     XUngrabPointer, XUngrabServer, XWarpPointer,
 };
 
-use crate::config::{CONFIG, DMENUCMD, DMENUMON};
+use crate::config::{CONFIG, DMENUCMD, DMENUMON, LAYOUTS};
 use crate::enums::{Cur, WM};
 use crate::util::die;
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
     sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, BH, CURSOR,
     DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
 };
-use rwm::{Arg, Client, Layout, Monitor};
+use rwm::{Arg, Client, Monitor};
 
 pub(crate) fn togglebar(_arg: *const Arg) {
     unsafe {
@@ -168,13 +168,17 @@ pub(crate) fn setlayout(arg: *const Arg) {
     log::trace!("setlayout: {arg:?}");
     unsafe {
         if arg.is_null()
-            || (*arg).v().is_null()
-            || (*arg).v().cast() != (*SELMON).lt[(*SELMON).sellt as usize]
+            || (*arg).l().is_none()
+            || !std::ptr::eq(
+                &LAYOUTS[(*arg).l().unwrap()],
+                (*SELMON).lt[(*SELMON).sellt as usize],
+            )
         {
             (*SELMON).sellt ^= 1;
         }
-        if !arg.is_null() && !(*arg).v().is_null() {
-            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v() as *mut Layout;
+        if !arg.is_null() && (*arg).l().is_some() {
+            (*SELMON).lt[(*SELMON).sellt as usize] =
+                &LAYOUTS[(*arg).l().unwrap()];
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),

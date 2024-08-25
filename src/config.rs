@@ -273,25 +273,10 @@ pub static KEYS: [Key; 60] = [
     Key::new(MODKEY, XK_Return, zoom, Arg::I(0)),
     Key::new(MODKEY, XK_Tab, view, Arg::Ui(0)),
     Key::new(MODKEY | ShiftMask, XK_c, killclient, Arg::I(0)),
-    Key::new(
-        MODKEY,
-        XK_t,
-        setlayout,
-        Arg::V(&LAYOUTS[0] as *const _ as *const _),
-    ),
-    Key::new(
-        MODKEY,
-        XK_f,
-        setlayout,
-        Arg::V(&LAYOUTS[1] as *const _ as *const _),
-    ),
-    Key::new(
-        MODKEY,
-        XK_m,
-        setlayout,
-        Arg::V(&LAYOUTS[2] as *const _ as *const _),
-    ),
-    Key::new(MODKEY, XK_space, setlayout, Arg::V(null())),
+    Key::new(MODKEY, XK_t, setlayout, Arg::L(Some(0))),
+    Key::new(MODKEY, XK_f, setlayout, Arg::L(Some(1))),
+    Key::new(MODKEY, XK_m, setlayout, Arg::L(Some(2))),
+    Key::new(MODKEY, XK_space, setlayout, Arg::L(None)),
     Key::new(MODKEY | ShiftMask, XK_space, togglefloating, Arg::I(0)),
     Key::new(MODKEY, XK_0, view, Arg::Ui(!0)),
     Key::new(MODKEY | ShiftMask, XK_0, tag, Arg::Ui(!0)),
@@ -386,14 +371,8 @@ pub static KEYS: [Key; 60] = [
 // button definitions
 
 pub static BUTTONS: [Button; 11] = [
-    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::V(null())),
-    Button::new(
-        Clk::LtSymbol,
-        0,
-        Button3,
-        setlayout,
-        Arg::V(&LAYOUTS[2] as *const _ as *const _),
-    ),
+    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::L(None)),
+    Button::new(Clk::LtSymbol, 0, Button3, setlayout, Arg::L(Some(2))),
     Button::new(Clk::WinTitle, 0, Button2, zoom, Arg::I(0)),
     Button::new(
         Clk::StatusText,

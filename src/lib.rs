@@ -15,6 +15,8 @@ pub enum Arg {
     Ui(c_uint),
     F(f32),
     V(*const c_void),
+    /// CONFIG.layouts index for setlayout
+    L(Option<usize>),
 }
 
 macro_rules! arg_getters {
@@ -34,6 +36,7 @@ impl Arg {
         Ui => ui => c_uint,
         F => f => f32,
         V => v => *const c_void,
+        L => l => Option<usize>,
     }
 }
 
