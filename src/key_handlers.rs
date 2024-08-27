@@ -534,6 +534,7 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
                 // MaybeUninit the whole sigaction if I can avoid it
                 sa_mask: std::mem::zeroed(),
                 sa_flags: 0,
+                #[cfg(not(target_os = "macos"))]
                 sa_restorer: None,
             };
             libc::sigemptyset(&mut sa.sa_mask);
