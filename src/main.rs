@@ -1116,7 +1116,30 @@ fn updatestatus() {
 }
 
 fn updatesystrayicongeom(i: *mut Client, w: c_int, h: c_int) {
-    todo!();
+    if i.is_null() {
+        return;
+    }
+    unsafe {
+        let i = &mut *i;
+        i.h = BH;
+        if w == h {
+            i.w = BH;
+        } else if h == BH {
+            i.w = w;
+        } else {
+            i.w = (BH as f32 * (w as f32 / h as f32)) as i32;
+        }
+        applysizehints(i, &mut i.x, &mut i.y, &mut i.w, &mut i.h, False);
+        // force icons into the systray dimensions if they don't want to
+        if i.h > BH {
+            if i.w == i.h {
+                i.w = BH;
+            } else {
+                i.w = (BH as f32 * (i.w as f32 / i.h as f32)) as i32;
+            }
+            i.h = BH;
+        }
+    }
 }
 
 fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
