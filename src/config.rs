@@ -38,6 +38,7 @@ impl Default for Config {
                 .to_vec(),
             colors: default_colors(),
             keys: default_keys().to_vec(),
+            dmenucmd: DMENUCMD.to_vec(),
         }
     }
 }
@@ -74,6 +75,8 @@ pub struct Config {
     pub colors: [[CString; 3]; 2],
 
     pub keys: Vec<Key>,
+
+    pub dmenucmd: Vec<String>,
 }
 
 fn get(
@@ -159,6 +162,11 @@ impl TryFrom<Fig> for Config {
                         .ok_or("unable to convert to strings")
                 })?
         };
+        let dmenucmd = conv(get(&mut v, "dmenucmd")?.as_list())?;
+        let dmenucmd = dmenucmd
+            .into_iter()
+            .map(|v| conv(v.as_str()))
+            .collect::<Result<Vec<_>, FigError>>()?;
         Ok(Self {
             borderpx: int(get(&mut v, "borderpx")?)? as c_uint,
             snap: int(get(&mut v, "snap")?)? as c_uint,
@@ -172,6 +180,7 @@ impl TryFrom<Fig> for Config {
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
             keys: get_keys(&mut v)?,
+            dmenucmd,
         })
     }
 }
@@ -210,7 +219,17 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 
 // appearance
 
-const DMENUFONT: &str = "monospace:size=12";
+/// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
+pub static SYSTRAYPINNING: c_uint = 0;
+/// 0: systray in the right corner, >0: systray on left of status text
+pub const SYSTRAYONLEFT: c_uint = 0;
+/// systray spacing
+pub const SYSTRAYSPACING: c_uint = 2;
+/// 1: if pinning fails, display systray on the first monitor, False: display
+/// systray on the last monitor
+pub const SYSTRAYPINNINGFAILFIRST: c_int = 1;
+/// 0 means no systray
+pub const SHOWSYSTRAY: c_int = 1;
 
 const COL_GRAY1: &str = "#222222";
 const COL_GRAY2: &str = "#444444";
@@ -246,7 +265,17 @@ pub const LAYOUTS: [Layout; 3] = [
 pub const MODKEY: c_uint = Mod4Mask;
 
 // commands
-pub static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
+
+use x11::keysym::{
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
+    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
+    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+};
+
+const S_MOD: c_uint = MODKEY | ShiftMask;
+
+static DMENUFONT: &str = "monospace:size=10";
+static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
     vec![
         "dmenu_run".into(),
         "-fn".into(),
@@ -261,15 +290,7 @@ pub static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
         COL_GRAY4.into(),
     ]
 });
-pub static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
-
-use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
-    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
-    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
-};
-
-const S_MOD: c_uint = MODKEY | ShiftMask;
+static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
 pub fn default_keys() -> [Key; 60] {
     [

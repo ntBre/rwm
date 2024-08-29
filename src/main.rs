@@ -8,27 +8,37 @@ use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
 use libc::{c_long, c_uchar, sigaction};
+use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xlib::{
-    self, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
-    BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
-    CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
-    CWSibling, CWStackMode, CWWidth, ClientMessage, ControlMask,
-    CopyFromParent, CurrentTime, Display, EnterWindowMask, ExposureMask, False,
-    FocusChangeMask, GrabModeAsync, GrabModeSync, InputHint, IsViewable,
-    LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask,
-    Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc,
-    PSize, ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot, ShiftMask,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XErrorEvent, XFree, XInternAtom, XSetErrorHandler, CWX, CWY,
-    XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    self, Above, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable,
+    BadMatch, BadWindow, Below, ButtonPressMask, ButtonReleaseMask,
+    CWBackPixel, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
+    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
+    ControlMask, CopyFromParent, CurrentTime, Display, EnterWindowMask,
+    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
+    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
+    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    XChangeProperty, XChangeWindowAttributes, XConfigureWindow,
+    XCreateSimpleWindow, XDestroyWindow, XErrorEvent, XFillRectangle, XFree,
+    XGetSelectionOwner, XInternAtom, XMapRaised, XMapSubwindows, XMapWindow,
+    XMoveResizeWindow, XPropertyEvent, XSelectInput, XSetErrorHandler,
+    XSetForeground, XSetSelectionOwner, XSetWindowAttributes, XSync,
+    XUnmapWindow, XWindowChanges, CWX, CWY, XA_ATOM, XA_CARDINAL, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 
-use rwm::{Arg, Client, Cursor, Layout, Monitor, Window};
+use rwm::{Arg, Client, Cursor, Layout, Monitor, Systray, Window};
 
-use config::{BUTTONS, CONFIG, LAYOUTS, RULES};
+use config::{
+    BUTTONS, CONFIG, LAYOUTS, RULES, SHOWSYSTRAY, SYSTRAYONLEFT,
+    SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
+};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -118,6 +128,7 @@ static mut XERRORXLIB: Option<
 
 static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
 static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
+static mut XATOM: [Atom; XEmbed::Last as usize] = [0; XEmbed::Last as usize];
 
 static mut DPY: *mut Display = null_mut();
 
@@ -131,7 +142,13 @@ static mut CURSOR: [*mut Cursor; Cur::Last as usize] =
 
 static mut SCHEME: *mut *mut Clr = null_mut();
 
+fn get_scheme_color(scheme: *mut *mut Clr, i: usize, j: usize) -> Clr {
+    unsafe { *(*scheme.add(i)).add(j) }
+}
+
 static mut SCREEN: c_int = 0;
+
+static mut SYSTRAY: *mut Systray = null_mut();
 
 const BROKEN: &CStr = c"broken";
 
@@ -264,6 +281,19 @@ fn setup() {
             XInternAtom(DPY, c"_NET_ACTIVE_WINDOW".as_ptr(), False);
         NETATOM[Net::Supported as usize] =
             XInternAtom(DPY, c"_NET_SUPPORTED".as_ptr(), False);
+
+        NETATOM[Net::SystemTray as usize] =
+            XInternAtom(DPY, c"_NET_SYSTEM_TRAY_S0".as_ptr(), False);
+        NETATOM[Net::SystemTrayOP as usize] =
+            XInternAtom(DPY, c"_NET_SYSTEM_TRAY_OPCODE".as_ptr(), False);
+        NETATOM[Net::SystemTrayOrientation as usize] =
+            XInternAtom(DPY, c"_NET_SYSTEM_TRAY_ORIENTATION".as_ptr(), False);
+        NETATOM[Net::SystemTrayOrientationHorz as usize] = XInternAtom(
+            DPY,
+            c"_NET_SYSTEM_TRAY_ORIENTATION_HORZ".as_ptr(),
+            False,
+        );
+
         NETATOM[Net::WMName as usize] =
             XInternAtom(DPY, c"_NET_WM_NAME".as_ptr(), False);
         NETATOM[Net::WMState as usize] =
@@ -279,6 +309,13 @@ fn setup() {
         NETATOM[Net::ClientList as usize] =
             XInternAtom(DPY, c"_NET_CLIENT_LIST".as_ptr(), False);
 
+        XATOM[XEmbed::Manager as usize] =
+            XInternAtom(DPY, c"MANAGER".as_ptr(), False);
+        XATOM[XEmbed::XEmbed as usize] =
+            XInternAtom(DPY, c"_XEMBED".as_ptr(), False);
+        XATOM[XEmbed::XEmbedInfo as usize] =
+            XInternAtom(DPY, c"_XEMBED_INFO".as_ptr(), False);
+
         /* init cursors */
         CURSOR[Cur::Normal as usize] = drw::cur_create(DRW, XC_LEFT_PTR as i32);
         CURSOR[Cur::Resize as usize] = drw::cur_create(DRW, XC_SIZING as i32);
@@ -290,6 +327,9 @@ fn setup() {
         for i in 0..CONFIG.colors.len() {
             *SCHEME.add(i) = drw::scm_create(DRW, &CONFIG.colors[i], 3);
         }
+
+        // init system tray
+        updatesystray();
 
         /* init bars */
         updatebars();
@@ -434,31 +474,62 @@ fn setfocus(c: *mut Client) {
                 1,
             );
         }
-        sendevent(c, WMATOM[WM::TakeFocus as usize]);
+        sendevent(
+            (*c).win,
+            WMATOM[WM::TakeFocus as usize],
+            NoEventMask as i32,
+            WMATOM[WM::TakeFocus as usize] as i64,
+            CurrentTime as i64,
+            0,
+            0,
+            0,
+        );
     }
 }
 
-fn sendevent(c: *mut Client, proto: Atom) -> c_int {
+#[allow(clippy::too_many_arguments)]
+fn sendevent(
+    w: Window,
+    proto: Atom,
+    mask: c_int,
+    d0: c_long,
+    d1: c_long,
+    d2: c_long,
+    d3: c_long,
+    d4: c_long,
+) -> c_int {
     log::trace!("sendevent");
     let mut n = 0;
     let mut protocols = std::ptr::null_mut();
+    let mt;
     let mut exists = 0;
     unsafe {
-        if xlib::XGetWMProtocols(DPY, (*c).win, &mut protocols, &mut n) != 0 {
-            while exists == 0 && n > 0 {
-                exists = (*protocols.offset(n as isize) == proto) as c_int;
-                n -= 1;
+        if proto == WMATOM[WM::TakeFocus as usize]
+            || proto == WMATOM[WM::Delete as usize]
+        {
+            mt = WMATOM[WM::Protocols as usize];
+            if xlib::XGetWMProtocols(DPY, w, &mut protocols, &mut n) != 0 {
+                while exists == 0 && n > 0 {
+                    exists = (*protocols.offset(n as isize) == proto) as c_int;
+                    n -= 1;
+                }
+                XFree(protocols.cast());
             }
-            XFree(protocols.cast());
+        } else {
+            exists = 1;
+            mt = proto;
         }
         if exists != 0 {
             let mut ev = xlib::XEvent { type_: ClientMessage };
-            ev.client_message.window = (*c).win;
-            ev.client_message.message_type = WMATOM[WM::Protocols as usize];
+            ev.client_message.window = w;
+            ev.client_message.message_type = mt;
             ev.client_message.format = 32;
-            ev.client_message.data.set_long(0, proto as c_long);
-            ev.client_message.data.set_long(1, CurrentTime as c_long);
-            xlib::XSendEvent(DPY, (*c).win, False, NoEventMask, &mut ev);
+            ev.client_message.data.set_long(0, d0);
+            ev.client_message.data.set_long(1, d1);
+            ev.client_message.data.set_long(2, d2);
+            ev.client_message.data.set_long(3, d3);
+            ev.client_message.data.set_long(4, d4);
+            xlib::XSendEvent(DPY, w, False, mask as i64, &mut ev);
         }
         exists
     }
@@ -656,6 +727,23 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
         );
         configure(c);
         xlib::XSync(DPY, False);
+    }
+}
+
+fn resizebarwin(m: *mut Monitor) {
+    unsafe {
+        let mut w = (*m).ww;
+        if SHOWSYSTRAY != 0 && m == systraytomon(m) && SYSTRAYONLEFT == 0 {
+            w -= getsystraywidth() as i32;
+        }
+        XMoveResizeWindow(
+            DPY,
+            (*m).barwin,
+            (*m).wx,
+            (*m).by,
+            w as u32,
+            BH as u32,
+        );
     }
 }
 
@@ -1033,6 +1121,273 @@ fn updatestatus() {
             libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
         }
         drawbar(SELMON);
+        updatesystray();
+    }
+}
+
+fn updatesystrayicongeom(i: *mut Client, w: c_int, h: c_int) {
+    if i.is_null() {
+        return;
+    }
+    unsafe {
+        let i = &mut *i;
+        i.h = BH;
+        if w == h {
+            i.w = BH;
+        } else if h == BH {
+            i.w = w;
+        } else {
+            i.w = (BH as f32 * (w as f32 / h as f32)) as i32;
+        }
+        applysizehints(i, &mut i.x, &mut i.y, &mut i.w, &mut i.h, False);
+        // force icons into the systray dimensions if they don't want to
+        if i.h > BH {
+            if i.w == i.h {
+                i.w = BH;
+            } else {
+                i.w = (BH as f32 * (i.w as f32 / i.h as f32)) as i32;
+            }
+            i.h = BH;
+        }
+    }
+}
+
+fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
+    unsafe {
+        let mut flags: Atom = 0;
+        let code;
+        if SHOWSYSTRAY == 0
+            || i.is_null()
+            || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
+        {
+            flags = getatomprop(i, XATOM[XEmbed::XEmbedInfo as usize]);
+            if flags == 0 {
+                return;
+            }
+        }
+        let i = &mut *i;
+        if flags & XEMBED_MAPPED != 0 && i.tags == 0 {
+            i.tags = 1;
+            code = XEMBED_WINDOW_ACTIVATE;
+            XMapRaised(DPY, i.win);
+            setclientstate(i, NORMAL_STATE);
+        } else if (flags & XEMBED_MAPPED) == 0 && i.tags != 0 {
+            i.tags = 0;
+            code = XEMBED_WINDOW_DEACTIVATE;
+            XUnmapWindow(DPY, i.win);
+            setclientstate(i, WITHDRAWN_STATE);
+        } else {
+            return;
+        }
+        sendevent(
+            i.win,
+            XATOM[XEmbed::XEmbed as usize],
+            StructureNotifyMask as i32,
+            CurrentTime as i64,
+            code as i64,
+            0,
+            (*SYSTRAY).win as i64,
+            XEMBED_EMBEDDED_VERSION as i64,
+        );
+    }
+}
+
+const fn default_window_attributes() -> XSetWindowAttributes {
+    XSetWindowAttributes {
+        background_pixmap: 0,
+        background_pixel: 0,
+        border_pixmap: 0,
+        border_pixel: 0,
+        bit_gravity: 0,
+        win_gravity: 0,
+        backing_store: 0,
+        backing_planes: 0,
+        backing_pixel: 0,
+        save_under: 0,
+        event_mask: 0,
+        do_not_propagate_mask: 0,
+        override_redirect: 0,
+        colormap: 0,
+        cursor: 0,
+    }
+}
+
+fn updatesystray() {
+    unsafe {
+        let mut wa = default_window_attributes();
+        let mut wc: XWindowChanges;
+        let mut i: *mut Client;
+        let m: *mut Monitor = systraytomon(null_mut());
+        let mut x: c_int = (*m).mx + (*m).mw;
+        let sw =
+            textw(addr_of!(STEXT) as *const _) - LRPAD + SYSTRAYSPACING as i32;
+        let mut w = 1;
+
+        if SHOWSYSTRAY == 0 {
+            return;
+        }
+        if SYSTRAYONLEFT != 0 {
+            x -= sw + LRPAD / 2;
+        }
+        if SYSTRAY.is_null() {
+            // init systray
+            SYSTRAY = ecalloc(1, size_of::<Systray>()).cast();
+            (*SYSTRAY).win = XCreateSimpleWindow(
+                DPY,
+                ROOT,
+                x,
+                (*m).by,
+                w,
+                BH as u32,
+                0,
+                0,
+                get_scheme_color(
+                    SCHEME,
+                    Scheme::Sel as usize,
+                    Col::Bg as usize,
+                )
+                .pixel,
+            );
+            wa.event_mask = ButtonPressMask | ExposureMask;
+            wa.override_redirect = True;
+            wa.background_pixel = get_scheme_color(
+                SCHEME,
+                Scheme::Norm as usize,
+                Col::Bg as usize,
+            )
+            .pixel;
+            XSelectInput(DPY, (*SYSTRAY).win, SubstructureNotifyMask);
+            XChangeProperty(
+                DPY,
+                (*SYSTRAY).win,
+                NETATOM[Net::SystemTrayOrientation as usize],
+                XA_CARDINAL,
+                32,
+                PropModeReplace,
+                &NETATOM[Net::SystemTrayOrientationHorz as usize] as *const _
+                    as *const _,
+                1,
+            );
+            XChangeWindowAttributes(
+                DPY,
+                (*SYSTRAY).win,
+                CWEventMask | CWOverrideRedirect | CWBackPixel,
+                &mut wa,
+            );
+            XMapRaised(DPY, (*SYSTRAY).win);
+            XSetSelectionOwner(
+                DPY,
+                NETATOM[Net::SystemTray as usize],
+                (*SYSTRAY).win,
+                CurrentTime,
+            );
+            if XGetSelectionOwner(DPY, NETATOM[Net::SystemTray as usize])
+                == (*SYSTRAY).win
+            {
+                sendevent(
+                    ROOT,
+                    XATOM[XEmbed::Manager as usize],
+                    StructureNotifyMask as i32,
+                    CurrentTime as i64,
+                    NETATOM[Net::SystemTray as usize] as i64,
+                    (*SYSTRAY).win as i64,
+                    0_i64,
+                    0_i64,
+                );
+                XSync(DPY, False);
+            } else {
+                log::error!("unable to obtain system tray");
+                libc::free(SYSTRAY.cast());
+                SYSTRAY = null_mut();
+                return;
+            }
+        } // end if !SYSTRAY
+        cfor!(((w, i) = (0, (*SYSTRAY).icons);
+        !i.is_null();
+        i = (*i).next) {
+            // make sure the background color stays the same
+            wa.background_pixel = get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize).pixel;
+            XChangeWindowAttributes(DPY, (*i).win, CWBackPixel, &mut wa);
+            XMapRaised(DPY, (*i).win);
+            w += SYSTRAYSPACING;
+            (*i).x = w as i32;
+            XMoveResizeWindow(DPY, (*i).win, (*i).x, 0, (*i).w as u32, (*i).h as u32);
+            w += (*i).w as u32;
+            if (*i).mon != m {
+                (*i).mon = m;
+            }
+        });
+        w = if w != 0 { w + SYSTRAYSPACING } else { 1 };
+        x -= w as i32;
+        XMoveResizeWindow(DPY, (*SYSTRAY).win, x, (*m).by, w, BH as u32);
+        wc = XWindowChanges {
+            x,
+            y: (*m).by,
+            width: w as i32,
+            height: BH,
+            border_width: 0,
+            sibling: (*m).barwin,
+            stack_mode: Above,
+        };
+        XConfigureWindow(
+            DPY,
+            (*SYSTRAY).win,
+            (CWX | CWY | CWWidth | CWHeight | CWSibling | CWStackMode) as u32,
+            &mut wc,
+        );
+        XMapWindow(DPY, (*SYSTRAY).win);
+        XMapSubwindows(DPY, (*SYSTRAY).win);
+        // redraw background
+        XSetForeground(
+            DPY,
+            (*DRW).gc,
+            get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
+                .pixel,
+        );
+        XFillRectangle(DPY, (*SYSTRAY).win, (*DRW).gc, 0, 0, w, BH as u32);
+        XSync(DPY, False);
+    } // end unsafe
+}
+
+fn wintosystrayicon(w: Window) -> *mut Client {
+    unsafe {
+        let mut i = null_mut();
+        if SHOWSYSTRAY == 0 || w == 0 {
+            return i;
+        }
+        cfor!((i = (*SYSTRAY).icons; !i.is_null() && (*i).win != w;
+            i = (*i).next) {});
+
+        i
+    }
+}
+
+fn systraytomon(m: *mut Monitor) -> *mut Monitor {
+    unsafe {
+        let mut t: *mut Monitor;
+        let mut i;
+        let mut n;
+        if SYSTRAYPINNING == 0 {
+            if m.is_null() {
+                return SELMON;
+            }
+            if m == SELMON {
+                return m;
+            } else {
+                return null_mut();
+            }
+        }
+        cfor!(((n, t) = (1, MONS);
+            !t.is_null() && !(*t).next.is_null();
+            (n, t) = (n+1, (*t).next)) {});
+        cfor!(((i, t) = (1, MONS);
+            !t.is_null() && !(*t).next.is_null() && i < SYSTRAYPINNING;
+            (i, t) = (i+1, (*t).next)) {});
+        if SYSTRAYPINNINGFAILFIRST != 0 && n < SYSTRAYPINNING {
+            return MONS;
+        }
+
+        t
     }
 }
 
@@ -1045,9 +1400,17 @@ fn drawbar(m: *mut Monitor) {
     log::trace!("drawbar");
     unsafe {
         let mut tw = 0;
+        let mut stw = 0;
         let boxs = (*(*DRW).fonts).h / 9;
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
+
+        if config::SHOWSYSTRAY != 0
+            && m == systraytomon(m)
+            && config::SYSTRAYONLEFT == 0
+        {
+            stw = getsystraywidth();
+        }
 
         if !(*m).showbar {
             return;
@@ -1057,18 +1420,20 @@ fn drawbar(m: *mut Monitor) {
         if m == SELMON {
             // status is only drawn on selected monitor
             drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(addr_of!(STEXT) as *const _) - LRPAD + 2; // 2px right padding
+            tw = textw(addr_of!(STEXT) as *const _) - LRPAD / 2 + 2; // 2px right padding
             drw::text(
                 DRW,
-                (*m).ww - tw,
+                (*m).ww - tw - stw as i32,
                 0,
                 tw as u32,
                 BH as u32,
-                0,
+                (LRPAD / 2 - 2) as u32,
                 addr_of!(STEXT) as *const _,
                 0,
             );
         }
+
+        resizebarwin(m);
 
         let mut c = (*m).clients;
         while !c.is_null() {
@@ -1134,7 +1499,7 @@ fn drawbar(m: *mut Monitor) {
             0,
         ) as i32;
 
-        let w = (*m).ww - tw - x;
+        let w = (*m).ww - tw - stw as i32 - x;
         if w > BH {
             if !(*m).sel.is_null() {
                 drw::setscheme(
@@ -1171,7 +1536,7 @@ fn drawbar(m: *mut Monitor) {
                 drw::rect(DRW, x, 0, w as u32, BH as u32, 1, 1);
             }
         }
-        drw::map(DRW, (*m).barwin, 0, 0, (*m).ww as u32, BH as u32);
+        drw::map(DRW, (*m).barwin, 0, 0, (*m).ww as u32 - stw, BH as u32);
     }
 }
 
@@ -1247,12 +1612,16 @@ fn updatebars() {
             if (*m).barwin != 0 {
                 continue;
             }
+            let mut w = (*m).ww;
+            if SHOWSYSTRAY != 0 && m == systraytomon(m) {
+                w -= getsystraywidth() as i32;
+            }
             (*m).barwin = xlib::XCreateWindow(
                 DPY,
                 ROOT,
                 (*m).wx as c_int,
                 (*m).by as c_int,
-                (*m).ww as c_uint,
+                w as c_uint,
                 BH as c_uint,
                 0,
                 xlib::XDefaultDepth(DPY, SCREEN),
@@ -1266,6 +1635,9 @@ fn updatebars() {
                 (*m).barwin,
                 (*CURSOR[Cur::Normal as usize]).cursor,
             );
+            if SHOWSYSTRAY != 0 && m == systraytomon(m) {
+                xlib::XMapRaised(DPY, (*SYSTRAY).win);
+            }
             xlib::XMapRaised(DPY, (*m).barwin);
             xlib::XSetClassHint(DPY, (*m).barwin, &mut ch);
             m = (*m).next;
@@ -1472,6 +1844,23 @@ fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
     }
 }
 
+fn removesystrayicon(i: *mut Client) {
+    unsafe {
+        if SHOWSYSTRAY == 0 || i.is_null() {
+            return;
+        }
+        let mut ii: *mut *mut Client;
+        cfor!((
+            ii = &mut (*SYSTRAY).icons as *mut _;
+            !ii.is_null() && *ii != i;
+            ii = &mut (*(*ii)).next) {});
+        if !ii.is_null() {
+            *ii = (*i).next;
+        }
+        libc::free(i.cast());
+    }
+}
+
 // "macros"
 
 #[inline]
@@ -1642,6 +2031,12 @@ fn cleanup() {
             cleanupmon(MONS);
         }
 
+        if config::SHOWSYSTRAY != 0 {
+            XUnmapWindow(DPY, (*SYSTRAY).win);
+            XDestroyWindow(DPY, (*SYSTRAY).win);
+            libc::free(SYSTRAY.cast());
+        }
+
         for cur in CURSOR {
             drw::cur_free(DRW, cur);
         }
@@ -1766,6 +2161,7 @@ static HANDLER: LazyLock<
     ret[x11::xlib::MapRequest as usize] = handlers::maprequest;
     ret[x11::xlib::MotionNotify as usize] = handlers::motionnotify;
     ret[x11::xlib::PropertyNotify as usize] = handlers::propertynotify;
+    ret[x11::xlib::ResizeRequest as usize] = handlers::resizerequest;
     ret[x11::xlib::UnmapNotify as usize] = handlers::unmapnotify;
     ret
 });
@@ -2065,6 +2461,12 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
     let mut da = 0;
     let mut atom: Atom = 0;
     unsafe {
+        // FIXME (systray author) getatomprop should return the number of items
+        // and a pointer to the stored data instead of this workaround
+        let mut req = XA_ATOM;
+        if prop == XATOM[XEmbed::XEmbedInfo as usize] {
+            req = XATOM[XEmbed::XEmbedInfo as usize];
+        }
         if xlib::XGetWindowProperty(
             DPY,
             (*c).win,
@@ -2072,7 +2474,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
             0,
             std::mem::size_of::<Atom>() as i64,
             False,
-            XA_ATOM,
+            req,
             &mut da,
             &mut di,
             &mut dl,
@@ -2084,10 +2486,32 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
             // the C code is *(Atom *)p. is that different from (Atom) *p?
             // that's closer to what I had before
             atom = *(p as *mut Atom);
+            if da == XATOM[XEmbed::XEmbedInfo as usize] && dl == 2 {
+                atom = *(p as *mut Atom).add(1);
+            }
             XFree(p.cast());
         }
     }
     atom
+}
+
+fn getsystraywidth() -> c_uint {
+    unsafe {
+        let mut w = 0;
+        let mut i;
+        if config::SHOWSYSTRAY != 0 {
+            cfor!((
+            i = (*SYSTRAY).icons;
+            !i.is_null();
+            (w, i) = (w + (*i).w + config::SYSTRAYSPACING as i32, (*i).next))
+            {});
+        }
+        if w != 0 {
+            w as c_uint + SYSTRAYSPACING
+        } else {
+            1
+        }
+    }
 }
 
 fn applyrules(c: *mut Client) {
@@ -2213,10 +2637,15 @@ fn getstate(w: Window) -> c_long {
 mod config;
 mod drw;
 pub use rwm::enums;
+use xembed::{
+    XEMBED_EMBEDDED_VERSION, XEMBED_MAPPED, XEMBED_WINDOW_ACTIVATE,
+    XEMBED_WINDOW_DEACTIVATE,
+};
 mod handlers;
 mod key_handlers;
 mod layouts;
 mod util;
+mod xembed;
 
 fn main() {
     env_logger::init();

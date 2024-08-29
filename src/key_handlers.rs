@@ -6,19 +6,20 @@ use std::ptr::null_mut;
 use x11::xlib::{
     ButtonRelease, ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask,
     Expose, ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest,
-    MotionNotify, SubstructureRedirectMask, XCheckMaskEvent, XEvent,
-    XGrabPointer, XGrabServer, XKillClient, XMaskEvent, XMoveResizeWindow,
-    XSetCloseDownMode, XSetErrorHandler, XSync, XUngrabPointer, XUngrabServer,
-    XWarpPointer,
+    MotionNotify, NoEventMask, SubstructureRedirectMask, XCheckMaskEvent,
+    XConfigureWindow, XEvent, XGrabPointer, XGrabServer, XKillClient,
+    XMaskEvent, XSetCloseDownMode, XSetErrorHandler, XSync, XUngrabPointer,
+    XUngrabServer, XWarpPointer, XWindowChanges, CWY,
 };
 
-use crate::config::{CONFIG, DMENUCMD, LAYOUTS};
+use crate::config::{CONFIG, LAYOUTS, SHOWSYSTRAY};
 use crate::enums::{Cur, WM};
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
-    getrootptr, height, is_visible, nexttiled, pop, recttomon, resize, restack,
-    sendevent, unfocus, updatebarpos, width, xerror, xerrordummy, BH, CURSOR,
-    DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON, TAGMASK, WMATOM, XNONE,
+    getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
+    resizebarwin, restack, sendevent, unfocus, updatebarpos, width, xerror,
+    xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON,
+    SYSTRAY, TAGMASK, WMATOM, XNONE,
 };
 use rwm::{Arg, Client, Monitor};
 
@@ -26,14 +27,27 @@ pub(crate) fn togglebar(_arg: *const Arg) {
     unsafe {
         (*SELMON).showbar = !(*SELMON).showbar;
         updatebarpos(SELMON);
-        XMoveResizeWindow(
-            DPY,
-            (*SELMON).barwin,
-            (*SELMON).wx,
-            (*SELMON).by,
-            (*SELMON).ww as u32,
-            BH as u32,
-        );
+        resizebarwin(SELMON);
+        if SHOWSYSTRAY != 0 {
+            let mut wc = XWindowChanges {
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+                border_width: 0,
+                sibling: 0,
+                stack_mode: 0,
+            };
+            if !(*SELMON).showbar {
+                wc.y = -BH;
+            } else if (*SELMON).showbar {
+                wc.y = 0;
+                if !(*SELMON).topbar {
+                    wc.y = (*SELMON).mh - BH;
+                }
+            }
+            XConfigureWindow(DPY, (*SYSTRAY).win, CWY as u32, &mut wc);
+        }
         arrange(SELMON);
     }
 }
@@ -151,7 +165,17 @@ pub(crate) fn killclient(_arg: *const Arg) {
             return;
         }
 
-        if sendevent((*SELMON).sel, WMATOM[WM::Delete as usize]) == 0 {
+        if sendevent(
+            (*(*SELMON).sel).win,
+            WMATOM[WM::Delete as usize],
+            NoEventMask as i32,
+            WMATOM[WM::Delete as usize] as i64,
+            CurrentTime as i64,
+            0,
+            0,
+            0,
+        ) == 0
+        {
             XGrabServer(DPY);
             XSetErrorHandler(Some(xerrordummy));
             XSetCloseDownMode(DPY, DestroyAll);
@@ -527,7 +551,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
 pub(crate) fn spawn(arg: *const Arg) {
     unsafe {
         let mut argv = (*arg).v();
-        if argv == *DMENUCMD {
+        if argv == *CONFIG.dmenucmd {
             log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
             argv.push("-m".into());
             argv.push((*SELMON).num.to_string());
