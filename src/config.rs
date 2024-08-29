@@ -22,7 +22,7 @@ pub const BORDERPX: c_uint = 3;
 pub const SNAP: c_uint = 32;
 
 /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
-pub const SYSTRAYPINNING: c_uint = 0;
+pub static SYSTRAYPINNING: c_uint = 0;
 /// 0: systray in the right corner, >0: systray on left of status text
 pub const SYSTRAYONLEFT: c_uint = 0;
 /// systray spacing
