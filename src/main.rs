@@ -1187,7 +1187,16 @@ fn updatesystray() {
 }
 
 fn wintosystrayicon(w: Window) -> *mut Client {
-    todo!();
+    unsafe {
+        let mut i = null_mut();
+        if SHOWSYSTRAY == 0 || w == 0 {
+            return i;
+        }
+        cfor!((i = (*SYSTRAY).icons; !i.is_null() && (*i).win != w;
+            i = (*i).next) {});
+
+        i
+    }
 }
 
 fn systraytomon(m: *mut Monitor) -> *mut Monitor {
