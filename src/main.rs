@@ -12,20 +12,25 @@ use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xlib::{
-    self, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable, BadMatch,
-    BadWindow, Below, ButtonPressMask, ButtonReleaseMask, CWBackPixmap,
-    CWBorderWidth, CWCursor, CWEventMask, CWHeight, CWOverrideRedirect,
-    CWSibling, CWStackMode, CWWidth, ClientMessage, ControlMask,
-    CopyFromParent, CurrentTime, Display, EnterWindowMask, ExposureMask, False,
-    FocusChangeMask, GrabModeAsync, GrabModeSync, InputHint, IsViewable,
-    LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask, Mod3Mask, Mod4Mask,
-    Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize, PMinSize, PResizeInc,
-    PSize, ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
-    PropModeReplace, PropertyChangeMask, RevertToPointerRoot, ShiftMask,
-    StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XDestroyWindow, XErrorEvent, XFree, XInternAtom, XMapRaised,
-    XMoveResizeWindow, XPropertyEvent, XSetErrorHandler, XUnmapWindow, CWX,
-    CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
+    self, Above, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable,
+    BadMatch, BadWindow, Below, ButtonPressMask, ButtonReleaseMask,
+    CWBackPixel, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
+    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
+    ControlMask, CopyFromParent, CurrentTime, Display, EnterWindowMask,
+    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
+    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
+    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
+    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
+    RevertToPointerRoot, ShiftMask, StructureNotifyMask,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
+    XChangeProperty, XChangeWindowAttributes, XConfigureWindow,
+    XCreateSimpleWindow, XDestroyWindow, XErrorEvent, XFillRectangle, XFree,
+    XGetSelectionOwner, XInternAtom, XMapRaised, XMapSubwindows, XMapWindow,
+    XMoveResizeWindow, XPropertyEvent, XSelectInput, XSetErrorHandler,
+    XSetForeground, XSetSelectionOwner, XSetWindowAttributes, XSync,
+    XUnmapWindow, XWindowChanges, CWX, CWY, XA_ATOM, XA_CARDINAL, XA_STRING,
+    XA_WINDOW, XA_WM_NAME,
 };
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Systray, Window};
@@ -1183,8 +1188,161 @@ fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
     }
 }
 
+const fn default_window_attributes() -> XSetWindowAttributes {
+    XSetWindowAttributes {
+        background_pixmap: 0,
+        background_pixel: 0,
+        border_pixmap: 0,
+        border_pixel: 0,
+        bit_gravity: 0,
+        win_gravity: 0,
+        backing_store: 0,
+        backing_planes: 0,
+        backing_pixel: 0,
+        save_under: 0,
+        event_mask: 0,
+        do_not_propagate_mask: 0,
+        override_redirect: 0,
+        colormap: 0,
+        cursor: 0,
+    }
+}
+
 fn updatesystray() {
-    todo!();
+    unsafe {
+        let mut wa = default_window_attributes();
+        let mut wc: XWindowChanges;
+        let mut i: *mut Client = null_mut();
+        let mut m: *mut Monitor = systraytomon(null_mut());
+        let mut x: c_int = (*m).mx + (*m).mw;
+        let mut sw =
+            textw(addr_of!(STEXT) as *const _) - LRPAD + SYSTRAYSPACING as i32;
+        let mut w = 1;
+
+        if SHOWSYSTRAY == 0 {
+            return;
+        }
+        if SYSTRAYONLEFT != 0 {
+            x -= sw + LRPAD / 2;
+        }
+        if SYSTRAY.is_null() {
+            // init systray
+            SYSTRAY = ecalloc(1, size_of::<Systray>()).cast();
+            (*SYSTRAY).win = XCreateSimpleWindow(
+                DPY,
+                ROOT,
+                x,
+                (*m).by,
+                w,
+                BH as u32,
+                0,
+                0,
+                get_scheme_color(
+                    SCHEME,
+                    Scheme::Sel as usize,
+                    Col::Bg as usize,
+                )
+                .pixel,
+            );
+            wa.event_mask = ButtonPressMask | ExposureMask;
+            wa.override_redirect = True;
+            wa.background_pixel = get_scheme_color(
+                SCHEME,
+                Scheme::Norm as usize,
+                Col::Bg as usize,
+            )
+            .pixel;
+            XSelectInput(DPY, (*SYSTRAY).win, SubstructureNotifyMask);
+            XChangeProperty(
+                DPY,
+                (*SYSTRAY).win,
+                NETATOM[Net::SystemTrayOrientation as usize],
+                XA_CARDINAL,
+                32,
+                PropModeReplace,
+                &NETATOM[Net::SystemTrayOrientationHorz as usize] as *const _
+                    as *const _,
+                1,
+            );
+            XChangeWindowAttributes(
+                DPY,
+                (*SYSTRAY).win,
+                CWEventMask | CWOverrideRedirect | CWBackPixel,
+                &mut wa,
+            );
+            XMapRaised(DPY, (*SYSTRAY).win);
+            XSetSelectionOwner(
+                DPY,
+                NETATOM[Net::SystemTray as usize],
+                (*SYSTRAY).win,
+                CurrentTime,
+            );
+            if XGetSelectionOwner(DPY, NETATOM[Net::SystemTray as usize])
+                == (*SYSTRAY).win
+            {
+                sendevent(
+                    ROOT,
+                    XATOM[XEmbed::Manager as usize],
+                    StructureNotifyMask as i32,
+                    CurrentTime as i64,
+                    NETATOM[Net::SystemTray as usize] as i64,
+                    (*SYSTRAY).win as i64,
+                    0 as i64,
+                    0 as i64,
+                );
+                XSync(DPY, False);
+            } else {
+                log::error!("unable to obtain system tray");
+                libc::free(SYSTRAY.cast());
+                SYSTRAY = null_mut();
+                return;
+            }
+        } // end if !SYSTRAY
+        cfor!(((w, i) = (0, (*SYSTRAY).icons);
+        !i.is_null();
+        i = (*i).next) {
+            // make sure the background color stays the same
+            wa.background_pixel = get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize).pixel;
+            XChangeWindowAttributes(DPY, (*i).win, CWBackPixel, &mut wa);
+            XMapRaised(DPY, (*i).win);
+            w += SYSTRAYSPACING;
+            (*i).x = w as i32;
+            XMoveResizeWindow(DPY, (*i).win, (*i).x, 0, (*i).w as u32, (*i).h as u32);
+            w += (*i).w as u32;
+            if (*i).mon != m {
+                (*i).mon = m;
+            }
+        });
+        w = if w != 0 { w + SYSTRAYSPACING } else { 1 };
+        x -= w as i32;
+        XMoveResizeWindow(DPY, (*SYSTRAY).win, x, (*m).by, w, BH as u32);
+        wc = XWindowChanges {
+            x,
+            y: (*m).by,
+            width: w as i32,
+            height: BH,
+            border_width: 0,
+            sibling: (*m).barwin,
+            stack_mode: Above,
+        };
+        XConfigureWindow(
+            DPY,
+            (*SYSTRAY).win,
+            (CWX | CWY | CWWidth | CWHeight | CWSibling | CWStackMode) as u32,
+            &mut wc,
+        );
+        XMapWindow(DPY, (*SYSTRAY).win);
+        XMapSubwindows(DPY, (*SYSTRAY).win);
+        // redraw background
+        XSetForeground(
+            DPY,
+            (*DRW).gc,
+            get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
+                .pixel,
+        );
+        XFillRectangle(DPY, (*SYSTRAY).win, (*DRW).gc, 0, 0, w, BH as u32);
+        XSync(DPY, False);
+    } // end unsafe
 }
 
 fn wintosystrayicon(w: Window) -> *mut Client {
