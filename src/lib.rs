@@ -99,8 +99,8 @@ impl Rule {
 }
 
 pub struct Systray {
-    win: Window,
-    icons: *mut Client,
+    pub win: Window,
+    pub icons: *mut Client,
 }
 
 #[repr(C)]
