@@ -221,8 +221,7 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 
 /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
 pub static SYSTRAYPINNING: c_uint = 0;
-/// 0: systray in the right corner, >0: systray on left of status text
-pub const SYSTRAYONLEFT: c_uint = 0;
+pub const SYSTRAYONLEFT: bool = false;
 /// systray spacing
 pub const SYSTRAYSPACING: c_uint = 2;
 /// 1: if pinning fails, display systray on the first monitor, False: display

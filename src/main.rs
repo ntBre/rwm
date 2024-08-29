@@ -733,7 +733,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
 fn resizebarwin(m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
-        if SHOWSYSTRAY != 0 && m == systraytomon(m) && SYSTRAYONLEFT == 0 {
+        if SHOWSYSTRAY != 0 && m == systraytomon(m) && !SYSTRAYONLEFT {
             w -= getsystraywidth() as i32;
         }
         XMoveResizeWindow(
@@ -1226,7 +1226,7 @@ fn updatesystray() {
         if SHOWSYSTRAY == 0 {
             return;
         }
-        if SYSTRAYONLEFT != 0 {
+        if SYSTRAYONLEFT {
             x -= sw + LRPAD / 2;
         }
         if SYSTRAY.is_null() {
@@ -1407,7 +1407,7 @@ fn drawbar(m: *mut Monitor) {
 
         if config::SHOWSYSTRAY != 0
             && m == systraytomon(m)
-            && config::SYSTRAYONLEFT == 0
+            && !config::SYSTRAYONLEFT
         {
             stw = getsystraywidth();
         }
