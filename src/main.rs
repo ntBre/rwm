@@ -733,7 +733,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
 fn resizebarwin(m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
-        if SHOWSYSTRAY != 0 && m == systraytomon(m) && !SYSTRAYONLEFT {
+        if SHOWSYSTRAY && m == systraytomon(m) && !SYSTRAYONLEFT {
             w -= getsystraywidth() as i32;
         }
         XMoveResizeWindow(
@@ -1156,7 +1156,7 @@ fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
     unsafe {
         let mut flags: Atom = 0;
         let code;
-        if SHOWSYSTRAY == 0
+        if !SHOWSYSTRAY
             || i.is_null()
             || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
         {
@@ -1223,7 +1223,7 @@ fn updatesystray() {
             textw(addr_of!(STEXT) as *const _) - LRPAD + SYSTRAYSPACING as i32;
         let mut w = 1;
 
-        if SHOWSYSTRAY == 0 {
+        if !SHOWSYSTRAY {
             return;
         }
         if SYSTRAYONLEFT {
@@ -1352,7 +1352,7 @@ fn updatesystray() {
 fn wintosystrayicon(w: Window) -> *mut Client {
     unsafe {
         let mut i = null_mut();
-        if SHOWSYSTRAY == 0 || w == 0 {
+        if !SHOWSYSTRAY || w == 0 {
             return i;
         }
         cfor!((i = (*SYSTRAY).icons; !i.is_null() && (*i).win != w;
@@ -1405,9 +1405,7 @@ fn drawbar(m: *mut Monitor) {
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if config::SHOWSYSTRAY != 0
-            && m == systraytomon(m)
-            && !config::SYSTRAYONLEFT
+        if config::SHOWSYSTRAY && m == systraytomon(m) && !config::SYSTRAYONLEFT
         {
             stw = getsystraywidth();
         }
@@ -1613,7 +1611,7 @@ fn updatebars() {
                 continue;
             }
             let mut w = (*m).ww;
-            if SHOWSYSTRAY != 0 && m == systraytomon(m) {
+            if SHOWSYSTRAY && m == systraytomon(m) {
                 w -= getsystraywidth() as i32;
             }
             (*m).barwin = xlib::XCreateWindow(
@@ -1635,7 +1633,7 @@ fn updatebars() {
                 (*m).barwin,
                 (*CURSOR[Cur::Normal as usize]).cursor,
             );
-            if SHOWSYSTRAY != 0 && m == systraytomon(m) {
+            if SHOWSYSTRAY && m == systraytomon(m) {
                 xlib::XMapRaised(DPY, (*SYSTRAY).win);
             }
             xlib::XMapRaised(DPY, (*m).barwin);
@@ -1846,7 +1844,7 @@ fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
 
 fn removesystrayicon(i: *mut Client) {
     unsafe {
-        if SHOWSYSTRAY == 0 || i.is_null() {
+        if !SHOWSYSTRAY || i.is_null() {
             return;
         }
         let mut ii: *mut *mut Client;
@@ -2031,7 +2029,7 @@ fn cleanup() {
             cleanupmon(MONS);
         }
 
-        if config::SHOWSYSTRAY != 0 {
+        if config::SHOWSYSTRAY {
             XUnmapWindow(DPY, (*SYSTRAY).win);
             XDestroyWindow(DPY, (*SYSTRAY).win);
             libc::free(SYSTRAY.cast());
@@ -2499,7 +2497,7 @@ fn getsystraywidth() -> c_uint {
     unsafe {
         let mut w = 0;
         let mut i;
-        if config::SHOWSYSTRAY != 0 {
+        if config::SHOWSYSTRAY {
             cfor!((
             i = (*SYSTRAY).icons;
             !i.is_null();

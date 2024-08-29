@@ -28,7 +28,7 @@ pub(crate) fn togglebar(_arg: *const Arg) {
         (*SELMON).showbar = !(*SELMON).showbar;
         updatebarpos(SELMON);
         resizebarwin(SELMON);
-        if SHOWSYSTRAY != 0 {
+        if SHOWSYSTRAY {
             let mut wc = XWindowChanges {
                 x: 0,
                 y: 0,

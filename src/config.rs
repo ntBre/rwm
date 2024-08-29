@@ -227,8 +227,7 @@ pub const SYSTRAYSPACING: c_uint = 2;
 /// 1: if pinning fails, display systray on the first monitor, False: display
 /// systray on the last monitor
 pub const SYSTRAYPINNINGFAILFIRST: c_int = 1;
-/// 0 means no systray
-pub const SHOWSYSTRAY: c_int = 1;
+pub const SHOWSYSTRAY: bool = true;
 
 const COL_GRAY1: &str = "#222222";
 const COL_GRAY2: &str = "#444444";

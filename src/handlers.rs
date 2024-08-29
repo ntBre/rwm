@@ -115,7 +115,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
         let cme = &(*e).client_message;
         let mut c = wintoclient(cme.window);
 
-        if config::SHOWSYSTRAY != 0
+        if config::SHOWSYSTRAY
             && cme.window == (*SYSTRAY).win
             && cme.message_type == NETATOM[Net::SystemTrayOP as usize]
         {
