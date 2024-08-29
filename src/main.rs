@@ -23,7 +23,7 @@ use x11::xlib::{
     PSize, ParentRelative, PointerMotionMask, PointerRoot, PropModeAppend,
     PropModeReplace, PropertyChangeMask, RevertToPointerRoot, ShiftMask,
     StructureNotifyMask, SubstructureNotifyMask, SubstructureRedirectMask,
-    Success, True, XDestroyWindow, XErrorEvent, XFree, XInternAtom,
+    Success, True, XDestroyWindow, XErrorEvent, XFree, XInternAtom, XMapRaised,
     XMoveResizeWindow, XPropertyEvent, XSetErrorHandler, XUnmapWindow, CWX,
     CWY, XA_ATOM, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
@@ -1143,7 +1143,43 @@ fn updatesystrayicongeom(i: *mut Client, w: c_int, h: c_int) {
 }
 
 fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
-    todo!();
+    unsafe {
+        let mut flags: Atom = 0;
+        let mut code = 0;
+        if SHOWSYSTRAY == 0
+            || i.is_null()
+            || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
+        {
+            flags = getatomprop(i, XATOM[XEmbed::XEmbedInfo as usize]);
+            if flags == 0 {
+                return;
+            }
+        }
+        let i = &mut *i;
+        if flags & XEMBED_MAPPED != 0 && i.tags == 0 {
+            i.tags = 1;
+            code = XEMBED_WINDOW_ACTIVATE;
+            XMapRaised(DPY, i.win);
+            setclientstate(i, NORMAL_STATE);
+        } else if (flags & XEMBED_MAPPED) == 0 && i.tags != 0 {
+            i.tags = 0;
+            code = XEMBED_WINDOW_DEACTIVATE;
+            XUnmapWindow(DPY, i.win);
+            setclientstate(i, WITHDRAWN_STATE);
+        } else {
+            return;
+        }
+        sendevent(
+            i.win,
+            XATOM[XEmbed::XEmbed as usize],
+            StructureNotifyMask as i32,
+            CurrentTime as i64,
+            code as i64,
+            0,
+            (*SYSTRAY).win as i64,
+            XEMBED_EMBEDDED_VERSION as i64,
+        );
+    }
 }
 
 fn updatesystray() {
@@ -2412,6 +2448,10 @@ fn getstate(w: Window) -> c_long {
 mod config;
 mod drw;
 pub use rwm::enums;
+use xembed::{
+    XEMBED_EMBEDDED_VERSION, XEMBED_MAPPED, XEMBED_WINDOW_ACTIVATE,
+    XEMBED_WINDOW_DEACTIVATE,
+};
 mod handlers;
 mod key_handlers;
 mod layouts;
