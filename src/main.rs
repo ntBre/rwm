@@ -487,6 +487,7 @@ fn setfocus(c: *mut Client) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn sendevent(
     w: Window,
     proto: Atom,
@@ -1151,7 +1152,7 @@ fn updatesystrayicongeom(i: *mut Client, w: c_int, h: c_int) {
 fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
     unsafe {
         let mut flags: Atom = 0;
-        let mut code = 0;
+        let code;
         if SHOWSYSTRAY == 0
             || i.is_null()
             || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
@@ -1212,10 +1213,10 @@ fn updatesystray() {
     unsafe {
         let mut wa = default_window_attributes();
         let mut wc: XWindowChanges;
-        let mut i: *mut Client = null_mut();
-        let mut m: *mut Monitor = systraytomon(null_mut());
+        let mut i: *mut Client;
+        let m: *mut Monitor = systraytomon(null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let mut sw =
+        let sw =
             textw(addr_of!(STEXT) as *const _) - LRPAD + SYSTRAYSPACING as i32;
         let mut w = 1;
 
@@ -1287,8 +1288,8 @@ fn updatesystray() {
                     CurrentTime as i64,
                     NETATOM[Net::SystemTray as usize] as i64,
                     (*SYSTRAY).win as i64,
-                    0 as i64,
-                    0 as i64,
+                    0_i64,
+                    0_i64,
                 );
                 XSync(DPY, False);
             } else {
@@ -1360,9 +1361,9 @@ fn wintosystrayicon(w: Window) -> *mut Client {
 
 fn systraytomon(m: *mut Monitor) -> *mut Monitor {
     unsafe {
-        let mut t: *mut Monitor = null_mut();
-        let mut i = 0;
-        let mut n = 0;
+        let mut t: *mut Monitor;
+        let mut i;
+        let mut n;
         if SYSTRAYPINNING == 0 {
             if m.is_null() {
                 return SELMON;
@@ -1532,14 +1533,7 @@ fn drawbar(m: *mut Monitor) {
                 drw::rect(DRW, x, 0, w as u32, BH as u32, 1, 1);
             }
         }
-        drw::map(
-            DRW,
-            (*m).barwin,
-            0,
-            0,
-            (*m).ww as u32 - stw as u32,
-            BH as u32,
-        );
+        drw::map(DRW, (*m).barwin, 0, 0, (*m).ww as u32 - stw, BH as u32);
     }
 }
 
@@ -2502,7 +2496,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
 fn getsystraywidth() -> c_uint {
     unsafe {
         let mut w = 0;
-        let mut i = null_mut();
+        let mut i;
         if config::SHOWSYSTRAY != 0 {
             cfor!((
             i = (*SYSTRAY).icons;
