@@ -39,11 +39,22 @@ pub enum Net {
     WMName,
     WMState,
     WMCheck,
+    SystemTray,
+    SystemTrayOP,
+    SystemTrayOrientation,
+    SystemTrayOrientationHorz,
     WMFullscreen,
     ActiveWindow,
     WMWindowType,
     WMWindowTypeDialog,
     ClientList,
+    Last,
+}
+
+pub enum XEmbed {
+    Manager,
+    XEmbed,
+    XEmbedInfo,
     Last,
 }
 
