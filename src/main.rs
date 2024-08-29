@@ -32,7 +32,8 @@ use rwm::{Arg, Client, Cursor, Layout, Monitor, Systray, Window};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, SHOWSYSTRAY,
-    SYSTRAYONLEFT, SYSTRAYSPACING, TAGS,
+    SYSTRAYONLEFT, SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
+    TAGS,
 };
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -1200,7 +1201,32 @@ fn wintosystrayicon(w: Window) -> *mut Client {
 }
 
 fn systraytomon(m: *mut Monitor) -> *mut Monitor {
-    todo!();
+    unsafe {
+        let mut t: *mut Monitor = null_mut();
+        let mut i = 0;
+        let mut n = 0;
+        if SYSTRAYPINNING == 0 {
+            if m.is_null() {
+                return SELMON;
+            }
+            if m == SELMON {
+                return m;
+            } else {
+                return null_mut();
+            }
+        }
+        cfor!(((n, t) = (1, MONS);
+            !t.is_null() && !(*t).next.is_null();
+            (n, t) = (n+1, (*t).next)) {});
+        cfor!(((i, t) = (1, MONS);
+            !t.is_null() && !(*t).next.is_null() && i < SYSTRAYPINNING;
+            (i, t) = (i+1, (*t).next)) {});
+        if SYSTRAYPINNINGFAILFIRST != 0 && n < SYSTRAYPINNING {
+            return MONS;
+        }
+
+        t
+    }
 }
 
 fn textw(x: *const c_char) -> c_int {
