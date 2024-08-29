@@ -98,6 +98,11 @@ impl Rule {
     }
 }
 
+pub struct Systray {
+    pub win: Window,
+    pub icons: *mut Client,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Layout {
