@@ -20,6 +20,19 @@ use rwm::{Arg, Button, Key, Layout, Rule};
 pub const BORDERPX: c_uint = 3;
 // Snap pixel
 pub const SNAP: c_uint = 32;
+
+/// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
+pub const SYSTRAYPINNING: c_uint = 0;
+/// 0: systray in the right corner, >0: systray on left of status text
+pub const SYSTRAYONLEFT: c_uint = 0;
+/// systray spacing
+pub const SYSTRAYSPACING: c_uint = 2;
+/// 1: if pinning fails, display systray on the first monitor, False: display
+/// systray on the last monitor
+pub const SYSTRAYPINNINGFAILFIRST: c_int = 1;
+/// 0 means no systray
+pub const SHOWSYSTRAY: c_int = 1;
+
 /// 0 means no bar
 pub const SHOWBAR: c_int = 1;
 /// 0 means bottom bar
