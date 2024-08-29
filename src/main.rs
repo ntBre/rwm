@@ -2216,6 +2216,7 @@ mod handlers;
 mod key_handlers;
 mod layouts;
 mod util;
+mod xembed;
 
 fn main() {
     env_logger::init();
