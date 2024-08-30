@@ -27,6 +27,8 @@ use rwm::{Arg, Client, Layout, Monitor};
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
         (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
+        (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize] =
+            ((*SELMON).showbar == 0) as c_int;
         updatebarpos(SELMON);
         resizebarwin(SELMON);
         if SHOWSYSTRAY != 0 {
@@ -119,6 +121,7 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
             return;
         }
         (*SELMON).mfact = f;
+        (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize] = f;
         arrange(SELMON);
     }
 }
@@ -313,6 +316,41 @@ pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
 
         if newtagset != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
+
+            if newtagset == !0 {
+                (*(*SELMON).pertag).prevtag = (*(*SELMON).pertag).curtag;
+                (*(*SELMON).pertag).curtag = 0;
+            }
+
+            // test if the user did not select the same tag
+            if (newtagset & 1 << ((*(*SELMON).pertag).curtag - 1)) == 0 {
+                (*(*SELMON).pertag).prevtag = (*(*SELMON).pertag).curtag;
+                let mut i;
+                cfor!((i = 0; (newtagset & 1 << i) == 0; i += 1) {});
+                (*(*SELMON).pertag).curtag = i + 1;
+            }
+
+            // apply settings for this view
+            (*SELMON).nmaster = (*(*SELMON).pertag).nmasters
+                [(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).mfact =
+                (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).sellt =
+                (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
+                [(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize];
+            (*SELMON).lt[((*SELMON).sellt ^ 1) as usize] = (*(*SELMON).pertag)
+                .ltidxs[(*(*SELMON).pertag).curtag as usize]
+                [((*SELMON).sellt ^ 1) as usize];
+
+            if (*SELMON).showbar
+                != (*(*SELMON).pertag).showbars
+                    [(*(*SELMON).pertag).curtag as usize]
+            {
+                togglebar(null_mut());
+            }
+
             focus(null_mut());
             arrange(SELMON);
         }
