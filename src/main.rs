@@ -33,7 +33,7 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
-use rwm::{Arg, Client, Cursor, Layout, Monitor, Systray, Window};
+use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, SHOWSYSTRAY,
@@ -203,6 +203,20 @@ fn createmon() -> *mut Monitor {
             LAYOUTS[0].symbol,
             size_of_val(&(*m).ltsymbol),
         );
+
+        // NOTE: using this instead of ecalloc because it feels weird to
+        // allocate a Vec that way, even though it worked in a separate test
+        // program. remember to free with Box::from_raw instead of libc::free
+        let pertag = Pertag {
+            curtag: 1,
+            prevtag: 1,
+            nmasters: vec![(*m).nmaster; TAGS.len()],
+            mfacts: vec![(*m).mfact; TAGS.len()],
+            sellts: vec![(*m).sellt; TAGS.len()],
+            ltidxs: vec![(*m).lt; TAGS.len()],
+            showbars: vec![(*m).showbar; TAGS.len()],
+        };
+        (*m).pertag = Box::into_raw(Box::new(pertag));
     }
 
     m
