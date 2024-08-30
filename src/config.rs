@@ -7,11 +7,16 @@ use std::{
 };
 
 use fig::{Fig, FigError, Value};
-use key::conv;
+use x11::keysym::{
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
+    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
+    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+};
+
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
 
 use crate::{
-    config::key::Key,
+    config::key::{conv, Key},
     enums::{Clk, Scheme},
     key_handlers::*,
     layouts::{monocle, tile},
@@ -253,12 +258,6 @@ pub const LAYOUTS: [Layout; 3] = [
 pub const MODKEY: c_uint = Mod4Mask;
 
 // commands
-
-use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
-    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
-    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
-};
 
 const S_MOD: c_uint = MODKEY | ShiftMask;
 
