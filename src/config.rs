@@ -255,7 +255,7 @@ pub const LAYOUTS: [Layout; 3] = [
 ];
 
 // key definitions
-pub const MODKEY: c_uint = Mod4Mask;
+const MODKEY: c_uint = Mod4Mask;
 
 // commands
 
@@ -279,7 +279,7 @@ static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
-pub fn default_keys() -> [Key; 60] {
+fn default_keys() -> [Key; 60] {
     [
         Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.clone())),
         Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.to_vec())),
