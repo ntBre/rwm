@@ -94,29 +94,24 @@ fn get_colors(
     let colors = get(v, "colors")?;
     let mut colors =
         colors.try_into_map().map_err(|_| "colors must be a map")?;
-    let norm = get(&mut colors, "SchemeNorm")?
-        .try_into_list()
-        .map_err(|_| "SchemeNorm must be a list")?;
-    let sel = get(&mut colors, "SchemeSel")?
-        .try_into_list()
-        .map_err(|_| "SchemeSel must be a list")?;
+    let norm: Vec<String> = get(&mut colors, "SchemeNorm")?.try_into()?;
+    let sel: Vec<String> = get(&mut colors, "SchemeSel")?.try_into()?;
     let mut ret = default_colors();
-    let str_err = |_| "failed to convert color";
     let [n0, n1, n2] = &norm[..] else {
         return Err("not enough colors for SchemeNorm".into());
     };
     ret[Scheme::Norm as usize] = [
-        CString::new(n0.clone().try_into_str().map_err(str_err)?)?,
-        CString::new(n1.clone().try_into_str().map_err(str_err)?)?,
-        CString::new(n2.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(n0.clone())?,
+        CString::new(n1.clone())?,
+        CString::new(n2.clone())?,
     ];
     let [s0, s1, s2] = &sel[..] else {
         return Err("not enough colors for SchemeSel".into());
     };
     ret[Scheme::Sel as usize] = [
-        CString::new(s0.clone().try_into_str().map_err(str_err)?)?,
-        CString::new(s1.clone().try_into_str().map_err(str_err)?)?,
-        CString::new(s2.clone().try_into_str().map_err(str_err)?)?,
+        CString::new(s0.clone())?,
+        CString::new(s1.clone())?,
+        CString::new(s2.clone())?,
     ];
     Ok(ret)
 }
@@ -162,11 +157,6 @@ impl TryFrom<Fig> for Config {
                         .ok_or("unable to convert to strings")
                 })?
         };
-        let dmenucmd = conv(get(&mut v, "dmenucmd")?.as_list())?;
-        let dmenucmd = dmenucmd
-            .into_iter()
-            .map(|v| conv(v.as_str()))
-            .collect::<Result<Vec<_>, FigError>>()?;
         Ok(Self {
             borderpx: int(get(&mut v, "borderpx")?)? as c_uint,
             snap: int(get(&mut v, "snap")?)? as c_uint,
@@ -180,7 +170,7 @@ impl TryFrom<Fig> for Config {
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
             keys: get_keys(&mut v)?,
-            dmenucmd,
+            dmenucmd: get(&mut v, "dmenucmd")?.try_into()?,
         })
     }
 }
