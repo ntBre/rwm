@@ -224,9 +224,9 @@ pub static SYSTRAYPINNING: c_uint = 0;
 pub const SYSTRAYONLEFT: bool = false;
 /// systray spacing
 pub const SYSTRAYSPACING: c_uint = 2;
-/// 1: if pinning fails, display systray on the first monitor, False: display
-/// systray on the last monitor
-pub const SYSTRAYPINNINGFAILFIRST: c_int = 1;
+/// if pinning fails and this is true, display systray on the first monitor,
+/// else display systray on the last monitor
+pub const SYSTRAYPINNINGFAILFIRST: bool = true;
 pub const SHOWSYSTRAY: bool = true;
 
 const COL_GRAY1: &str = "#222222";

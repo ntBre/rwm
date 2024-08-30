@@ -1383,7 +1383,7 @@ fn systraytomon(m: *mut Monitor) -> *mut Monitor {
         cfor!(((i, t) = (1, MONS);
             !t.is_null() && !(*t).next.is_null() && i < SYSTRAYPINNING;
             (i, t) = (i+1, (*t).next)) {});
-        if SYSTRAYPINNINGFAILFIRST != 0 && n < SYSTRAYPINNING {
+        if SYSTRAYPINNINGFAILFIRST && n < SYSTRAYPINNING {
             return MONS;
         }
 
