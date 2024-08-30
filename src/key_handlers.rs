@@ -93,6 +93,8 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
         (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize] =
+            (*SELMON).nmaster;
         arrange(SELMON);
     }
 }
@@ -192,9 +194,13 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
             || (*arg).v.cast() != (*SELMON).lt[(*SELMON).sellt as usize]
         {
             (*SELMON).sellt ^= 1;
+            (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize] ^=
+                1;
         }
         if !arg.is_null() && !(*arg).v.is_null() {
             (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
+            (*(*SELMON).pertag).ltidxs[(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),
