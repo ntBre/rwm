@@ -261,7 +261,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                     c,
                     cme.data.get_long(0) == 1 // _NET_WM_STATE_ADD
                         || (cme.data.get_long(0) == 2 // _NET_WM_STATE_TOGGLE
-                            && (*c).isfullscreen == 0),
+                            && !(*c).isfullscreen),
                 );
             }
         } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
@@ -366,7 +366,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
                 while !m.is_null() {
                     let mut c = (*m).clients;
                     while !c.is_null() {
-                        if (*c).isfullscreen != 0 {
+                        if (*c).isfullscreen {
                             resizeclient(c, (*m).mx, (*m).my, (*m).mw, (*m).mh);
                         }
                         c = (*c).next;

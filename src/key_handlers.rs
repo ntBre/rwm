@@ -61,7 +61,7 @@ pub(crate) fn focusstack(arg: *const Arg) {
         let mut i: *mut Client;
 
         if (*SELMON).sel.is_null()
-            || ((*(*SELMON).sel).isfullscreen != 0 && CONFIG.lock_fullscreen)
+            || ((*(*SELMON).sel).isfullscreen && CONFIG.lock_fullscreen)
         {
             return;
         }
@@ -264,7 +264,7 @@ pub(crate) fn togglefloating(_arg: *const Arg) {
         if (*SELMON).sel.is_null() {
             return;
         }
-        if (*(*SELMON).sel).isfullscreen != 0 {
+        if (*(*SELMON).sel).isfullscreen {
             // no support for fullscreen windows
             return;
         }
@@ -418,7 +418,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
             return;
         }
         let c = &mut *c; // reborrow now that it's not null
-        if c.isfullscreen != 0 {
+        if c.isfullscreen {
             return; // no support for moving fullscreen windows with mouse
         }
         restack(SELMON);
@@ -522,7 +522,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
             return;
         }
         let c = &mut *c;
-        if c.isfullscreen != 0 {
+        if c.isfullscreen {
             return; // no support for resizing fullscreen window with mouse
         }
         restack(SELMON);
