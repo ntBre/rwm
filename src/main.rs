@@ -7,6 +7,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
+use key_handlers::togglebar;
 use libc::{c_long, c_uchar, sigaction};
 use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
@@ -1005,9 +1006,38 @@ fn view(arg: *const Arg) {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
+
+        // Safety: we were gonna dereference it anyway
+        let pertag = &mut *(*SELMON).pertag;
         if ((*arg).ui & TAGMASK) != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
+            pertag.prevtag = pertag.curtag;
+
+            if (*arg).ui == !0 {
+                pertag.curtag = 0;
+            } else {
+                let mut i;
+                cfor!((i = 0; ((*arg).ui & 1 << i) == 0; i += 1) {});
+                pertag.curtag = i + 1;
+            }
+        } else {
+            let tmptag = pertag.prevtag;
+            pertag.prevtag = pertag.curtag;
+            pertag.curtag = tmptag;
         }
+
+        (*SELMON).nmaster = pertag.nmasters[pertag.curtag as usize];
+        (*SELMON).mfact = pertag.mfacts[pertag.curtag as usize];
+        (*SELMON).sellt = pertag.sellts[pertag.curtag as usize];
+        (*SELMON).lt[(*SELMON).sellt as usize] =
+            pertag.ltidxs[pertag.curtag as usize][(*SELMON).sellt as usize];
+        (*SELMON).lt[((*SELMON).sellt ^ 1) as usize] = pertag.ltidxs
+            [pertag.curtag as usize][((*SELMON).sellt ^ 1) as usize];
+
+        if (*SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
+            togglebar(null_mut());
+        }
+
         focus(null_mut());
         arrange(SELMON);
     }
