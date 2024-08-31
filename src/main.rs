@@ -210,11 +210,11 @@ fn createmon() -> *mut Monitor {
         let pertag = Pertag {
             curtag: 1,
             prevtag: 1,
-            nmasters: vec![(*m).nmaster; CONFIG.tags.len()],
-            mfacts: vec![(*m).mfact; CONFIG.tags.len()],
-            sellts: vec![(*m).sellt; CONFIG.tags.len()],
-            ltidxs: vec![(*m).lt; CONFIG.tags.len()],
-            showbars: vec![(*m).showbar; CONFIG.tags.len()],
+            nmasters: vec![(*m).nmaster; CONFIG.tags.len() + 1],
+            mfacts: vec![(*m).mfact; CONFIG.tags.len() + 1],
+            sellts: vec![(*m).sellt; CONFIG.tags.len() + 1],
+            ltidxs: vec![(*m).lt; CONFIG.tags.len() + 1],
+            showbars: vec![(*m).showbar; CONFIG.tags.len() + 1],
         };
         (*m).pertag = Box::into_raw(Box::new(pertag));
     }
