@@ -38,8 +38,8 @@ use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, SHOWSYSTRAY,
-    SYSTRAYONLEFT, SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
-    TAGS,
+    SWALLOWFLOATING, SYSTRAYONLEFT, SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST,
+    SYSTRAYSPACING, TAGS,
 };
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -168,6 +168,8 @@ static mut SH: c_int = 0;
 static mut ROOT: Window = 0;
 
 static mut WMCHECKWIN: Window = 0;
+
+static mut XCON: *mut xcb_connection_t = null_mut();
 
 static mut RUNNING: bool = true;
 
@@ -2542,6 +2544,8 @@ fn applyrules(c: *mut Client) {
                 && (r.instance.is_null()
                     || !libc::strstr(instance.as_ptr(), r.instance).is_null())
             {
+                (*c).isterminal = r.isterminal;
+                (*c).noswallow = r.noswallow;
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
                 let mut m = MONS;
@@ -2566,6 +2570,35 @@ fn applyrules(c: *mut Client) {
         };
     }
 }
+
+fn swallow(p: *mut Client, c: *mut Client) {
+    unsafe {
+        let c = &mut *c;
+        if c.noswallow || c.isterminal {
+            return;
+        }
+        if c.noswallow && !SWALLOWFLOATING && c.isfloating {
+            return;
+        }
+        detach(c);
+        detachstack(c);
+
+        setclientstate(c, WITHDRAWN_STATE);
+        let p = &mut *p;
+        XUnmapWindow(DPY, p.win);
+        p.swallowing = c;
+        c.mon = p.mon;
+
+        std::mem::swap(&mut p.win, &mut c.win);
+        updatetitle(p);
+        XMoveResizeWindow(DPY, p.win, p.x, p.y, p.w as u32, p.h as u32);
+        arrange(p.mon);
+        configure(p);
+        updateclientlist();
+    }
+}
+
+fn unswallow(c: *mut Client) {}
 
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 const TAGMASK: u32 = (1 << TAGS.len()) - 1;
@@ -2635,6 +2668,7 @@ fn getstate(w: Window) -> c_long {
 mod config;
 mod drw;
 pub use rwm::enums;
+use x11::xlib_xcb::xcb_connection_t;
 use xembed::{
     XEMBED_EMBEDDED_VERSION, XEMBED_MAPPED, XEMBED_WINDOW_ACTIVATE,
     XEMBED_WINDOW_DEACTIVATE,
