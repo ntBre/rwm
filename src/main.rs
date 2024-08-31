@@ -2598,7 +2598,26 @@ fn swallow(p: *mut Client, c: *mut Client) {
     }
 }
 
-fn unswallow(c: *mut Client) {}
+fn unswallow(c: *mut Client) {
+    unsafe {
+        let c = &mut *c;
+
+        c.win = (*c.swallowing).win;
+
+        libc::free(c.swallowing.cast());
+        c.swallowing = null_mut();
+
+        // unfullscreen the client
+        setfullscreen(c, false);
+        updatetitle(c);
+        arrange(c.mon);
+        XMapWindow(DPY, c.win);
+        XMoveResizeWindow(DPY, c.win, c.x, c.y, c.w as u32, c.h as u32);
+        setclientstate(c, NORMAL_STATE);
+        focus(null_mut());
+        arrange(c.mon);
+    }
+}
 
 // #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 const TAGMASK: u32 = (1 << TAGS.len()) - 1;
