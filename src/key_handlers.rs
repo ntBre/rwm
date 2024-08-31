@@ -26,9 +26,10 @@ use rwm::{Arg, Client, Layout, Monitor};
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
-        (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
         (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize] =
             ((*SELMON).showbar == 0) as c_int;
+        (*SELMON).showbar =
+            (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize];
         updatebarpos(SELMON);
         resizebarwin(SELMON);
         if SHOWSYSTRAY != 0 {
@@ -94,9 +95,10 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
-        (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
         (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize] =
-            (*SELMON).nmaster;
+            std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        (*SELMON).nmaster =
+            (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize];
         arrange(SELMON);
     }
 }
@@ -120,8 +122,9 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        (*SELMON).mfact = f;
         (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize] = f;
+        (*SELMON).mfact =
+            (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize];
         arrange(SELMON);
     }
 }
@@ -196,14 +199,17 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
             || (*arg).v.is_null()
             || (*arg).v.cast() != (*SELMON).lt[(*SELMON).sellt as usize]
         {
-            (*SELMON).sellt ^= 1;
             (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize] ^=
                 1;
+            (*SELMON).sellt =
+                (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize];
         }
         if !arg.is_null() && !(*arg).v.is_null() {
-            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
             (*(*SELMON).pertag).ltidxs[(*(*SELMON).pertag).curtag as usize]
                 [(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
+                [(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize];
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),
