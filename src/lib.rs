@@ -171,8 +171,12 @@ pub struct Client {
     pub neverfocus: c_int,
     pub oldstate: c_int,
     pub isfullscreen: bool,
+    pub isterminal: bool,
+    pub noswallow: bool,
+    pub pid: libc::pid_t,
     pub next: *mut Client,
     pub snext: *mut Client,
+    pub swallowing: *mut Client,
     pub mon: *mut Monitor,
     pub win: Window,
 }
