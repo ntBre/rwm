@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_int, c_long, c_uint},
+    ffi::{c_long, c_uint},
     mem::MaybeUninit,
     ptr::{addr_of, addr_of_mut, null_mut},
 };
@@ -156,7 +156,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
 
             c.oldbw = wa.border_width;
             c.bw = 0;
-            c.isfloating = 1;
+            c.isfloating = true;
 
             // reuse tags field as mapped status
             c.tags = 1;
@@ -280,7 +280,7 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
         if !c.is_null() {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
                 (*c).bw = ev.border_width;
-            } else if (*c).isfloating != 0
+            } else if (*c).isfloating
                 || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
             {
                 let m = (*c).mon;
@@ -304,10 +304,10 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 assert!(!m.is_null());
                 let c = &mut *c;
                 let m = &mut *m;
-                if (c.x + c.w) > m.mx + m.mw && c.isfloating != 0 {
+                if (c.x + c.w) > m.mx + m.mw && c.isfloating {
                     c.x = m.mx + (m.mw / 2 - width(c) / 2); // center x
                 }
-                if (c.y + c.h) > m.my + m.mh && c.isfloating != 0 {
+                if (c.y + c.h) > m.my + m.mh && c.isfloating {
                     c.y = m.my + (m.mh / 2 - height(c) / 2); // center y
                 }
                 if (ev.value_mask & (CWX | CWY) as u64) != 0
@@ -577,12 +577,12 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
             let c = &mut *c;
             match ev.atom {
                 XA_WM_TRANSIENT_FOR => {
-                    if c.isfloating == 0
+                    if !c.isfloating
                         && (xlib::XGetTransientForHint(DPY, c.win, &mut trans)
                             != 0)
                     {
-                        c.isfloating = !wintoclient(trans).is_null() as c_int;
-                        if c.isfloating != 0 {
+                        c.isfloating = !wintoclient(trans).is_null();
+                        if c.isfloating {
                             arrange(c.mon);
                         }
                     }

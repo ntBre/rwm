@@ -639,7 +639,7 @@ fn restack(m: *mut Monitor) {
         if (*m).sel.is_null() {
             return;
         }
-        if (*(*m).sel).isfloating != 0
+        if (*(*m).sel).isfloating
             || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
         {
             xlib::XRaiseWindow(DPY, (*(*m).sel).win);
@@ -656,7 +656,7 @@ fn restack(m: *mut Monitor) {
             };
             let mut c = (*m).stack;
             while !c.is_null() {
-                if (*c).isfloating == 0 && is_visible(c) {
+                if !(*c).isfloating && is_visible(c) {
                     xlib::XConfigureWindow(
                         DPY,
                         (*c).win,
@@ -686,7 +686,7 @@ fn showhide(c: *mut Client) {
             if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
                 .is_none()
-                || (*c).isfloating != 0)
+                || (*c).isfloating)
                 && !(*c).isfullscreen
             {
                 resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
@@ -839,7 +839,7 @@ fn applysizehints(
             *w = BH;
         }
         if RESIZE_HINTS != 0
-            || (*c).isfloating != 0
+            || (*c).isfloating
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
                 .is_none()
@@ -992,7 +992,7 @@ fn detach(c: *mut Client) {
 fn nexttiled(mut c: *mut Client) -> *mut Client {
     log::trace!("nexttiled");
     unsafe {
-        while !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)) {
+        while !c.is_null() && ((*c).isfloating || !is_visible(c)) {
             c = (*c).next;
         }
         c
@@ -1517,7 +1517,7 @@ fn drawbar(m: *mut Monitor) {
                     (*(*m).sel).name.as_ptr(),
                     0,
                 );
-                if (*(*m).sel).isfloating != 0 {
+                if (*(*m).sel).isfloating {
                     drw::rect(
                         DRW,
                         x + boxs as i32,
@@ -2324,11 +2324,11 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
                 | StructureNotifyMask,
         );
         grabbuttons(c, false);
-        if (*c).isfloating == 0 {
-            (*c).oldstate = (trans != 0 || (*c).isfixed != 0) as c_int;
+        if !(*c).isfloating {
+            (*c).oldstate = trans != 0 || (*c).isfixed != 0;
             (*c).isfloating = (*c).oldstate;
         }
-        if (*c).isfloating != 0 {
+        if (*c).isfloating {
             xlib::XRaiseWindow(DPY, (*c).win);
         }
         attach(c);
@@ -2394,7 +2394,7 @@ fn updatewindowtype(c: *mut Client) {
             setfullscreen(c, true);
         }
         if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
-            (*c).isfloating = 1;
+            (*c).isfloating = true;
         }
     }
 }
@@ -2419,7 +2419,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).oldstate = (*c).isfloating;
             (*c).oldbw = (*c).bw;
             (*c).bw = 0;
-            (*c).isfloating = 1;
+            (*c).isfloating = true;
             resizeclient(
                 c,
                 (*(*c).mon).mx,
@@ -2520,7 +2520,7 @@ fn applyrules(c: *mut Client) {
             res_class: std::ptr::null_mut(),
         };
         // rule matching
-        (*c).isfloating = 0;
+        (*c).isfloating = false;
         (*c).tags = 0;
         xlib::XGetClassHint(DPY, (*c).win, &mut ch);
         let class = if !ch.res_class.is_null() {
