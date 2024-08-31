@@ -110,6 +110,23 @@ pub struct Layout {
     pub arrange: Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
 }
 
+pub struct Pertag {
+    /// Current tag
+    pub curtag: c_uint,
+    /// Previous tag
+    pub prevtag: c_uint,
+    /// Number of windows in master area
+    pub nmasters: Vec<c_int>,
+    /// Proportion of monitor for master area
+    pub mfacts: Vec<f32>,
+    /// Selected layouts
+    pub sellts: Vec<c_uint>,
+    /// Matrix of tag and layout indices
+    pub ltidxs: Vec<[*const Layout; 2]>,
+    /// Whether to display the bar
+    pub showbars: Vec<c_int>,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Monitor {
@@ -137,6 +154,7 @@ pub struct Monitor {
     pub next: *mut Monitor,
     pub barwin: Window,
     pub lt: [*const Layout; 2usize],
+    pub pertag: *mut Pertag,
 }
 
 #[repr(C)]

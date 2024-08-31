@@ -26,7 +26,10 @@ use rwm::{Arg, Client, Layout, Monitor};
 
 pub(crate) unsafe extern "C" fn togglebar(_arg: *const Arg) {
     unsafe {
-        (*SELMON).showbar = ((*SELMON).showbar == 0) as c_int;
+        (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize] =
+            ((*SELMON).showbar == 0) as c_int;
+        (*SELMON).showbar =
+            (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize];
         updatebarpos(SELMON);
         resizebarwin(SELMON);
         if SHOWSYSTRAY != 0 {
@@ -92,7 +95,10 @@ pub(crate) unsafe extern "C" fn focusstack(arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) unsafe extern "C" fn incnmaster(arg: *const Arg) {
     unsafe {
-        (*SELMON).nmaster = std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize] =
+            std::cmp::max((*SELMON).nmaster + (*arg).i, 0);
+        (*SELMON).nmaster =
+            (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize];
         arrange(SELMON);
     }
 }
@@ -116,7 +122,9 @@ pub(crate) unsafe extern "C" fn setmfact(arg: *const Arg) {
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        (*SELMON).mfact = f;
+        (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize] = f;
+        (*SELMON).mfact =
+            (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize];
         arrange(SELMON);
     }
 }
@@ -144,14 +152,42 @@ pub(crate) unsafe extern "C" fn zoom(_arg: *const Arg) {
 
 /// View the tag identified by `arg.ui`.
 pub(crate) unsafe extern "C" fn view(arg: *const Arg) {
+    log::trace!("view");
     unsafe {
         if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
             return;
         }
         (*SELMON).seltags ^= 1; // toggle sel tagset
-        if (*arg).ui & TAGMASK != 0 {
+
+        // Safety: we were gonna dereference it anyway
+        let pertag = &mut *(*SELMON).pertag;
+        if ((*arg).ui & TAGMASK) != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
+            pertag.prevtag = pertag.curtag;
+
+            if (*arg).ui == !0 {
+                pertag.curtag = 0;
+            } else {
+                let mut i;
+                cfor!((i = 0; ((*arg).ui & 1 << i) == 0; i += 1) {});
+                pertag.curtag = i + 1;
+            }
+        } else {
+            std::mem::swap(&mut pertag.prevtag, &mut pertag.curtag);
         }
+
+        (*SELMON).nmaster = pertag.nmasters[pertag.curtag as usize];
+        (*SELMON).mfact = pertag.mfacts[pertag.curtag as usize];
+        (*SELMON).sellt = pertag.sellts[pertag.curtag as usize];
+        (*SELMON).lt[(*SELMON).sellt as usize] =
+            pertag.ltidxs[pertag.curtag as usize][(*SELMON).sellt as usize];
+        (*SELMON).lt[((*SELMON).sellt ^ 1) as usize] = pertag.ltidxs
+            [pertag.curtag as usize][((*SELMON).sellt ^ 1) as usize];
+
+        if (*SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
+            togglebar(null_mut());
+        }
+
         focus(null_mut());
         arrange(SELMON);
     }
@@ -191,10 +227,17 @@ pub(crate) unsafe extern "C" fn setlayout(arg: *const Arg) {
             || (*arg).v.is_null()
             || (*arg).v.cast() != (*SELMON).lt[(*SELMON).sellt as usize]
         {
-            (*SELMON).sellt ^= 1;
+            (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize] ^=
+                1;
+            (*SELMON).sellt =
+                (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize];
         }
         if !arg.is_null() && !(*arg).v.is_null() {
-            (*SELMON).lt[(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
+            (*(*SELMON).pertag).ltidxs[(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize] = (*arg).v as *mut Layout;
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
+                [(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize];
         }
         libc::strncpy(
             (*SELMON).ltsymbol.as_mut_ptr(),
@@ -307,6 +350,41 @@ pub(crate) unsafe extern "C" fn toggleview(arg: *const Arg) {
 
         if newtagset != 0 {
             (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
+
+            if newtagset == !0 {
+                (*(*SELMON).pertag).prevtag = (*(*SELMON).pertag).curtag;
+                (*(*SELMON).pertag).curtag = 0;
+            }
+
+            // test if the user did not select the same tag
+            if (newtagset & 1 << ((*(*SELMON).pertag).curtag - 1)) == 0 {
+                (*(*SELMON).pertag).prevtag = (*(*SELMON).pertag).curtag;
+                let mut i;
+                cfor!((i = 0; (newtagset & 1 << i) == 0; i += 1) {});
+                (*(*SELMON).pertag).curtag = i + 1;
+            }
+
+            // apply settings for this view
+            (*SELMON).nmaster = (*(*SELMON).pertag).nmasters
+                [(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).mfact =
+                (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).sellt =
+                (*(*SELMON).pertag).sellts[(*(*SELMON).pertag).curtag as usize];
+            (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
+                [(*(*SELMON).pertag).curtag as usize]
+                [(*SELMON).sellt as usize];
+            (*SELMON).lt[((*SELMON).sellt ^ 1) as usize] = (*(*SELMON).pertag)
+                .ltidxs[(*(*SELMON).pertag).curtag as usize]
+                [((*SELMON).sellt ^ 1) as usize];
+
+            if (*SELMON).showbar
+                != (*(*SELMON).pertag).showbars
+                    [(*(*SELMON).pertag).curtag as usize]
+            {
+                togglebar(null_mut());
+            }
+
             focus(null_mut());
             arrange(SELMON);
         }

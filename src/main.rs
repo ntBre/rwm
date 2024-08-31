@@ -7,6 +7,7 @@ use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
+use key_handlers::view;
 use libc::{c_long, c_uchar, sigaction};
 use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
@@ -33,7 +34,7 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
-use rwm::{Arg, Client, Cursor, Layout, Monitor, Systray, Window};
+use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::{
     BUTTONS, COLORS, FONTS, KEYS, LAYOUTS, RESIZE_HINTS, RULES, SHOWSYSTRAY,
@@ -203,6 +204,20 @@ fn createmon() -> *mut Monitor {
             LAYOUTS[0].symbol,
             size_of_val(&(*m).ltsymbol),
         );
+
+        // NOTE: using this instead of ecalloc because it feels weird to
+        // allocate a Vec that way, even though it worked in a separate test
+        // program. remember to free with Box::from_raw instead of libc::free
+        let pertag = Pertag {
+            curtag: 1,
+            prevtag: 1,
+            nmasters: vec![(*m).nmaster; TAGS.len() + 1],
+            mfacts: vec![(*m).mfact; TAGS.len() + 1],
+            sellts: vec![(*m).sellt; TAGS.len() + 1],
+            ltidxs: vec![(*m).lt; TAGS.len() + 1],
+            showbars: vec![(*m).showbar; TAGS.len() + 1],
+        };
+        (*m).pertag = Box::into_raw(Box::new(pertag));
     }
 
     m
@@ -981,21 +996,6 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
             c = (*c).next;
         }
         c
-    }
-}
-
-fn view(arg: *const Arg) {
-    log::trace!("view");
-    unsafe {
-        if (*arg).ui & TAGMASK == (*SELMON).tagset[(*SELMON).seltags as usize] {
-            return;
-        }
-        (*SELMON).seltags ^= 1; // toggle sel tagset
-        if ((*arg).ui & TAGMASK) != 0 {
-            (*SELMON).tagset[(*SELMON).seltags as usize] = (*arg).ui & TAGMASK;
-        }
-        focus(null_mut());
-        arrange(SELMON);
     }
 }
 
