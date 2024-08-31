@@ -20,6 +20,8 @@ use rwm::{Arg, Button, Key, Layout, Rule};
 pub const BORDERPX: c_uint = 3;
 // Snap pixel
 pub const SNAP: c_uint = 32;
+/// Swallow floating windows by default
+pub const SWALLOWFLOATING: bool = false;
 
 /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
 pub static SYSTRAYPINNING: c_uint = 0;
@@ -56,9 +58,37 @@ pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
 pub const TAGS: [&CStr; 9] =
     [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"];
 
-pub const RULES: [Rule; 2] = [
-    Rule::new(c"Gimp", null(), null(), 0, 1, -1),
-    Rule::new(c"Firefox", null(), null(), 1 << 8, 0, -1),
+pub const RULES: [Rule; 3] = [
+    Rule {
+        class: c"Gimp".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 0,
+        isfloating: 1,
+        isterminal: false,
+        noswallow: false,
+        monitor: -1,
+    },
+    Rule {
+        class: c"Firefox".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 1 << 8,
+        isfloating: 0,
+        isterminal: false,
+        noswallow: true,
+        monitor: -1,
+    },
+    Rule {
+        class: c"st-256color".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 0,
+        isfloating: 0,
+        isterminal: true,
+        noswallow: false,
+        monitor: -1,
+    },
 ];
 
 // layouts

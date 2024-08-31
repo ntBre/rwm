@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_uint, c_void, CStr};
+use std::ffi::{c_char, c_int, c_uint, c_void};
 
 use x11::xlib::KeySym;
 
@@ -75,27 +75,9 @@ pub struct Rule {
     pub title: *const c_char,
     pub tags: c_uint,
     pub isfloating: c_int,
+    pub isterminal: bool,
+    pub noswallow: bool,
     pub monitor: c_int,
-}
-
-impl Rule {
-    pub const fn new(
-        class: &'static CStr,
-        instance: *const i8,
-        title: *const i8,
-        tags: c_uint,
-        isfloating: c_int,
-        monitor: c_int,
-    ) -> Self {
-        Self {
-            class: class.as_ptr(),
-            instance,
-            title,
-            tags,
-            isfloating,
-            monitor,
-        }
-    }
 }
 
 pub struct Systray {
