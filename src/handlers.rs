@@ -388,11 +388,16 @@ pub(crate) fn destroynotify(e: *mut XEvent) {
         if !c.is_null() {
             unmanage(c, 1);
         } else {
-            c = wintosystrayicon(ev.window);
+            c = swallowingclient(ev.window);
             if !c.is_null() {
-                removesystrayicon(c);
-                resizebarwin(SELMON);
-                updatesystray();
+                unmanage((*c).swallowing, 1);
+            } else {
+                c = wintosystrayicon(ev.window);
+                if !c.is_null() {
+                    removesystrayicon(c);
+                    resizebarwin(SELMON);
+                    updatesystray();
+                }
             }
         }
     }
