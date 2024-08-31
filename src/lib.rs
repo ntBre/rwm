@@ -188,7 +188,7 @@ pub struct Client {
     pub isurgent: c_int,
     pub neverfocus: c_int,
     pub oldstate: c_int,
-    pub isfullscreen: c_int,
+    pub isfullscreen: bool,
     pub next: *mut Client,
     pub snext: *mut Client,
     pub mon: *mut Monitor,

@@ -687,7 +687,7 @@ fn showhide(c: *mut Client) {
                 .arrange
                 .is_none()
                 || (*c).isfloating != 0)
-                && (*c).isfullscreen == 0
+                && !(*c).isfullscreen
             {
                 resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
             }
@@ -2401,7 +2401,7 @@ fn updatewindowtype(c: *mut Client) {
 
 fn setfullscreen(c: *mut Client, fullscreen: bool) {
     unsafe {
-        if fullscreen && (*c).isfullscreen == 0 {
+        if fullscreen && !(*c).isfullscreen {
             xlib::XChangeProperty(
                 DPY,
                 (*c).win,
@@ -2415,7 +2415,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                     as *mut c_uchar,
                 1,
             );
-            (*c).isfullscreen = 1;
+            (*c).isfullscreen = true;
             (*c).oldstate = (*c).isfloating;
             (*c).oldbw = (*c).bw;
             (*c).bw = 0;
@@ -2428,7 +2428,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 (*(*c).mon).mh,
             );
             xlib::XRaiseWindow(DPY, (*c).win);
-        } else if !fullscreen && (*c).isfullscreen != 0 {
+        } else if !fullscreen && (*c).isfullscreen {
             xlib::XChangeProperty(
                 DPY,
                 (*c).win,
@@ -2439,7 +2439,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
                 std::ptr::null_mut::<c_uchar>(),
                 0,
             );
-            (*c).isfullscreen = 0;
+            (*c).isfullscreen = false;
             (*c).isfloating = (*c).oldstate;
             (*c).bw = (*c).oldbw;
             (*c).x = (*c).oldx;
