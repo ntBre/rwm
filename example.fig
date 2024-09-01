@@ -18,6 +18,11 @@ let cyan = "#005577";
 
 let colors = {SchemeNorm: [gray3, gray1, gray2], SchemeSel: [gray4, cyan, cyan]};
 
+# class, instance, title, tags, isfloating, isterminal, noswallow, monitor
+let rules = [
+	["st-256color", nil, nil, 0, false, true, false, -1],
+];
+
 let dmenufont = "monospace:size=12";
 let dmenucmd = [
 	"dmenu_run",
