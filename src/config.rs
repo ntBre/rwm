@@ -360,7 +360,7 @@ const RULES: [Rule; 3] = [
 
 // layouts
 
-pub const LAYOUTS: [Layout; 3] = [
+const LAYOUTS: [Layout; 3] = [
     Layout { symbol: c"[]=".as_ptr(), arrange: Some(tile) },
     Layout { symbol: c"><>".as_ptr(), arrange: None },
     Layout { symbol: c"[M]".as_ptr(), arrange: Some(monocle) },
@@ -458,7 +458,7 @@ fn default_keys() -> [Key; 60] {
 
 // button definitions
 
-pub static BUTTONS: LazyLock<[Button; 11]> = LazyLock::new(|| {
+static BUTTONS: LazyLock<[Button; 11]> = LazyLock::new(|| {
     [
         Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg::L(None)),
         Button::new(Clk::LtSymbol, 0, Button3, setlayout, Arg::L(Some(2))),
