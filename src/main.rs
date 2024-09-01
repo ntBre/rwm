@@ -2434,7 +2434,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
             (*c).isfloating = true;
             (*c).x = (*(*c).mon).wx + (*(*c).mon).ww / 2 - width(c) / 2;
-            (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - width(c) / 2;
+            (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - height(c) / 2;
         }
 
         log::trace!("manage: XWindowChanges");
