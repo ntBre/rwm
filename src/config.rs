@@ -8,6 +8,7 @@ use std::{
 };
 
 use fig::{Fig, FigError, Value};
+use key::{get_arg, FUNC_MAP};
 use libc::c_char;
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
@@ -23,7 +24,7 @@ use crate::{
     key_handlers::*,
     layouts::{monocle, tile},
 };
-use rwm::{Arg, Button, Layout, Rule};
+use rwm::{Arg, Button, Layout, Monitor, Rule};
 
 mod fig_env;
 pub mod key;
@@ -53,6 +54,8 @@ impl Default for Config {
             systrayspacing: SYSTRAYSPACING,
             systraypinningfailfirst: SYSTRAYPINNINGFAILFIRST,
             showsystray: SHOWSYSTRAY,
+            BUTTONS: BUTTONS.to_vec(),
+            LAYOUTS: LAYOUTS.to_vec(),
         }
     }
 }
@@ -109,6 +112,10 @@ pub struct Config {
     pub systraypinningfailfirst: bool,
 
     pub showsystray: bool,
+
+    pub BUTTONS: Vec<Button>,
+
+    pub LAYOUTS: Vec<Layout>,
 }
 
 unsafe impl Send for Config {}
@@ -204,6 +211,93 @@ fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
     Ok(ret)
 }
 
+fn get_buttons(
+    v: &mut HashMap<String, Value>,
+) -> Result<Vec<Button>, FigError> {
+    let err = Err(FigError::Conversion);
+    let Some(buttons) = v.get("buttons") else {
+        log::trace!("failed to get buttons from config");
+        return err;
+    };
+    let buttons: Vec<Value> = conv(buttons.as_list())?;
+
+    // each entry should be a list of
+    // Clk (int), mask (int), button (int), func (str or nil), arg (Map)
+    let mut ret = Vec::new();
+    for button in buttons {
+        let button: Vec<Value> = button.try_into()?;
+        if button.len() != 5 {
+            log::error!("Expected 5 fields for button");
+            return err;
+        }
+        let func = match &button[3] {
+            Value::Str(s) => match FUNC_MAP.get(s.as_str()) {
+                res @ Some(_) => res.cloned(),
+                None => {
+                    log::error!("unrecognized func name for button: {s}");
+                    return err;
+                }
+            },
+            Value::Nil => None,
+            _ => {
+                log::error!("func field on button should be Str or nil");
+                return err;
+            }
+        };
+        ret.push(Button {
+            click: i64::try_from(button[0].clone())? as u32,
+            mask: i64::try_from(button[1].clone())? as u32,
+            button: i64::try_from(button[2].clone())? as u32,
+            func,
+            arg: get_arg(conv(button[4].as_map())?)?,
+        });
+    }
+
+    Ok(ret)
+}
+
+fn get_layouts(
+    v: &mut HashMap<String, Value>,
+) -> Result<Vec<Layout>, FigError> {
+    let err = Err(FigError::Conversion);
+    let Some(layouts) = v.get("layouts") else {
+        log::trace!("failed to get layouts from config");
+        return err;
+    };
+    let layouts: Vec<Value> = conv(layouts.as_list())?;
+
+    // each entry should be a list of
+    // Clk (int), mask (int), layout (int), func (str or nil), arg (Map)
+    let mut ret = Vec::new();
+    for layout in layouts {
+        let layout: Vec<Value> = layout.try_into()?;
+        if layout.len() != 2 {
+            log::error!("Expected 2 fields for layout");
+            return err;
+        }
+
+        let symbol: String = layout[0].clone().try_into()?;
+        let symbol = CString::new(symbol).map_err(|_| FigError::Conversion)?;
+        // LEAK but okay since this should hang around for the whole program
+        let symbol = symbol.into_raw();
+
+        type F = fn(*mut Monitor);
+        let arrange = match &layout[1] {
+            Value::Str(s) if s == "tile" => Some(tile as F),
+            Value::Str(s) if s == "monocle" => Some(monocle as F),
+            Value::Nil => None,
+            _ => {
+                log::error!("func field on layout should be Str or nil");
+                return err;
+            }
+        };
+
+        ret.push(Layout { symbol, arrange });
+    }
+
+    Ok(ret)
+}
+
 impl TryFrom<Fig> for Config {
     type Error = Box<dyn Error>;
 
@@ -257,6 +351,8 @@ impl TryFrom<Fig> for Config {
             systraypinningfailfirst: get(&mut v, "systraypinningfailfirst")?
                 .try_into()?,
             showsystray: get(&mut v, "showsystray")?.try_into()?,
+            BUTTONS: get_buttons(&mut v)?,
+            LAYOUTS: get_layouts(&mut v)?,
         })
     }
 }
@@ -486,6 +582,7 @@ mod tests {
 
     #[test]
     fn load_config() {
+        let _ = env_logger::try_init();
         Config::load("example.fig").unwrap();
     }
 }

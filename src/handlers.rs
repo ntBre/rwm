@@ -21,7 +21,7 @@ use rwm::{
 
 use crate::{
     arrange, cleanmask,
-    config::{BUTTONS, CONFIG},
+    config::CONFIG,
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, get_scheme_color, getsystraywidth, grabkeys, height, is_visible,
@@ -92,7 +92,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for button in &*BUTTONS {
+        for button in &CONFIG.BUTTONS {
             if click as u32 == button.click
                 && button.func.is_some()
                 && button.button == ev.button

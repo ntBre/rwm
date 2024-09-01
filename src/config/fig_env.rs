@@ -4,8 +4,10 @@
 use std::{collections::HashMap, sync::LazyLock};
 
 use fig::Value;
+use rwm::enums::Clk;
 use x11::xlib::{
-    ControlMask, Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, ShiftMask,
+    Button1, Button2, Button3, ControlMask, Mod2Mask, Mod3Mask, Mod4Mask,
+    Mod5Mask, ShiftMask,
 };
 
 use x11::keysym::*;
@@ -28,12 +30,23 @@ macro_rules! keys {
     }
 }
 
+/// Turn [Clk] variants like `Clk::TagBar` into string (`ClkTagBar`), `Int`
+/// pairs
+macro_rules! clicks {
+    ($($id:ident$(,)*)*) => {
+        [
+            $((concat!("Clk", stringify!($id)).into(),
+                Value::Int(Clk::$id as i64)),)*
+        ]
+    }
+}
+
 pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
     || {
         let handlers = handler_fns! {
             focusmon, focusstack, incnmaster, killclient, quit, setlayout, setmfact,
             spawn, tag, tagmon, togglebar, togglefloating, toggletag, toggleview,
-            view, zoom,
+            view, zoom, movemouse, resizemouse, tile, monocle
         };
         let keys = keys! {
             Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask,
@@ -43,9 +56,15 @@ pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
             XK_7, XK_8, XK_9, XK_Return, XK_Tab, XK_space, XK_comma, XK_period,
             ShiftMask, ControlMask,
         };
+        let clicks = clicks! {
+            TagBar, LtSymbol, StatusText, WinTitle, ClientWin, RootWin,
+        };
+        let buttons = keys! { Button1, Button2, Button3 };
         let mut ret = HashMap::new();
         ret.extend(handlers);
         ret.extend(keys);
+        ret.extend(clicks);
+        ret.extend(buttons);
         ret
     },
 );

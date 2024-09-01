@@ -37,7 +37,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
-use config::{BUTTONS, CONFIG, LAYOUTS};
+use config::CONFIG;
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -192,11 +192,11 @@ fn createmon() -> *mut Monitor {
         (*m).nmaster = CONFIG.nmaster;
         (*m).showbar = CONFIG.showbar;
         (*m).topbar = CONFIG.topbar;
-        (*m).lt[0] = &LAYOUTS[0];
-        (*m).lt[1] = &LAYOUTS[1 % LAYOUTS.len()];
+        (*m).lt[0] = &CONFIG.LAYOUTS[0];
+        (*m).lt[1] = &CONFIG.LAYOUTS[1 % CONFIG.LAYOUTS.len()];
         libc::strncpy(
             &mut (*m).ltsymbol as *mut _,
-            LAYOUTS[0].symbol,
+            CONFIG.LAYOUTS[0].symbol,
             size_of_val(&(*m).ltsymbol),
         );
 
@@ -566,7 +566,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for button in &*BUTTONS {
+        for button in &CONFIG.BUTTONS {
             if button.click == Clk::ClientWin as u32 {
                 for mod_ in modifiers {
                     xlib::XGrabButton(

@@ -89,7 +89,7 @@ pub struct Systray {
 #[derive(Debug, Copy, Clone)]
 pub struct Layout {
     pub symbol: *const c_char,
-    pub arrange: Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
+    pub arrange: Option<fn(*mut Monitor)>,
 }
 
 pub struct Pertag {

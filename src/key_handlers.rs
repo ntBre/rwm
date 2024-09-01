@@ -12,7 +12,7 @@ use x11::xlib::{
     XUngrabServer, XWarpPointer, XWindowChanges, CWY,
 };
 
-use crate::config::{CONFIG, LAYOUTS};
+use crate::config::CONFIG;
 use crate::enums::{Cur, WM};
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
@@ -229,7 +229,7 @@ pub(crate) fn setlayout(arg: *const Arg) {
         if arg.is_null()
             || (*arg).l().is_none()
             || !std::ptr::eq(
-                &LAYOUTS[(*arg).l().unwrap()],
+                &CONFIG.LAYOUTS[(*arg).l().unwrap()],
                 (*SELMON).lt[(*SELMON).sellt as usize],
             )
         {
@@ -240,7 +240,8 @@ pub(crate) fn setlayout(arg: *const Arg) {
         }
         if !arg.is_null() && (*arg).l().is_some() {
             (*(*SELMON).pertag).ltidxs[(*(*SELMON).pertag).curtag as usize]
-                [(*SELMON).sellt as usize] = &LAYOUTS[(*arg).l().unwrap()];
+                [(*SELMON).sellt as usize] =
+                &CONFIG.LAYOUTS[(*arg).l().unwrap()];
             (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
                 [(*(*SELMON).pertag).curtag as usize]
                 [(*SELMON).sellt as usize];

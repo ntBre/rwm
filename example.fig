@@ -107,3 +107,24 @@ let keys = [
 	[S_MOD | ControlMask, XK_9, toggletag, {ui: 1 << 8}],
 	[S_MOD, XK_q, quit, {i: 0}],
 ];
+
+let buttons = [
+	[ClkLtSymbol, 0, Button1, setlayout, {l: nil}],
+	[ClkLtSymbol, 0, Button3, setlayout, {l: 2}],
+	[ClkWinTitle, 0, Button2, zoom, {i: 0}],
+	[ClkStatusText, 0, Button2, spawn, {v: termcmd}],
+	[ClkClientWin, MODKEY, Button1, movemouse, {i: 0}],
+	[ClkClientWin, MODKEY, Button2, togglefloating, {i: 0}],
+	[ClkClientWin, MODKEY, Button3, resizemouse, {i: 0}],
+	[ClkTagBar, 0, Button1, view, {i: 0}],
+	[ClkTagBar, 0, Button3, toggleview, {i: 0}],
+	[ClkTagBar, MODKEY, Button1, tag, {i: 0}],
+	[ClkTagBar, MODKEY, Button3, toggletag, {i: 0}],
+];
+
+let layouts = [
+	["[]=", tile],
+	["><>", nil],
+	["[M]", monocle],
+];
+
