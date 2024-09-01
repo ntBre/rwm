@@ -19,7 +19,7 @@ use crate::{
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
     width, xerror, xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK,
-    ROOT, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
+    ROOT, SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
 };
 use rwm::{Arg, Client, Monitor};
 
@@ -634,6 +634,8 @@ pub(crate) fn spawn(arg: *const Arg) {
             argv.push((*SELMON).num.to_string());
         }
 
+        (*SELMON).tagset[(*SELMON).seltags as usize] &= !*SCRATCHTAG;
+
         let mut cmd = Command::new(argv[0].clone());
         let cmd = if argv.len() > 1 { cmd.args(&argv[1..]) } else { &mut cmd };
 
@@ -668,5 +670,36 @@ pub(crate) fn fullscreen(_: *const Arg) {
             return;
         }
         setfullscreen((*SELMON).sel, !(*(*SELMON).sel).isfullscreen)
+    }
+}
+
+pub(crate) fn togglescratch(arg: *const Arg) {
+    unsafe {
+        let mut c: *mut Client;
+        let mut found = false;
+        cfor!((
+        c = (*SELMON).clients;
+        !c.is_null();
+        c = (*c).next) {
+            found = ((*c).tags & *SCRATCHTAG) != 0;
+            if found {
+                break;
+            }
+        });
+        if found {
+            let newtagset =
+                (*SELMON).tagset[(*SELMON).seltags as usize] ^ *SCRATCHTAG;
+            if newtagset != 0 {
+                (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
+                focus(null_mut());
+                arrange(SELMON);
+            }
+            if is_visible(c) {
+                focus(c);
+                restack(SELMON);
+            }
+        } else {
+            spawn(arg);
+        }
     }
 }

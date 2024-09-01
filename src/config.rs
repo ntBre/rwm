@@ -11,9 +11,9 @@ use fig::{Fig, FigError, Value};
 use key::{get_arg, FUNC_MAP};
 use libc::c_char;
 use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
-    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
-    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_grave, XK_h, XK_i,
+    XK_j, XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
+    XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
 };
 
 use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
@@ -474,10 +474,27 @@ static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
-fn default_keys() -> [Key; 60] {
+pub const SCRATCHPADNAME: &str = "scratchpad";
+pub static SCRATCHPADCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
+    vec![
+        "st".into(),
+        "-t".into(),
+        SCRATCHPADNAME.into(),
+        "-g".into(),
+        "120x34".into(),
+    ]
+});
+
+fn default_keys() -> [Key; 61] {
     [
         Key::new(MODKEY, XK_p, spawn, Arg::V(DMENUCMD.clone())),
         Key::new(S_MOD, XK_Return, spawn, Arg::V(TERMCMD.to_vec())),
+        Key::new(
+            MODKEY,
+            XK_grave,
+            togglescratch,
+            Arg::V(SCRATCHPADCMD.to_vec()),
+        ),
         Key::new(MODKEY, XK_b, togglebar, Arg::I(0)),
         Key::new(MODKEY, XK_j, focusstack, Arg::I(1)),
         Key::new(MODKEY, XK_k, focusstack, Arg::I(-1)),

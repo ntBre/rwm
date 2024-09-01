@@ -1,7 +1,7 @@
 //! tiling window manager based on dwm
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
+use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr, CString};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
@@ -2412,6 +2412,26 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
         (*c).bw = CONFIG.borderpx as i32;
 
+        // TODO pretty sure this doesn't work with pertags, which explains some
+        // behavior I saw before in dwm. probably need to operate on
+        // selmon.pertag.tags[selmon.pertag.curtag].
+        //
+        // TODO I'm also pretty sure this is _not_ the right way to be handling
+        // this. checking the name of the window and applying these rules seems
+        // like something meant to be handled by RULES
+        (*SELMON).tagset[(*SELMON).seltags as usize] &= !*SCRATCHTAG;
+        let scratchname = match CString::new(config::SCRATCHPADNAME) {
+            Ok(s) => s.as_ptr(),
+            Err(_) => null_mut(),
+        };
+        if libc::strcmp((*c).name.as_ptr(), scratchname) == 0 {
+            (*c).tags = *SCRATCHTAG;
+            (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
+            (*c).isfloating = true;
+            (*c).x = (*(*c).mon).wx + (*(*c).mon).ww / 2 - width(c) / 2;
+            (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - height(c) / 2;
+        }
+
         log::trace!("manage: XWindowChanges");
         let mut wc = xlib::XWindowChanges {
             x: 0,
@@ -2748,6 +2768,8 @@ fn unswallow(c: *mut Client) {
 static TAGMASK: LazyLock<u32> = LazyLock::new(|| (1 << CONFIG.tags.len()) - 1);
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
+
+static SCRATCHTAG: LazyLock<u32> = LazyLock::new(|| 1 << CONFIG.tags.len());
 
 fn updatetitle(c: *mut Client) {
     log::trace!("updatetitle");
