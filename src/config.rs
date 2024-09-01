@@ -302,15 +302,11 @@ impl TryFrom<Fig> for Config {
     type Error = Box<dyn Error>;
 
     fn try_from(Fig { variables: mut v }: Fig) -> Result<Self, Self::Error> {
-        let float = |val: fig::Value| {
-            val.as_float().cloned().ok_or("unable to parse number")
-        };
+        let float = |val: fig::Value| val.try_into();
         let int = |val: fig::Value| {
             val.try_into_int().map_err(|_| "unable to parse int")
         };
-        let bool = |val: fig::Value| {
-            val.as_bool().cloned().ok_or("unable to parse bool")
-        };
+        let bool = |val: fig::Value| val.try_into();
         let str_list = |val: fig::Value| {
             val.as_list()
                 .cloned()
