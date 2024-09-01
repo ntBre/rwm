@@ -170,8 +170,6 @@ static mut ROOT: Window = 0;
 
 static mut WMCHECKWIN: Window = 0;
 
-static mut XCON: *mut xcb_connection_t = null_mut();
-
 static mut RUNNING: bool = true;
 
 /// sum of left and right padding for text
@@ -2823,7 +2821,6 @@ fn getstate(w: Window) -> c_long {
 mod config;
 mod drw;
 pub use rwm::enums;
-use x11::xlib_xcb::xcb_connection_t;
 use xembed::{
     XEMBED_EMBEDDED_VERSION, XEMBED_MAPPED, XEMBED_WINDOW_ACTIVATE,
     XEMBED_WINDOW_DEACTIVATE,
