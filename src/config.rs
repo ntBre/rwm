@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     error::Error,
     ffi::{c_float, c_int, c_uint, CString},
     path::Path,
@@ -7,6 +8,7 @@ use std::{
 };
 
 use fig::{Fig, FigError, Value};
+use libc::c_char;
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
     XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
@@ -44,6 +46,7 @@ impl Default for Config {
             colors: default_colors(),
             keys: default_keys().to_vec(),
             dmenucmd: DMENUCMD.to_vec(),
+            rules: RULES.to_vec(),
         }
     }
 }
@@ -82,10 +85,15 @@ pub struct Config {
     pub keys: Vec<Key>,
 
     pub dmenucmd: Vec<String>,
+
+    pub rules: Vec<Rule>,
 }
 
+unsafe impl Send for Config {}
+unsafe impl Sync for Config {}
+
 fn get(
-    v: &mut std::collections::HashMap<String, fig::Value>,
+    v: &mut HashMap<String, fig::Value>,
     name: &str,
 ) -> Result<Value, String> {
     v.remove(name).ok_or(format!("failed to find {name}"))
@@ -94,7 +102,7 @@ fn get(
 /// Extract colors from a fig Map<Str, List<Str>>. The two Str keys should be
 /// `SchemeNorm` and `SchemeSel`, and the two Lists should be of length 3.
 fn get_colors(
-    v: &mut std::collections::HashMap<String, fig::Value>,
+    v: &mut HashMap<String, fig::Value>,
 ) -> Result<[[CString; 3]; 2], Box<dyn Error>> {
     let colors = get(v, "colors")?;
     let mut colors =
@@ -121,9 +129,7 @@ fn get_colors(
     Ok(ret)
 }
 
-fn get_keys(
-    v: &mut std::collections::HashMap<String, Value>,
-) -> Result<Vec<Key>, FigError> {
+fn get_keys(v: &mut HashMap<String, Value>) -> Result<Vec<Key>, FigError> {
     let err = Err(FigError::Conversion);
     let Some(keys) = v.get("keys") else {
         log::trace!("failed to get keys from config");
@@ -131,6 +137,49 @@ fn get_keys(
     };
     let keys = conv(keys.as_list())?;
     keys.into_iter().map(Key::try_from).collect()
+}
+
+fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
+    let err = Err(FigError::Conversion);
+    let Some(rules) = v.get("rules") else {
+        log::trace!("failed to get rules from config");
+        return err;
+    };
+    let rules: Vec<Value> = conv(rules.as_list())?;
+
+    // NOTE each into_raw call is a leak, but these should live as long as the
+    // program runs anyway
+    let maybe_string = |val: Value| -> Result<*const c_char, FigError> {
+        if let Ok(Ok(s)) = String::try_from(val.clone()).map(CString::new) {
+            Ok(s.into_raw())
+        } else if val.is_nil() {
+            Ok(null())
+        } else {
+            log::error!("expected Str or Nil");
+            Err(FigError::Conversion)
+        }
+    };
+
+    let mut ret = Vec::new();
+    for rule in rules {
+        let rule: Vec<Value> = rule.try_into()?;
+        if rule.len() != 8 {
+            log::error!("invalid rule: {rule:?}");
+            return err;
+        }
+        ret.push(Rule {
+            class: maybe_string(rule[0].clone())?,
+            instance: maybe_string(rule[1].clone())?,
+            title: maybe_string(rule[2].clone())?,
+            tags: i64::try_from(rule[3].clone())? as u32,
+            isfloating: rule[4].clone().try_into()?,
+            isterminal: rule[5].clone().try_into()?,
+            noswallow: rule[6].clone().try_into()?,
+            monitor: i64::try_from(rule[7].clone())? as i32,
+        });
+    }
+
+    Ok(ret)
 }
 
 impl TryFrom<Fig> for Config {
@@ -176,6 +225,7 @@ impl TryFrom<Fig> for Config {
             colors: get_colors(&mut v)?,
             keys: get_keys(&mut v)?,
             dmenucmd: get(&mut v, "dmenucmd")?.try_into()?,
+            rules: get_rules(&mut v)?,
         })
     }
 }
@@ -244,7 +294,7 @@ fn default_colors() -> [[CString; 3]; 2] {
     ret
 }
 
-pub const RULES: [Rule; 3] = [
+const RULES: [Rule; 3] = [
     Rule {
         class: c"Gimp".as_ptr(),
         instance: null(),

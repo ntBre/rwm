@@ -38,8 +38,8 @@ use x11::xlib::{
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::{
-    BUTTONS, CONFIG, LAYOUTS, RULES, SHOWSYSTRAY, SWALLOWFLOATING,
-    SYSTRAYONLEFT, SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
+    BUTTONS, CONFIG, LAYOUTS, SHOWSYSTRAY, SWALLOWFLOATING, SYSTRAYONLEFT,
+    SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
 };
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -2667,7 +2667,7 @@ fn applyrules(c: *mut Client) {
             BROKEN
         };
 
-        for r in RULES {
+        for r in &CONFIG.rules {
             if (r.title.is_null()
                 || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
                 && (r.class.is_null()
