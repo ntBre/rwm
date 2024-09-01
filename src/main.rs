@@ -2420,8 +2420,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         // this. checking the name of the window and applying these rules seems
         // like something meant to be handled by RULES
         (*SELMON).tagset[(*SELMON).seltags as usize] &= !*SCRATCHTAG;
-        let cstring = CString::new(CONFIG.scratchpadname.clone());
-        let scratchname = match cstring {
+        let scratchname = match CString::new(CONFIG.scratchpadname.clone()) {
             Ok(s) => s.as_ptr(),
             Err(_) => null_mut(),
         };
