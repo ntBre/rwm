@@ -307,21 +307,12 @@ impl TryFrom<Fig> for Config {
             val.try_into_int().map_err(|_| "unable to parse int")
         };
         let bool = |val: fig::Value| val.try_into();
-        let str_list = |val: fig::Value| {
-            val.as_list()
-                .cloned()
-                .ok_or("unable to parse list")
-                .map(|vec| {
-                    vec.into_iter()
-                        .map(|v| {
-                            v.as_str().cloned().map(|s| {
-                                CString::new(s)
-                                    .expect("failed to convert to CString")
-                            })
-                        })
-                        .collect::<Option<Vec<CString>>>()
-                        .ok_or("unable to convert to strings")
-                })?
+        let str_list = |val: fig::Value| -> Result<Vec<CString>, _> {
+            let strs: Vec<String> = val.try_into()?;
+            strs.into_iter()
+                .map(CString::new)
+                .collect::<Result<Vec<CString>, _>>()
+                .map_err(|_| Box::new(FigError::Conversion))
         };
         Ok(Self {
             borderpx: int(get(&mut v, "borderpx")?)? as c_uint,
@@ -579,6 +570,8 @@ mod tests {
     #[test]
     fn load_config() {
         let _ = env_logger::try_init();
-        Config::load("example.fig").unwrap();
+        let conf = Config::load("example.fig").unwrap();
+
+        assert_eq!(conf.tags.len(), 9);
     }
 }
