@@ -192,11 +192,11 @@ fn createmon() -> *mut Monitor {
         (*m).nmaster = CONFIG.nmaster;
         (*m).showbar = CONFIG.showbar;
         (*m).topbar = CONFIG.topbar;
-        (*m).lt[0] = &CONFIG.LAYOUTS[0];
-        (*m).lt[1] = &CONFIG.LAYOUTS[1 % CONFIG.LAYOUTS.len()];
+        (*m).lt[0] = &CONFIG.layouts[0];
+        (*m).lt[1] = &CONFIG.layouts[1 % CONFIG.layouts.len()];
         libc::strncpy(
             &mut (*m).ltsymbol as *mut _,
-            CONFIG.LAYOUTS[0].symbol,
+            CONFIG.layouts[0].symbol,
             size_of_val(&(*m).ltsymbol),
         );
 
@@ -566,7 +566,7 @@ fn grabbuttons(c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for button in &CONFIG.BUTTONS {
+        for button in &CONFIG.buttons {
             if button.click == Clk::ClientWin as u32 {
                 for mod_ in modifiers {
                     xlib::XGrabButton(

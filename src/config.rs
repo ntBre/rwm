@@ -54,8 +54,8 @@ impl Default for Config {
             systrayspacing: SYSTRAYSPACING,
             systraypinningfailfirst: SYSTRAYPINNINGFAILFIRST,
             showsystray: SHOWSYSTRAY,
-            BUTTONS: BUTTONS.to_vec(),
-            LAYOUTS: LAYOUTS.to_vec(),
+            buttons: BUTTONS.to_vec(),
+            layouts: LAYOUTS.to_vec(),
         }
     }
 }
@@ -113,9 +113,9 @@ pub struct Config {
 
     pub showsystray: bool,
 
-    pub BUTTONS: Vec<Button>,
+    pub buttons: Vec<Button>,
 
-    pub LAYOUTS: Vec<Layout>,
+    pub layouts: Vec<Layout>,
 }
 
 unsafe impl Send for Config {}
@@ -351,8 +351,8 @@ impl TryFrom<Fig> for Config {
             systraypinningfailfirst: get(&mut v, "systraypinningfailfirst")?
                 .try_into()?,
             showsystray: get(&mut v, "showsystray")?.try_into()?,
-            BUTTONS: get_buttons(&mut v)?,
-            LAYOUTS: get_layouts(&mut v)?,
+            buttons: get_buttons(&mut v)?,
+            layouts: get_layouts(&mut v)?,
         })
     }
 }

@@ -229,7 +229,7 @@ pub(crate) fn setlayout(arg: *const Arg) {
         if arg.is_null()
             || (*arg).l().is_none()
             || !std::ptr::eq(
-                &CONFIG.LAYOUTS[(*arg).l().unwrap()],
+                &CONFIG.layouts[(*arg).l().unwrap()],
                 (*SELMON).lt[(*SELMON).sellt as usize],
             )
         {
@@ -241,7 +241,7 @@ pub(crate) fn setlayout(arg: *const Arg) {
         if !arg.is_null() && (*arg).l().is_some() {
             (*(*SELMON).pertag).ltidxs[(*(*SELMON).pertag).curtag as usize]
                 [(*SELMON).sellt as usize] =
-                &CONFIG.LAYOUTS[(*arg).l().unwrap()];
+                &CONFIG.layouts[(*arg).l().unwrap()];
             (*SELMON).lt[(*SELMON).sellt as usize] = (*(*SELMON).pertag).ltidxs
                 [(*(*SELMON).pertag).curtag as usize]
                 [(*SELMON).sellt as usize];

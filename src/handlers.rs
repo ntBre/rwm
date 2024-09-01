@@ -92,7 +92,7 @@ pub(crate) fn buttonpress(e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for button in &CONFIG.BUTTONS {
+        for button in &CONFIG.buttons {
             if click as u32 == button.click
                 && button.func.is_some()
                 && button.button == ev.button
