@@ -46,7 +46,8 @@ pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
         let handlers = handler_fns! {
             focusmon, focusstack, incnmaster, killclient, quit, setlayout, setmfact,
             spawn, tag, tagmon, togglebar, togglefloating, toggletag, toggleview,
-            view, zoom, movemouse, resizemouse, tile, monocle, fullscreen
+            view, zoom, movemouse, resizemouse, tile, monocle, fullscreen,
+            togglescratch,
         };
         let keys = keys! {
             Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask,
@@ -54,7 +55,7 @@ pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
             XK_l, XK_m, XK_n, XK_o, XK_p, XK_q, XK_r, XK_s, XK_t, XK_u, XK_v,
             XK_w, XK_x, XK_y, XK_z, XK_0, XK_1, XK_2, XK_3, XK_4, XK_5, XK_6,
             XK_7, XK_8, XK_9, XK_Return, XK_Tab, XK_space, XK_comma, XK_period,
-            ShiftMask, ControlMask,
+            XK_grave, ShiftMask, ControlMask,
         };
         let clicks = clicks! {
             TagBar, LtSymbol, StatusText, WinTitle, ClientWin, RootWin,

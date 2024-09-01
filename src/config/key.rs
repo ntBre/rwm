@@ -47,6 +47,7 @@ pub(super) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
         ("setlayout", setlayout as FN),
         ("setmfact", setmfact as FN),
         ("spawn", spawn as FN),
+        ("togglescratch", togglescratch as FN),
         ("tag", tag as FN),
         ("tagmon", tagmon as FN),
         ("togglebar", togglebar as FN),

@@ -15,6 +15,7 @@ let systraypinningfailfirst = true;
 let showsystray = true;
 
 let scratchpadname = "scratchpad";
+let scratchpadcmd = ["st", "-t", scratchpadname, "-g", "120x34"];
 
 let fonts = ["monospace:size=10"];
 let tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -50,6 +51,7 @@ let S_MOD = ShiftMask | MODKEY;
 let keys = [
 	[MODKEY, XK_p, spawn, {v: dmenucmd}],
 	[S_MOD, XK_Return, spawn, {v: termcmd}],
+	[MODKEY, XK_grave, togglescratch, {v: scratchpadcmd}],
 	[MODKEY, XK_b, togglebar, {i: 0}],
 	[MODKEY, XK_j, focusstack, {i: 1}],
 	[MODKEY, XK_k, focusstack, {i: -1}],
