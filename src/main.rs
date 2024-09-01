@@ -37,10 +37,7 @@ use x11::xlib::{
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
-use config::{
-    BUTTONS, CONFIG, LAYOUTS, SHOWSYSTRAY, SWALLOWFLOATING, SYSTRAYONLEFT,
-    SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
-};
+use config::{BUTTONS, CONFIG, LAYOUTS};
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
 use util::{die, ecalloc};
@@ -749,7 +746,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
 fn resizebarwin(m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
-        if SHOWSYSTRAY && m == systraytomon(m) && !SYSTRAYONLEFT {
+        if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
             w -= getsystraywidth() as i32;
         }
         XMoveResizeWindow(
@@ -1154,7 +1151,7 @@ fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
     unsafe {
         let mut flags: Atom = 0;
         let code;
-        if !SHOWSYSTRAY
+        if !CONFIG.showsystray
             || i.is_null()
             || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
         {
@@ -1217,14 +1214,14 @@ fn updatesystray() {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw =
-            textw(addr_of!(STEXT) as *const _) - LRPAD + SYSTRAYSPACING as i32;
+        let sw = textw(addr_of!(STEXT) as *const _) - LRPAD
+            + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
-        if !SHOWSYSTRAY {
+        if !CONFIG.showsystray {
             return;
         }
-        if SYSTRAYONLEFT {
+        if CONFIG.systrayonleft {
             x -= sw + LRPAD / 2;
         }
         if SYSTRAY.is_null() {
@@ -1307,7 +1304,7 @@ fn updatesystray() {
             wa.background_pixel = get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize).pixel;
             XChangeWindowAttributes(DPY, (*i).win, CWBackPixel, &mut wa);
             XMapRaised(DPY, (*i).win);
-            w += SYSTRAYSPACING;
+            w += CONFIG.systrayspacing;
             (*i).x = w as i32;
             XMoveResizeWindow(DPY, (*i).win, (*i).x, 0, (*i).w as u32, (*i).h as u32);
             w += (*i).w as u32;
@@ -1315,7 +1312,7 @@ fn updatesystray() {
                 (*i).mon = m;
             }
         });
-        w = if w != 0 { w + SYSTRAYSPACING } else { 1 };
+        w = if w != 0 { w + CONFIG.systrayspacing } else { 1 };
         x -= w as i32;
         XMoveResizeWindow(DPY, (*SYSTRAY).win, x, (*m).by, w, BH as u32);
         wc = XWindowChanges {
@@ -1350,7 +1347,7 @@ fn updatesystray() {
 fn wintosystrayicon(w: Window) -> *mut Client {
     unsafe {
         let mut i = null_mut();
-        if !SHOWSYSTRAY || w == 0 {
+        if !CONFIG.showsystray || w == 0 {
             return i;
         }
         cfor!((i = (*SYSTRAY).icons; !i.is_null() && (*i).win != w;
@@ -1365,7 +1362,7 @@ fn systraytomon(m: *mut Monitor) -> *mut Monitor {
         let mut t: *mut Monitor;
         let mut i;
         let mut n;
-        if SYSTRAYPINNING == 0 {
+        if CONFIG.systraypinning == 0 {
             if m.is_null() {
                 return SELMON;
             }
@@ -1379,9 +1376,9 @@ fn systraytomon(m: *mut Monitor) -> *mut Monitor {
             !t.is_null() && !(*t).next.is_null();
             (n, t) = (n+1, (*t).next)) {});
         cfor!(((i, t) = (1, MONS);
-            !t.is_null() && !(*t).next.is_null() && i < SYSTRAYPINNING;
+            !t.is_null() && !(*t).next.is_null() && i < CONFIG.systraypinning;
             (i, t) = (i+1, (*t).next)) {});
-        if SYSTRAYPINNINGFAILFIRST && n < SYSTRAYPINNING {
+        if CONFIG.systraypinningfailfirst && n < CONFIG.systraypinning {
             return MONS;
         }
 
@@ -1403,7 +1400,9 @@ fn drawbar(m: *mut Monitor) {
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if config::SHOWSYSTRAY && m == systraytomon(m) && !config::SYSTRAYONLEFT
+        if config::CONFIG.showsystray
+            && m == systraytomon(m)
+            && !config::CONFIG.systrayonleft
         {
             stw = getsystraywidth();
         }
@@ -1609,7 +1608,7 @@ fn updatebars() {
                 continue;
             }
             let mut w = (*m).ww;
-            if SHOWSYSTRAY && m == systraytomon(m) {
+            if CONFIG.showsystray && m == systraytomon(m) {
                 w -= getsystraywidth() as i32;
             }
             (*m).barwin = xlib::XCreateWindow(
@@ -1631,7 +1630,7 @@ fn updatebars() {
                 (*m).barwin,
                 (*CURSOR[Cur::Normal as usize]).cursor,
             );
-            if SHOWSYSTRAY && m == systraytomon(m) {
+            if CONFIG.showsystray && m == systraytomon(m) {
                 xlib::XMapRaised(DPY, (*SYSTRAY).win);
             }
             xlib::XMapRaised(DPY, (*m).barwin);
@@ -1842,7 +1841,7 @@ fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
 
 fn removesystrayicon(i: *mut Client) {
     unsafe {
-        if !SHOWSYSTRAY || i.is_null() {
+        if !CONFIG.showsystray || i.is_null() {
             return;
         }
         let mut ii: *mut *mut Client;
@@ -2027,7 +2026,7 @@ fn cleanup() {
             cleanupmon(MONS);
         }
 
-        if config::SHOWSYSTRAY {
+        if config::CONFIG.showsystray {
             XUnmapWindow(DPY, (*SYSTRAY).win);
             XDestroyWindow(DPY, (*SYSTRAY).win);
             libc::free(SYSTRAY.cast());
@@ -2630,15 +2629,15 @@ fn getsystraywidth() -> c_uint {
     unsafe {
         let mut w = 0;
         let mut i;
-        if config::SHOWSYSTRAY {
+        if config::CONFIG.showsystray {
             cfor!((
             i = (*SYSTRAY).icons;
             !i.is_null();
-            (w, i) = (w + (*i).w + config::SYSTRAYSPACING as i32, (*i).next))
+            (w, i) = (w + (*i).w + config::CONFIG.systrayspacing as i32, (*i).next))
             {});
         }
         if w != 0 {
-            w as c_uint + SYSTRAYSPACING
+            w as c_uint + CONFIG.systrayspacing
         } else {
             1
         }
@@ -2708,7 +2707,7 @@ fn swallow(p: *mut Client, c: *mut Client) {
         if c.noswallow || c.isterminal {
             return;
         }
-        if c.noswallow && !SWALLOWFLOATING && c.isfloating {
+        if c.noswallow && !CONFIG.swallowfloating && c.isfloating {
             return;
         }
         detach(c);

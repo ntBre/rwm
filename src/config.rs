@@ -47,6 +47,12 @@ impl Default for Config {
             keys: default_keys().to_vec(),
             dmenucmd: DMENUCMD.to_vec(),
             rules: RULES.to_vec(),
+            swallowfloating: SWALLOWFLOATING,
+            systraypinning: SYSTRAYPINNING,
+            systrayonleft: SYSTRAYONLEFT,
+            systrayspacing: SYSTRAYSPACING,
+            systraypinningfailfirst: SYSTRAYPINNINGFAILFIRST,
+            showsystray: SHOWSYSTRAY,
         }
     }
 }
@@ -87,6 +93,22 @@ pub struct Config {
     pub dmenucmd: Vec<String>,
 
     pub rules: Vec<Rule>,
+
+    /// Swallow floating windows by default
+    pub swallowfloating: bool,
+
+    /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
+    pub systraypinning: c_uint,
+
+    pub systrayonleft: bool,
+
+    pub systrayspacing: c_uint,
+
+    /// if pinning fails and this is true, display systray on the first monitor,
+    /// else display systray on the last monitor
+    pub systraypinningfailfirst: bool,
+
+    pub showsystray: bool,
 }
 
 unsafe impl Send for Config {}
@@ -226,6 +248,15 @@ impl TryFrom<Fig> for Config {
             keys: get_keys(&mut v)?,
             dmenucmd: get(&mut v, "dmenucmd")?.try_into()?,
             rules: get_rules(&mut v)?,
+            swallowfloating: get(&mut v, "swallowfloating")?.try_into()?,
+            systraypinning: i64::try_from(get(&mut v, "systraypinning")?)?
+                as u32,
+            systrayonleft: get(&mut v, "systrayonleft")?.try_into()?,
+            systrayspacing: i64::try_from(get(&mut v, "systrayspacing")?)?
+                as u32,
+            systraypinningfailfirst: get(&mut v, "systraypinningfailfirst")?
+                .try_into()?,
+            showsystray: get(&mut v, "showsystray")?.try_into()?,
         })
     }
 }
@@ -265,17 +296,17 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 // appearance
 
 /// Swallow floating windows by default
-pub const SWALLOWFLOATING: bool = false;
+const SWALLOWFLOATING: bool = false;
 
 /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
-pub static SYSTRAYPINNING: c_uint = 0;
-pub const SYSTRAYONLEFT: bool = false;
+static SYSTRAYPINNING: c_uint = 0;
+const SYSTRAYONLEFT: bool = false;
 /// systray spacing
-pub const SYSTRAYSPACING: c_uint = 2;
+const SYSTRAYSPACING: c_uint = 2;
 /// if pinning fails and this is true, display systray on the first monitor,
 /// else display systray on the last monitor
-pub const SYSTRAYPINNINGFAILFIRST: bool = true;
-pub const SHOWSYSTRAY: bool = true;
+const SYSTRAYPINNINGFAILFIRST: bool = true;
+const SHOWSYSTRAY: bool = true;
 
 const COL_GRAY1: &str = "#222222";
 const COL_GRAY2: &str = "#444444";

@@ -12,7 +12,7 @@ use x11::xlib::{
     XUngrabServer, XWarpPointer, XWindowChanges, CWY,
 };
 
-use crate::config::{CONFIG, LAYOUTS, SHOWSYSTRAY};
+use crate::config::{CONFIG, LAYOUTS};
 use crate::enums::{Cur, WM};
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
@@ -31,7 +31,7 @@ pub(crate) fn togglebar(_arg: *const Arg) {
             (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize];
         updatebarpos(SELMON);
         resizebarwin(SELMON);
-        if SHOWSYSTRAY {
+        if CONFIG.showsystray {
             let mut wc = XWindowChanges {
                 x: 0,
                 y: 0,
