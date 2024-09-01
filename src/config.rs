@@ -56,6 +56,7 @@ impl Default for Config {
             showsystray: SHOWSYSTRAY,
             buttons: BUTTONS.to_vec(),
             layouts: LAYOUTS.to_vec(),
+            scratchpadname: SCRATCHPADNAME.into(),
         }
     }
 }
@@ -116,6 +117,8 @@ pub struct Config {
     pub buttons: Vec<Button>,
 
     pub layouts: Vec<Layout>,
+
+    pub scratchpadname: String,
 }
 
 unsafe impl Send for Config {}
@@ -340,6 +343,7 @@ impl TryFrom<Fig> for Config {
             showsystray: get(&mut v, "showsystray")?.try_into()?,
             buttons: get_buttons(&mut v)?,
             layouts: get_layouts(&mut v)?,
+            scratchpadname: get(&mut v, "scratchpadname")?.try_into()?,
         })
     }
 }
@@ -474,8 +478,8 @@ static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
-pub const SCRATCHPADNAME: &str = "scratchpad";
-pub static SCRATCHPADCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
+const SCRATCHPADNAME: &str = "scratchpad";
+static SCRATCHPADCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
     vec![
         "st".into(),
         "-t".into(),
