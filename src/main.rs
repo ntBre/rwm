@@ -2188,6 +2188,47 @@ fn isdescprocess(p: pid_t, mut c: pid_t) -> pid_t {
     c
 }
 
+fn termforwin(w: *const Client) -> *mut Client {
+    unsafe {
+        let w = &*w;
+
+        if w.pid == 0 || w.isterminal {
+            return null_mut();
+        }
+
+        let mut c;
+        let mut m;
+
+        cfor!((m = MONS; !m.is_null(); m = (*m).next) {
+            cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
+                if (*c).isterminal && (*c).swallowing.is_null()
+                && (*c).pid != 0 && isdescprocess((*c).pid, w.pid) != 0 {
+                    return c;
+                }
+            });
+        });
+    }
+
+    null_mut()
+}
+
+fn swallowingclient(w: Window) -> *mut Client {
+    unsafe {
+        let mut c;
+        let mut m;
+
+        cfor!((m = MONS; !m.is_null(); m = (*m).next) {
+            cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
+                if !(*c).swallowing.is_null() && (*(*c).swallowing).win == w {
+                    return c;
+                }
+            });
+        });
+
+        null_mut()
+    }
+}
+
 fn updateclientlist() {
     unsafe {
         xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
@@ -2350,7 +2391,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         (*c).oldh = wa.height;
         (*c).oldbw = wa.border_width;
 
-        let mut term: *mut Client;
+        let mut term: *mut Client = null_mut();
 
         updatetitle(c);
         log::trace!("manage: XGetTransientForHint");
