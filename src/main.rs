@@ -2421,6 +2421,11 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
         (*c).bw = config::BORDERPX as i32;
 
+        // TODO pretty sure this doesn't work with pertags, which explains some
+        // behavior I saw before in dwm. probably need to operate on
+        // selmon.pertag.tags[selmon.pertag.curtag]
+        (*SELMON).tagset[(*SELMON).seltags as usize] &= !SCRATCHTAG;
+
         log::trace!("manage: XWindowChanges");
         let mut wc = xlib::XWindowChanges {
             x: 0,
@@ -2757,6 +2762,8 @@ fn unswallow(c: *mut Client) {
 const TAGMASK: u32 = (1 << TAGS.len()) - 1;
 const BUTTONMASK: i64 = ButtonPressMask | ButtonReleaseMask;
 const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
+
+static SCRATCHTAG: u32 = 1 << TAGS.len();
 
 fn updatetitle(c: *mut Client) {
     log::trace!("updatetitle");
