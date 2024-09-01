@@ -17,9 +17,9 @@ use crate::enums::{Cur, WM};
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
-    resizebarwin, restack, sendevent, unfocus, updatebarpos, width, xerror,
-    xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON,
-    SYSTRAY, TAGMASK, WMATOM, XNONE,
+    resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
+    width, xerror, xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK,
+    ROOT, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
 };
 use rwm::{Arg, Client, Monitor};
 
@@ -655,5 +655,18 @@ pub(crate) fn toggletag(arg: *const Arg) {
             focus(null_mut());
             arrange(SELMON);
         }
+    }
+}
+
+/// Toggle fullscreen for a window.
+///
+/// adapted from: https://old.reddit.com/r/dwm/comments/avhkgb/fullscreen_mode/
+/// for fixing problems with steam games
+pub(crate) fn fullscreen(_: *const Arg) {
+    unsafe {
+        if (*SELMON).sel.is_null() {
+            return;
+        }
+        setfullscreen((*SELMON).sel, !(*(*SELMON).sel).isfullscreen)
     }
 }

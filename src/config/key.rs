@@ -55,6 +55,7 @@ pub(super) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
         ("toggleview", toggleview as FN),
         ("view", view as FN),
         ("zoom", zoom as FN),
+        ("fullscreen", fullscreen as FN),
         // mouse handlers
         ("movemouse", movemouse as FN),
         ("resizemouse", resizemouse as FN),

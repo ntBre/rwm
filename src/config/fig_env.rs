@@ -46,7 +46,7 @@ pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
         let handlers = handler_fns! {
             focusmon, focusstack, incnmaster, killclient, quit, setlayout, setmfact,
             spawn, tag, tagmon, togglebar, togglefloating, toggletag, toggleview,
-            view, zoom, movemouse, resizemouse, tile, monocle
+            view, zoom, movemouse, resizemouse, tile, monocle, fullscreen
         };
         let keys = keys! {
             Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask,
