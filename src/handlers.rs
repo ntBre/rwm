@@ -21,7 +21,7 @@ use rwm::{
 
 use crate::{
     arrange, cleanmask,
-    config::{self, BUTTONS, CONFIG},
+    config::{BUTTONS, CONFIG},
     configure, drawbar, drawbars, drw,
     enums::{Clk, Net},
     focus, get_scheme_color, getsystraywidth, grabkeys, height, is_visible,
@@ -115,7 +115,7 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
         let cme = &(*e).client_message;
         let mut c = wintoclient(cme.window);
 
-        if config::CONFIG.showsystray
+        if CONFIG.showsystray
             && cme.window == (*SYSTRAY).win
             && cme.message_type == NETATOM[Net::SystemTrayOP as usize]
         {

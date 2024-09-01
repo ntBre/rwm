@@ -179,8 +179,6 @@ type Clr = XftColor;
 fn createmon() -> *mut Monitor {
     log::trace!("createmon");
 
-    use config::CONFIG;
-
     // I thought about trying to create a Monitor directly, followed by
     // Box::into_raw(Box::new(m)), but we use libc::free to free the Monitors
     // later. I'd have to replace that with Box::from_raw and allow it to drop
@@ -1400,10 +1398,7 @@ fn drawbar(m: *mut Monitor) {
         let boxw = (*(*DRW).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if config::CONFIG.showsystray
-            && m == systraytomon(m)
-            && !config::CONFIG.systrayonleft
-        {
+        if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
             stw = getsystraywidth();
         }
 
@@ -2026,7 +2021,7 @@ fn cleanup() {
             cleanupmon(MONS);
         }
 
-        if config::CONFIG.showsystray {
+        if CONFIG.showsystray {
             XUnmapWindow(DPY, (*SYSTRAY).win);
             XDestroyWindow(DPY, (*SYSTRAY).win);
             libc::free(SYSTRAY.cast());
@@ -2629,7 +2624,7 @@ fn getsystraywidth() -> c_uint {
     unsafe {
         let mut w = 0;
         let mut i;
-        if config::CONFIG.showsystray {
+        if CONFIG.showsystray {
             cfor!((
             i = (*SYSTRAY).icons;
             !i.is_null();
