@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     error::Error,
-    ffi::{c_float, c_int, c_uint, CString},
+    ffi::{c_float, c_int, c_uint, CStr, CString},
     path::Path,
     ptr::null,
     sync::LazyLock,
@@ -118,7 +118,7 @@ pub struct Config {
 
     pub layouts: Vec<Layout>,
 
-    pub scratchpadname: String,
+    pub scratchpadname: CString,
 }
 
 unsafe impl Send for Config {}
@@ -343,7 +343,10 @@ impl TryFrom<Fig> for Config {
             showsystray: get(&mut v, "showsystray")?.try_into()?,
             buttons: get_buttons(&mut v)?,
             layouts: get_layouts(&mut v)?,
-            scratchpadname: get(&mut v, "scratchpadname")?.try_into()?,
+            scratchpadname: CString::new(String::try_from(get(
+                &mut v,
+                "scratchpadname",
+            )?)?)?,
         })
     }
 }
@@ -478,12 +481,12 @@ static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
-const SCRATCHPADNAME: &str = "scratchpad";
+const SCRATCHPADNAME: &CStr = c"scratchpad";
 static SCRATCHPADCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
     vec![
         "st".into(),
         "-t".into(),
-        SCRATCHPADNAME.into(),
+        SCRATCHPADNAME.to_str().unwrap().to_owned(),
         "-g".into(),
         "120x34".into(),
     ]

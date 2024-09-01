@@ -1,7 +1,7 @@
 //! tiling window manager based on dwm
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr, CString};
+use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
@@ -2420,11 +2420,8 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         // this. checking the name of the window and applying these rules seems
         // like something meant to be handled by RULES
         (*SELMON).tagset[(*SELMON).seltags as usize] &= !*SCRATCHTAG;
-        let scratchname = match CString::new(CONFIG.scratchpadname.clone()) {
-            Ok(s) => s.as_ptr(),
-            Err(_) => null_mut(),
-        };
-        if libc::strcmp((*c).name.as_ptr(), scratchname) == 0 {
+        if libc::strcmp((*c).name.as_ptr(), CONFIG.scratchpadname.as_ptr()) == 0
+        {
             (*c).tags = *SCRATCHTAG;
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
             (*c).isfloating = true;
