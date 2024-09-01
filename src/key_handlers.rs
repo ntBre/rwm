@@ -676,13 +676,12 @@ pub(crate) unsafe extern "C" fn togglescratch(arg: *const Arg) {
         let mut found = false;
         cfor!((
         c = (*SELMON).clients;
-        !c.is_null() && (*c).tags & SCRATCHTAG == 0;
+        !c.is_null();
         c = (*c).next) {
-            // this is duplicated from the (negated) loop condition because
-            // we can't do an in-line assigment like C:
-            //
-            // !(found = c->tags & scratchtag)
-            found = (*c).tags & SCRATCHTAG != 0;
+            found = ((*c).tags & SCRATCHTAG) != 0;
+            if found {
+                break;
+            }
         });
         if found {
             let newtagset =
