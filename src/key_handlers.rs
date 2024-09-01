@@ -19,8 +19,8 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, unfocus, updatebarpos, width, xerror,
-    xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SELMON,
-    SYSTRAY, TAGMASK, WMATOM, XNONE,
+    xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK, ROOT, SCRATCHTAG,
+    SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
 };
 use rwm::{Arg, Client, Layout, Monitor};
 
@@ -623,6 +623,7 @@ pub(crate) unsafe extern "C" fn spawn(arg: *const Arg) {
             log::trace!("spawn: dmenucmd on monitor {}", (*SELMON).num);
             DMENUMON[0] = '0' as c_char + (*SELMON).num as c_char;
         }
+        (*SELMON).tagset[(*SELMON).seltags as usize] &= !SCRATCHTAG;
         if libc::fork() == 0 {
             if !DPY.is_null() {
                 libc::close(XConnectionNumber(DPY));
@@ -665,6 +666,38 @@ pub(crate) unsafe extern "C" fn toggletag(arg: *const Arg) {
             (*(*SELMON).sel).tags = newtags;
             focus(null_mut());
             arrange(SELMON);
+        }
+    }
+}
+
+pub(crate) unsafe extern "C" fn togglescratch(arg: *const Arg) {
+    unsafe {
+        let mut c: *mut Client;
+        let mut found = false;
+        cfor!((
+        c = (*SELMON).clients;
+        !c.is_null() && (*c).tags & SCRATCHTAG == 0;
+        c = (*c).next) {
+            // this is duplicated from the (negated) loop condition because
+            // we can't do an in-line assigment like C:
+            //
+            // !(found = c->tags & scratchtag)
+            found = (*c).tags & SCRATCHTAG != 0;
+        });
+        if found {
+            let newtagset =
+                (*SELMON).tagset[(*SELMON).seltags as usize] ^ SCRATCHTAG;
+            if newtagset != 0 {
+                (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
+                focus(null_mut());
+                arrange(SELMON);
+            }
+            if is_visible(c) {
+                focus(c);
+                restack(SELMON);
+            }
+        } else {
+            spawn(arg);
         }
     }
 }

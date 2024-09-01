@@ -137,19 +137,35 @@ pub static DMENUCMD: DmenuCmd = DmenuCmd([
 ]);
 pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
 
+pub const SCRATCHPADNAME: *const c_char = c"scratchpad".as_ptr();
+pub const SCRATCHPADCMD: [*const c_char; 6] = [
+    c"st".as_ptr(),
+    c"-t".as_ptr(),
+    SCRATCHPADNAME,
+    c"-g".as_ptr(),
+    c"120x34".as_ptr(),
+    null_mut(),
+];
+
 use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_h, XK_i, XK_j,
-    XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1, XK_2,
-    XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
+    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_grave, XK_h, XK_i,
+    XK_j, XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
+    XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
 };
 
-pub static KEYS: [Key; 60] = [
+pub static KEYS: [Key; 61] = [
     Key::new(MODKEY, XK_p, spawn, Arg { v: DMENUCMD.0.as_ptr().cast() }),
     Key::new(
         MODKEY | ShiftMask,
         XK_Return,
         spawn,
         Arg { v: TERMCMD.as_ptr().cast() },
+    ),
+    Key::new(
+        MODKEY,
+        XK_grave,
+        togglescratch,
+        Arg { v: SCRATCHPADCMD.as_ptr().cast() },
     ),
     Key::new(MODKEY, XK_b, togglebar, Arg { i: 0 }),
     Key::new(MODKEY, XK_j, focusstack, Arg { i: 1 }),
