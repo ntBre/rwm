@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_uint, CStr};
+use std::ffi::{c_char, c_int, c_uint};
 
 use enums::Clk;
 
@@ -74,28 +74,10 @@ pub struct Rule {
     pub instance: *const c_char,
     pub title: *const c_char,
     pub tags: c_uint,
-    pub isfloating: c_int,
+    pub isfloating: bool,
+    pub isterminal: bool,
+    pub noswallow: bool,
     pub monitor: c_int,
-}
-
-impl Rule {
-    pub const fn new(
-        class: &'static CStr,
-        instance: *const i8,
-        title: *const i8,
-        tags: c_uint,
-        isfloating: c_int,
-        monitor: c_int,
-    ) -> Self {
-        Self {
-            class: class.as_ptr(),
-            instance,
-            title,
-            tags,
-            isfloating,
-            monitor,
-        }
-    }
 }
 
 pub struct Systray {
@@ -184,13 +166,17 @@ pub struct Client {
     pub oldbw: c_int,
     pub tags: c_uint,
     pub isfixed: c_int,
-    pub isfloating: c_int,
+    pub isfloating: bool,
     pub isurgent: c_int,
     pub neverfocus: c_int,
-    pub oldstate: c_int,
+    pub oldstate: bool,
     pub isfullscreen: bool,
+    pub isterminal: bool,
+    pub noswallow: bool,
+    pub pid: libc::pid_t,
     pub next: *mut Client,
     pub snext: *mut Client,
+    pub swallowing: *mut Client,
     pub mon: *mut Monitor,
     pub win: Window,
 }

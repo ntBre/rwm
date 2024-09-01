@@ -135,7 +135,7 @@ pub(crate) fn zoom(_arg: *const Arg) {
         let mut c = (*SELMON).sel;
         if (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
             || c.is_null()
-            || (*c).isfloating != 0
+            || (*c).isfloating
         {
             return;
         }
@@ -268,10 +268,9 @@ pub(crate) fn togglefloating(_arg: *const Arg) {
             // no support for fullscreen windows
             return;
         }
-        (*(*SELMON).sel).isfloating = ((*(*SELMON).sel).isfloating == 0
-            || (*(*SELMON).sel).isfixed != 0)
-            as c_int;
-        if (*(*SELMON).sel).isfloating != 0 {
+        (*(*SELMON).sel).isfloating =
+            !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed != 0;
+        if (*(*SELMON).sel).isfloating {
             let sel = &mut *(*SELMON).sel;
             resize(sel, sel.x, sel.y, sel.w, sel.h, 0);
         }
@@ -481,7 +480,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
                     {
                         ny = (*SELMON).wy + (*SELMON).wh - height(c);
                     }
-                    if c.isfloating == 0
+                    if !c.isfloating
                         && (*(*SELMON).lt[(*SELMON).sellt as usize])
                             .arrange
                             .is_some()
@@ -493,7 +492,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
                     if (*(*SELMON).lt[(*SELMON).sellt as usize])
                         .arrange
                         .is_none()
-                        || c.isfloating != 0
+                        || c.isfloating
                     {
                         resize(c, nx, ny, c.w, c.h, 1);
                     }
@@ -579,7 +578,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
                         && (*c.mon).wx + nw <= (*SELMON).wx + (*SELMON).ww
                         && (*c.mon).wy + nh >= (*SELMON).wy
                         && (*c.mon).wy + nh <= (*SELMON).wy + (*SELMON).wh
-                        && c.isfloating == 0
+                        && !c.isfloating
                         && (*(*SELMON).lt[(*SELMON).sellt as usize])
                             .arrange
                             .is_some()
@@ -591,7 +590,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
                     if (*(*SELMON).lt[(*SELMON).sellt as usize])
                         .arrange
                         .is_none()
-                        || c.isfloating != 0
+                        || c.isfloating
                     {
                         resize(c, c.x, c.y, nw, nh, 1);
                     }

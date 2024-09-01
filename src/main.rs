@@ -2,43 +2,44 @@
 
 use std::cmp::max;
 use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
+use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::{addr_of, addr_of_mut, null_mut};
 use std::sync::LazyLock;
 
 use key_handlers::view;
-use libc::{c_long, c_uchar, sigaction};
+use libc::{c_long, c_uchar, pid_t, sigaction};
 use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
 use x11::xft::XftColor;
 use x11::xlib::{
-    self, Above, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable,
-    BadMatch, BadWindow, Below, ButtonPressMask, ButtonReleaseMask,
-    CWBackPixel, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
-    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
-    ControlMask, CopyFromParent, CurrentTime, Display, EnterWindowMask,
-    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
-    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
-    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    self, Above, AnyButton, AnyKey, AnyModifier, AnyPropertyType, BadAccess,
+    BadDrawable, BadMatch, BadWindow, Below, ButtonPressMask,
+    ButtonReleaseMask, CWBackPixel, CWBackPixmap, CWBorderWidth, CWCursor,
+    CWEventMask, CWHeight, CWOverrideRedirect, CWSibling, CWStackMode, CWWidth,
+    ClientMessage, ControlMask, CopyFromParent, CurrentTime, Display,
+    EnterWindowMask, ExposureMask, False, FocusChangeMask, GrabModeAsync,
+    GrabModeSync, InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask,
+    Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize,
+    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
     PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
     RevertToPointerRoot, ShiftMask, StructureNotifyMask,
     SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
     XChangeProperty, XChangeWindowAttributes, XConfigureWindow,
     XCreateSimpleWindow, XDestroyWindow, XErrorEvent, XFillRectangle, XFree,
-    XGetSelectionOwner, XInternAtom, XMapRaised, XMapSubwindows, XMapWindow,
-    XMoveResizeWindow, XPropertyEvent, XSelectInput, XSetErrorHandler,
-    XSetForeground, XSetSelectionOwner, XSetWindowAttributes, XSync,
-    XUnmapWindow, XWindowChanges, CWX, CWY, XA_ATOM, XA_CARDINAL, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    XGetSelectionOwner, XGetWindowProperty, XInternAtom, XMapRaised,
+    XMapSubwindows, XMapWindow, XMoveResizeWindow, XPropertyEvent,
+    XSelectInput, XSetErrorHandler, XSetForeground, XSetSelectionOwner,
+    XSetWindowAttributes, XSync, XUnmapWindow, XWindowChanges, CWX, CWY,
+    XA_ATOM, XA_CARDINAL, XA_STRING, XA_WINDOW, XA_WM_NAME,
 };
 
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::{
-    BUTTONS, CONFIG, LAYOUTS, RULES, SHOWSYSTRAY, SYSTRAYONLEFT,
-    SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
+    BUTTONS, CONFIG, LAYOUTS, RULES, SHOWSYSTRAY, SWALLOWFLOATING,
+    SYSTRAYONLEFT, SYSTRAYPINNING, SYSTRAYPINNINGFAILFIRST, SYSTRAYSPACING,
 };
 use drw::Drw;
 use enums::{Clk, Col, Cur, Net, Scheme, WM};
@@ -639,7 +640,7 @@ fn restack(m: *mut Monitor) {
         if (*m).sel.is_null() {
             return;
         }
-        if (*(*m).sel).isfloating != 0
+        if (*(*m).sel).isfloating
             || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
         {
             xlib::XRaiseWindow(DPY, (*(*m).sel).win);
@@ -656,7 +657,7 @@ fn restack(m: *mut Monitor) {
             };
             let mut c = (*m).stack;
             while !c.is_null() {
-                if (*c).isfloating == 0 && is_visible(c) {
+                if !(*c).isfloating && is_visible(c) {
                     xlib::XConfigureWindow(
                         DPY,
                         (*c).win,
@@ -686,7 +687,7 @@ fn showhide(c: *mut Client) {
             if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
                 .is_none()
-                || (*c).isfloating != 0)
+                || (*c).isfloating)
                 && !(*c).isfullscreen
             {
                 resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
@@ -839,7 +840,7 @@ fn applysizehints(
             *w = BH;
         }
         if CONFIG.resize_hints
-            || (*c).isfloating != 0
+            || (*c).isfloating
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
                 .is_none()
@@ -992,7 +993,7 @@ fn detach(c: *mut Client) {
 fn nexttiled(mut c: *mut Client) -> *mut Client {
     log::trace!("nexttiled");
     unsafe {
-        while !c.is_null() && ((*c).isfloating != 0 || !is_visible(c)) {
+        while !c.is_null() && ((*c).isfloating || !is_visible(c)) {
             c = (*c).next;
         }
         c
@@ -1515,7 +1516,7 @@ fn drawbar(m: *mut Monitor) {
                     (*(*m).sel).name.as_ptr(),
                     0,
                 );
-                if (*(*m).sel).isfloating != 0 {
+                if (*(*m).sel).isfloating {
                     drw::rect(
                         DRW,
                         x + boxs as i32,
@@ -2071,6 +2072,21 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             sibling: 0,
             stack_mode: 0,
         };
+
+        if !(*c).swallowing.is_null() {
+            unswallow(c);
+            return;
+        }
+
+        let s = swallowingclient((*c).win);
+        if !s.is_null() {
+            libc::free((*s).swallowing.cast());
+            (*s).swallowing = null_mut();
+            arrange(m);
+            focus(null_mut());
+            return;
+        }
+
         detach(c);
         detachstack(c);
         if destroyed == 0 {
@@ -2091,9 +2107,120 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
             xlib::XUngrabServer(DPY);
         }
         libc::free(c.cast());
-        focus(null_mut());
-        updateclientlist();
-        arrange(m);
+
+        if s.is_null() {
+            arrange(m);
+            focus(null_mut());
+            updateclientlist();
+        }
+    }
+}
+
+/// I'm just using the OpenBSD version of the code in the patch rather than the
+/// Linux version that uses XCB
+fn winpid(w: Window) -> pid_t {
+    let result;
+
+    unsafe {
+        let mut type_: Atom = 0;
+        let mut format: c_int = 0;
+        let mut len: c_ulong = 0;
+        let mut bytes: c_ulong = 0;
+        let mut prop: *mut c_uchar = null_mut();
+        if XGetWindowProperty(
+            DPY,
+            w,
+            XInternAtom(DPY, c"_NET_WM_PID".as_ptr(), 0),
+            0,
+            1,
+            False,
+            AnyPropertyType as u64,
+            &mut type_,
+            &mut format,
+            &mut len,
+            &mut bytes,
+            &mut prop,
+        ) != Success as i32
+            || prop.is_null()
+        {
+            return 0;
+        }
+        let ret = *(prop as *mut pid_t);
+        XFree(prop.cast());
+        result = ret;
+    }
+
+    result
+}
+
+/// this looks insane... rust has std::os::unix::process::parent_id, but it
+/// doesn't take any arguments. we need to get the parent of a specific process
+/// here, so we read from /proc
+fn getparentprocess(p: pid_t) -> pid_t {
+    let filename = format!("/proc/{p}/stat");
+    let Ok(mut f) = std::fs::File::open(filename) else {
+        return 0;
+    };
+    let mut buf = Vec::new();
+    let Ok(_) = f.read_to_end(&mut buf) else {
+        return 0;
+    };
+    let Ok(s) = String::from_utf8(buf) else {
+        return 0;
+    };
+    // trying to emulate fscanf(f, "%*u %*s %*c %u", &v); which should give the
+    // 3rd field
+    match s.split_ascii_whitespace().nth(3).map(str::parse) {
+        Some(Ok(p)) => p,
+        _ => 0,
+    }
+}
+
+fn isdescprocess(p: pid_t, mut c: pid_t) -> pid_t {
+    while p != c && c != 0 {
+        c = getparentprocess(c);
+    }
+    c
+}
+
+fn termforwin(w: *const Client) -> *mut Client {
+    unsafe {
+        let w = &*w;
+
+        if w.pid == 0 || w.isterminal {
+            return null_mut();
+        }
+
+        let mut c;
+        let mut m;
+
+        cfor!((m = MONS; !m.is_null(); m = (*m).next) {
+            cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
+                if (*c).isterminal && (*c).swallowing.is_null()
+                && (*c).pid != 0 && isdescprocess((*c).pid, w.pid) != 0 {
+                    return c;
+                }
+            });
+        });
+    }
+
+    null_mut()
+}
+
+fn swallowingclient(w: Window) -> *mut Client {
+    unsafe {
+        let mut c;
+        let mut m;
+
+        cfor!((m = MONS; !m.is_null(); m = (*m).next) {
+            cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
+                if !(*c).swallowing.is_null() && (*(*c).swallowing).win == w {
+                    return c;
+                }
+            });
+        });
+
+        null_mut()
     }
 }
 
@@ -2248,6 +2375,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         let wa = *wa;
         let c: *mut Client = util::ecalloc(1, size_of::<Client>()) as *mut _;
         (*c).win = w;
+        (*c).pid = winpid(w);
         (*c).x = wa.x;
         (*c).oldx = wa.x;
         (*c).y = wa.y;
@@ -2258,6 +2386,8 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         (*c).oldh = wa.height;
         (*c).oldbw = wa.border_width;
 
+        let mut term: *mut Client = null_mut();
+
         updatetitle(c);
         log::trace!("manage: XGetTransientForHint");
         if xlib::XGetTransientForHint(DPY, w, &mut trans) != 0 {
@@ -2266,14 +2396,17 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
                 (*c).mon = (*t).mon;
                 (*c).tags = (*t).tags;
             } else {
+                // NOTE must keep in sync with else below
                 (*c).mon = SELMON;
                 applyrules(c);
+                term = termforwin(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
             (*c).mon = SELMON;
             applyrules(c);
+            term = termforwin(c);
         }
         if (*c).x + width(c) > ((*(*c).mon).wx + (*(*c).mon).ww) as i32 {
             (*c).x = ((*(*c).mon).wx + (*(*c).mon).ww) as i32 - width(c);
@@ -2321,11 +2454,11 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
                 | StructureNotifyMask,
         );
         grabbuttons(c, false);
-        if (*c).isfloating == 0 {
-            (*c).oldstate = (trans != 0 || (*c).isfixed != 0) as c_int;
+        if !(*c).isfloating {
+            (*c).oldstate = trans != 0 || (*c).isfixed != 0;
             (*c).isfloating = (*c).oldstate;
         }
-        if (*c).isfloating != 0 {
+        if (*c).isfloating {
             xlib::XRaiseWindow(DPY, (*c).win);
         }
         attach(c);
@@ -2356,6 +2489,9 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         (*(*c).mon).sel = c;
         arrange((*c).mon);
         xlib::XMapWindow(DPY, (*c).win);
+        if !term.is_null() {
+            swallow(term, c);
+        }
         focus(std::ptr::null_mut());
     }
 }
@@ -2391,7 +2527,7 @@ fn updatewindowtype(c: *mut Client) {
             setfullscreen(c, true);
         }
         if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
-            (*c).isfloating = 1;
+            (*c).isfloating = true;
         }
     }
 }
@@ -2416,7 +2552,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).oldstate = (*c).isfloating;
             (*c).oldbw = (*c).bw;
             (*c).bw = 0;
-            (*c).isfloating = 1;
+            (*c).isfloating = true;
             resizeclient(
                 c,
                 (*(*c).mon).mx,
@@ -2517,7 +2653,7 @@ fn applyrules(c: *mut Client) {
             res_class: std::ptr::null_mut(),
         };
         // rule matching
-        (*c).isfloating = 0;
+        (*c).isfloating = false;
         (*c).tags = 0;
         xlib::XGetClassHint(DPY, (*c).win, &mut ch);
         let class = if !ch.res_class.is_null() {
@@ -2539,6 +2675,8 @@ fn applyrules(c: *mut Client) {
                 && (r.instance.is_null()
                     || !libc::strstr(instance.as_ptr(), r.instance).is_null())
             {
+                (*c).isterminal = r.isterminal;
+                (*c).noswallow = r.noswallow;
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
                 let mut m = MONS;
@@ -2561,6 +2699,54 @@ fn applyrules(c: *mut Client) {
         } else {
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize]
         };
+    }
+}
+
+fn swallow(p: *mut Client, c: *mut Client) {
+    unsafe {
+        let c = &mut *c;
+        if c.noswallow || c.isterminal {
+            return;
+        }
+        if c.noswallow && !SWALLOWFLOATING && c.isfloating {
+            return;
+        }
+        detach(c);
+        detachstack(c);
+
+        setclientstate(c, WITHDRAWN_STATE);
+        let p = &mut *p;
+        XUnmapWindow(DPY, p.win);
+        p.swallowing = c;
+        c.mon = p.mon;
+
+        std::mem::swap(&mut p.win, &mut c.win);
+        updatetitle(p);
+        XMoveResizeWindow(DPY, p.win, p.x, p.y, p.w as u32, p.h as u32);
+        arrange(p.mon);
+        configure(p);
+        updateclientlist();
+    }
+}
+
+fn unswallow(c: *mut Client) {
+    unsafe {
+        let c = &mut *c;
+
+        c.win = (*c.swallowing).win;
+
+        libc::free(c.swallowing.cast());
+        c.swallowing = null_mut();
+
+        // unfullscreen the client
+        setfullscreen(c, false);
+        updatetitle(c);
+        arrange(c.mon);
+        XMapWindow(DPY, c.win);
+        XMoveResizeWindow(DPY, c.win, c.x, c.y, c.w as u32, c.h as u32);
+        setclientstate(c, NORMAL_STATE);
+        focus(null_mut());
+        arrange(c.mon);
     }
 }
 

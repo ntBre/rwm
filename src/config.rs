@@ -214,6 +214,9 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 
 // appearance
 
+/// Swallow floating windows by default
+pub const SWALLOWFLOATING: bool = false;
+
 /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
 pub static SYSTRAYPINNING: c_uint = 0;
 pub const SYSTRAYONLEFT: bool = false;
@@ -241,9 +244,37 @@ fn default_colors() -> [[CString; 3]; 2] {
     ret
 }
 
-pub const RULES: [Rule; 2] = [
-    Rule::new(c"Gimp", null(), null(), 0, 1, -1),
-    Rule::new(c"Firefox", null(), null(), 1 << 8, 0, -1),
+pub const RULES: [Rule; 3] = [
+    Rule {
+        class: c"Gimp".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 0,
+        isfloating: true,
+        isterminal: false,
+        noswallow: false,
+        monitor: -1,
+    },
+    Rule {
+        class: c"Firefox".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 1 << 8,
+        isfloating: false,
+        isterminal: false,
+        noswallow: true,
+        monitor: -1,
+    },
+    Rule {
+        class: c"st-256color".as_ptr(),
+        instance: null(),
+        title: null(),
+        tags: 0,
+        isfloating: false,
+        isterminal: true,
+        noswallow: false,
+        monitor: -1,
+    },
 ];
 
 // layouts
