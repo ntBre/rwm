@@ -569,7 +569,7 @@ pub(crate) fn text(
             if utf8strlen != 0 {
                 if render != 0 {
                     ty = y
-                        + (h - (*usedfont).h) as i32 / 2
+                        + (h as i32 - (*usedfont).h as i32) / 2
                         + (*(*usedfont).xfont).ascent;
                     log::trace!("text: XftDrawStringUtf8");
                     xft::XftDrawStringUtf8(
