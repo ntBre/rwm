@@ -279,9 +279,11 @@ pub(crate) fn togglefloating(_arg: *const Arg) {
     }
 }
 
-/// From the stacker patch. This should only be called with an ISINC arg, in
-/// their parlance, so also inline their stackpos function, in the branch where
-/// this is true
+/// Push clients up (`Arg::I(+N)`) and down (`Arg::I(-N)`) the stack.
+///
+/// From the [stacker patch](https://dwm.suckless.org/patches/stacker/). This
+/// should only be called with an ISINC arg, in their parlance, so also inline
+/// their stackpos function, in the branch where this is true
 pub(crate) fn pushstack(arg: *const Arg) {
     fn modulo(n: c_int, m: c_int) -> c_int {
         if n % m < 0 {
