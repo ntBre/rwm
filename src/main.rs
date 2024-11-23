@@ -2150,6 +2150,8 @@ fn winpid(w: Window) -> pid_t {
 
     #[cfg(not(target_os = "linux"))]
     unsafe {
+        use x11::xlib::{AnyPropertyType, XGetWindowProperty};
+
         let mut type_: Atom = 0;
         let mut format: c_int = 0;
         let mut len: c_ulong = 0;
