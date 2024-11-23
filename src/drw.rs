@@ -274,7 +274,7 @@ fn xfont_create(
 ) -> *mut Fnt {
     log::trace!("xfont_create");
     unsafe {
-        let mut xfont: *mut XftFont = null_mut();
+        let xfont: *mut XftFont;
         let mut pattern: *mut FcPattern = null_mut();
         if !fontname.is_null() {
             /* Using the pattern found at font->xfont->pattern does not yield
