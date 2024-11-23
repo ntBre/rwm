@@ -310,26 +310,28 @@ pub(crate) fn pushstack(arg: *const Arg) {
         // end stackpos
 
         let sel = (*SELMON).sel;
-        if stackpos < 0 {
-            return;
-        } else if stackpos == 0 {
-            detach(sel);
-            attach(sel);
-        } else {
-            let mut p;
-            cfor!((
-            (p, c) = (null_mut(), (*SELMON).clients);
-            !c.is_null();
-            (p, c) = (c, (*c).next)) {
-                stackpos -= (is_visible(c) && c != sel) as c_int;
-                if stackpos == 0 {
-                    break;
-                }
-            });
-            let c = if !c.is_null() { c } else { p };
-            detach(sel);
-            (*sel).next = (*c).next;
-            (*c).next = sel;
+        match stackpos.cmp(&0) {
+            std::cmp::Ordering::Less => return,
+            std::cmp::Ordering::Equal => {
+                detach(sel);
+                attach(sel);
+            }
+            std::cmp::Ordering::Greater => {
+                let mut p;
+                cfor!((
+                (p, c) = (null_mut(), (*SELMON).clients);
+                !c.is_null();
+                (p, c) = (c, (*c).next)) {
+                    stackpos -= (is_visible(c) && c != sel) as c_int;
+                    if stackpos == 0 {
+                        break;
+                    }
+                });
+                let c = if !c.is_null() { c } else { p };
+                detach(sel);
+                (*sel).next = (*c).next;
+                (*c).next = sel;
+            }
         }
         arrange(SELMON);
     }
