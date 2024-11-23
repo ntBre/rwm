@@ -279,6 +279,66 @@ pub(crate) fn togglefloating(_arg: *const Arg) {
     }
 }
 
+/// Push clients up (`Arg::I(+N)`) and down (`Arg::I(-N)`) the stack.
+///
+/// From the [stacker patch](https://dwm.suckless.org/patches/stacker/). This
+/// should only be called with an ISINC arg, in their parlance, so also inline
+/// their stackpos function, in the branch where this is true
+pub(crate) fn pushstack(arg: *const Arg) {
+    fn modulo(n: c_int, m: c_int) -> c_int {
+        if n % m < 0 {
+            (n % m) + m
+        } else {
+            n % m
+        }
+    }
+    unsafe {
+        // begin stackpos
+        if (*SELMON).clients.is_null() {
+            return;
+        }
+        if (*SELMON).sel.is_null() {
+            return;
+        }
+        let mut i;
+        let mut c;
+        cfor!((
+            (i, c) = (0, (*SELMON).clients);
+            c != (*SELMON).sel;
+            (i, c) = (i + is_visible(c) as c_int, (*c).next)) {});
+        let mut n;
+        cfor!((n = i; !c.is_null(); (n, c) = (n + is_visible(c) as c_int, (*c).next)) {});
+        let mut stackpos = modulo(i + (*arg).i(), n);
+        // end stackpos
+
+        let sel = (*SELMON).sel;
+        match stackpos.cmp(&0) {
+            std::cmp::Ordering::Less => return,
+            std::cmp::Ordering::Equal => {
+                detach(sel);
+                attach(sel);
+            }
+            std::cmp::Ordering::Greater => {
+                let mut p;
+                cfor!((
+                (p, c) = (null_mut(), (*SELMON).clients);
+                !c.is_null();
+                (p, c) = (c, (*c).next)) {
+                    stackpos -= (is_visible(c) && c != sel) as c_int;
+                    if stackpos == 0 {
+                        break;
+                    }
+                });
+                let c = if !c.is_null() { c } else { p };
+                detach(sel);
+                (*sel).next = (*c).next;
+                (*c).next = sel;
+            }
+        }
+        arrange(SELMON);
+    }
+}
+
 pub(crate) fn tag(arg: *const Arg) {
     unsafe {
         if !(*SELMON).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {

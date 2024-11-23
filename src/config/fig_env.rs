@@ -44,7 +44,7 @@ macro_rules! clicks {
 pub static FIG_ENV: LazyLock<HashMap<String, fig::Value>> = LazyLock::new(
     || {
         let handlers = handler_fns! {
-            focusmon, focusstack, incnmaster, killclient, quit, setlayout, setmfact,
+            focusmon, focusstack, pushstack, incnmaster, killclient, quit, setlayout, setmfact,
             spawn, tag, tagmon, togglebar, togglefloating, toggletag, toggleview,
             view, zoom, movemouse, resizemouse, tile, monocle, fullscreen,
             togglescratch,

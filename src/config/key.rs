@@ -41,6 +41,7 @@ pub(super) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
     HashMap::from([
         ("focusmon", focusmon as FN),
         ("focusstack", focusstack as FN),
+        ("pushstack", pushstack as FN),
         ("incnmaster", incnmaster as FN),
         ("killclient", killclient as FN),
         ("quit", quit as FN),
