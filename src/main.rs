@@ -35,6 +35,9 @@ use x11::xlib::{
     XA_WINDOW, XA_WM_NAME,
 };
 
+#[cfg(target_os = "linux")]
+use xcb::Connection;
+
 use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
 
 use config::CONFIG;
@@ -86,6 +89,9 @@ const WITHDRAWN_STATE: usize = 0;
 const NORMAL_STATE: usize = 1;
 /// application wants to start as an icon
 const ICONIC_STATE: usize = 3;
+
+#[cfg(target_os = "linux")]
+static mut XCON: *mut Connection = null_mut();
 
 extern "C" fn xerror(mdpy: *mut Display, ee: *mut XErrorEvent) -> c_int {
     unsafe {
@@ -2114,8 +2120,35 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
 /// I'm just using the OpenBSD version of the code in the patch rather than the
 /// Linux version that uses XCB
 fn winpid(w: Window) -> pid_t {
-    let result;
+    let mut result = 0;
 
+    #[cfg(target_os = "linux")]
+    unsafe {
+        log::trace!("winpid linux");
+
+        let spec = xcb::res::ClientIdSpec {
+            client: w as u32,
+            mask: xcb::res::ClientIdMask::LOCAL_CLIENT_PID,
+        };
+        assert!(!XCON.is_null(), "xcon is null");
+        let xcon = &*XCON;
+        let cookie =
+            xcon.send_request(&xcb::res::QueryClientIds { specs: &[spec] });
+        let Ok(r) = xcon.wait_for_reply(cookie) else {
+            return 0;
+        };
+
+        for id in r.ids() {
+            let spec = id.spec();
+            if !(spec.mask & xcb::res::ClientIdMask::LOCAL_CLIENT_PID)
+                .is_empty()
+            {
+                result = id.value()[0] as i32;
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
     unsafe {
         let mut type_: Atom = 0;
         let mut format: c_int = 0;
@@ -2852,6 +2885,13 @@ fn main() {
         if DPY.is_null() {
             die("rwm: cannot open display");
         }
+        #[cfg(target_os = "linux")]
+        {
+            let Ok((xcon, _)) = Connection::connect(None) else {
+                die("rwm: cannot get xcb connection");
+            };
+            XCON = Box::into_raw(Box::new(xcon));
+        }
     }
     checkotherwm();
     setup();
@@ -2860,5 +2900,8 @@ fn main() {
     cleanup();
     unsafe {
         xlib::XCloseDisplay(DPY);
+
+        #[cfg(target_os = "linux")]
+        drop(Box::from_raw(XCON));
     }
 }

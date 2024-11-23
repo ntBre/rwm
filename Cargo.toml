@@ -13,3 +13,6 @@ yeslogic-fontconfig-sys = "6.0.0"
 env_logger = "0.11.3"
 log = "0.4.21"
 fig = { git = "https://github.com/ntBre/fig" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+xcb = { version = "1.5.0", features = [ "res" ] }

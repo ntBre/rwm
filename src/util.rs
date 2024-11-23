@@ -1,6 +1,6 @@
 use libc::{c_void, size_t};
 
-pub(crate) fn die(msg: &str) {
+pub(crate) fn die(msg: &str) -> ! {
     eprintln!("{}", msg);
     std::process::exit(1);
 }
