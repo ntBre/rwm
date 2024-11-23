@@ -109,6 +109,23 @@ pub struct Pertag {
     pub showbars: Vec<bool>,
 }
 
+pub struct Pertag {
+    /// Current tag
+    pub curtag: c_uint,
+    /// Previous tag
+    pub prevtag: c_uint,
+    /// Number of windows in master area
+    pub nmasters: Vec<c_int>,
+    /// Proportion of monitor for master area
+    pub mfacts: Vec<f32>,
+    /// Selected layouts
+    pub sellts: Vec<c_uint>,
+    /// Matrix of tag and layout indices
+    pub ltidxs: Vec<[*const Layout; 2]>,
+    /// Whether to display the bar
+    pub showbars: Vec<c_int>,
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct Monitor {

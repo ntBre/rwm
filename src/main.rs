@@ -2429,6 +2429,22 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
             (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - height(c) / 2;
         }
 
+        // TODO pretty sure this doesn't work with pertags, which explains some
+        // behavior I saw before in dwm. probably need to operate on
+        // selmon.pertag.tags[selmon.pertag.curtag].
+        //
+        // TODO I'm also pretty sure this is _not_ the right way to be handling
+        // this. checking the name of the window and applying these rules seems
+        // like something meant to be handled by RULES
+        (*SELMON).tagset[(*SELMON).seltags as usize] &= !SCRATCHTAG;
+        if libc::strcmp((*c).name.as_ptr(), config::SCRATCHPADNAME) == 0 {
+            (*c).tags = SCRATCHTAG;
+            (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
+            (*c).isfloating = true;
+            (*c).x = (*(*c).mon).wx + (*(*c).mon).ww / 2 - width(c) / 2;
+            (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - height(c) / 2;
+        }
+
         log::trace!("manage: XWindowChanges");
         let mut wc = xlib::XWindowChanges {
             x: 0,
