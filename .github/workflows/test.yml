@@ -7,19 +7,28 @@ on:
 name: test
 jobs:
   required:
-    runs-on: ubuntu-latest
-    name: ubuntu / ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.toolchain }}
     strategy:
       matrix:
         toolchain: [nightly]
+        os: [ubuntu-latest, macos-13]
+        include:
+          - os: macos-13
+            is_mac: 1
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Install X libraries
+      - name: Install X libraries (ubuntu)
+        if: ${{ ! matrix.is_mac }}
         run: |
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev
+      - name: Install X libraries (mac)
+        if: ${{ matrix.is_mac }}
+        run: |
+          brew install libxft libxinerama
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:

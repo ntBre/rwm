@@ -258,6 +258,7 @@ fn setup() {
             sa_flags: libc::SA_NOCLDSTOP
                 | libc::SA_NOCLDWAIT
                 | libc::SA_RESTART,
+            #[cfg(not(target_os = "macos"))]
             sa_restorer: None,
         };
         libc::sigemptyset(&mut sa.sa_mask);
