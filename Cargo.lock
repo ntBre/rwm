@@ -107,6 +107,7 @@ dependencies = [
 [[package]]
 name = "fig"
 version = "0.1.0"
+source = "git+https://github.com/ntBre/fig#37dcfda168ddbf8d1b5b83838de8d3982e8791fe"
 dependencies = [
  "nom",
 ]
