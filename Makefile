@@ -26,3 +26,6 @@ target/release/rwm: $(rust-src)
 build: target/release/rwm
 
 .PHONY: build
+
+xephyr:
+	Xephyr :1 & DISPLAY=:1.0 cargo run; kill %1
