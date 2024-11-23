@@ -386,7 +386,7 @@ fn setup() {
             XA_ATOM,
             32,
             PropModeReplace,
-            NETATOM.as_ptr() as *mut c_uchar,
+            &raw mut NETATOM as *mut c_uchar,
             Net::Last as i32,
         );
         xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
@@ -2442,9 +2442,10 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         log::trace!("manage: XConfigureWindow");
         xlib::XConfigureWindow(DPY, w, CWBorderWidth as u32, &mut wc);
         log::trace!(
-            "manage: XSetWindowBorder with DPY = {DPY:?} and w = {w:?}"
+            "manage: XSetWindowBorder with DPY = {:?} and w = {w:?}",
+            &raw const DPY
         );
-        log::trace!("scheme: {:?}", SCHEME);
+        log::trace!("scheme: {:?}", &raw const SCHEME);
         let scheme_norm: *mut Clr = *SCHEME.offset(Scheme::Norm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
         let border: Clr = *scheme_norm.offset(Col::Border as isize);
