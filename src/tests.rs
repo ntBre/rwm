@@ -1,0 +1,82 @@
+use rwm::events::Event;
+use xlib::Button1;
+
+use super::*;
+
+use std::process::Command;
+
+#[test]
+fn main() {
+    // setup xephyr
+    #[cfg(target_os = "linux")]
+    let mut cmd = Command::new("Xvfb").arg(":1").spawn().unwrap();
+
+    #[cfg(not(target_os = "linux"))]
+    let mut cmd = Command::new("xvfb").arg(":1").spawn().unwrap();
+
+    // wait for xephyr to start
+    unsafe {
+        while DPY.is_null() {
+            DPY = xlib::XOpenDisplay(c":1.0".as_ptr());
+        }
+    }
+
+    // goto for killing xephyr no matter what
+    let ok = 'defer: {
+        #[cfg(target_os = "linux")]
+        unsafe {
+            let xcon = match Connection::connect(Some(":1.0")) {
+                Ok((xcon, _)) => xcon,
+                Err(e) => {
+                    eprintln!("rwm: cannot get xcb connection: {e:?}");
+                    break 'defer false;
+                }
+            };
+            XCON = Box::into_raw(Box::new(xcon));
+        }
+        checkotherwm();
+        setup();
+        scan();
+
+        // instead of calling `run`, manually send some XEvents
+
+        // test that a mouse click on the initial (tiling) layout icon
+        // switches to floating mode
+        handlers::buttonpress(
+            &mut Event::button(
+                (unsafe { *SELMON }).barwin,
+                Button1,
+                CONFIG
+                    .tags
+                    .iter()
+                    .map(|tag| textw(tag.as_ptr()))
+                    .sum::<i32>()
+                    + 5,
+                unsafe { DPY },
+                0,
+            )
+            .into_button(),
+        );
+        unsafe {
+            assert!((*(*SELMON).lt[(*SELMON).sellt as usize])
+                .arrange
+                .is_none());
+        }
+
+        cleanup();
+        unsafe {
+            xlib::XCloseDisplay(DPY);
+
+            #[cfg(target_os = "linux")]
+            drop(Box::from_raw(XCON));
+        }
+
+        break 'defer true;
+    };
+
+    // kill xephyr when finished
+    cmd.kill().unwrap();
+    cmd.try_wait().unwrap();
+
+    assert!(ok);
+}
