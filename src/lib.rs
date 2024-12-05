@@ -96,7 +96,7 @@ pub struct Systray {
 #[derive(Debug, Copy, Clone)]
 pub struct Layout {
     pub symbol: *const c_char,
-    pub arrange: Option<fn(*mut Monitor)>,
+    pub arrange: Option<fn(&State, *mut Monitor)>,
 }
 
 pub struct Pertag {
@@ -195,5 +195,7 @@ pub struct Cursors {
 }
 
 pub struct State {
+    /// Bar height
+    pub bh: c_int,
     pub cursors: Cursors,
 }

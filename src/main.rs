@@ -158,9 +158,6 @@ const BROKEN: &CStr = c"broken";
 
 static mut STEXT: [c_char; 256] = ['\0' as c_char; 256];
 
-/// bar height
-static mut BH: c_int = 0;
-
 /// X display screen geometry width
 static mut SW: c_int = 0;
 
@@ -279,8 +276,16 @@ fn setup() -> State {
             panic!("no fonts could be loaded");
         }
         LRPAD = (*(*DRW).fonts).h as i32;
-        BH = (*(*DRW).fonts).h as i32 + 2;
-        updategeom();
+
+        /* init cursors */
+        let cursors = rwm::Cursors {
+            normal: drw::cur_create(DRW, XC_LEFT_PTR as i32),
+            resize: drw::cur_create(DRW, XC_SIZING as i32),
+            move_: drw::cur_create(DRW, XC_FLEUR as i32),
+        };
+        let state = State { bh: (*(*DRW).fonts).h as i32 + 2, cursors };
+
+        updategeom(&state);
 
         /* init atoms */
         let utf8string = XInternAtom(DPY, c"UTF8_STRING".as_ptr(), False);
@@ -332,14 +337,6 @@ fn setup() -> State {
         XATOM[XEmbed::XEmbedInfo as usize] =
             XInternAtom(DPY, c"_XEMBED_INFO".as_ptr(), False);
 
-        /* init cursors */
-        let cursors = rwm::Cursors {
-            normal: drw::cur_create(DRW, XC_LEFT_PTR as i32),
-            resize: drw::cur_create(DRW, XC_SIZING as i32),
-            move_: drw::cur_create(DRW, XC_FLEUR as i32),
-        };
-        let state = State { cursors };
-
         /* init appearance */
         SCHEME =
             util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
@@ -348,11 +345,11 @@ fn setup() -> State {
         }
 
         // init system tray
-        updatesystray();
+        updatesystray(&state);
 
         /* init bars */
         updatebars(&state);
-        updatestatus();
+        updatestatus(&state);
 
         /* supporting window for NetWMCheck */
         WMCHECKWIN = xlib::XCreateSimpleWindow(DPY, ROOT, 0, 0, 1, 1, 0, 0, 0);
@@ -417,13 +414,13 @@ fn setup() -> State {
         );
         xlib::XSelectInput(DPY, ROOT, wa.event_mask);
         grabkeys();
-        focus(null_mut());
+        focus(&state, null_mut());
 
         state
     }
 }
 
-fn focus(mut c: *mut Client) {
+fn focus(state: &State, mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     unsafe {
         if c.is_null() || !is_visible(c) {
@@ -459,16 +456,16 @@ fn focus(mut c: *mut Client) {
             );
         }
         (*SELMON).sel = c;
-        drawbars();
+        drawbars(state);
     }
 }
 
-fn drawbars() {
+fn drawbars(state: &State) {
     log::trace!("drawbars");
     unsafe {
         let mut m = MONS;
         while !m.is_null() {
-            drawbar(m);
+            drawbar(state, m);
             m = (*m).next;
         }
     }
@@ -597,33 +594,33 @@ fn grabbuttons(c: *mut Client, focused: bool) {
     }
 }
 
-fn arrange(mut m: *mut Monitor) {
+fn arrange(state: &State, mut m: *mut Monitor) {
     log::trace!("arrange");
     unsafe {
         if !m.is_null() {
-            showhide((*m).stack);
+            showhide(state, (*m).stack);
         } else {
             m = MONS;
             while !m.is_null() {
-                showhide((*m).stack);
+                showhide(state, (*m).stack);
                 m = (*m).next;
             }
         }
 
         if !m.is_null() {
-            arrangemon(m);
-            restack(m);
+            arrangemon(state, m);
+            restack(state, m);
         } else {
             m = MONS;
             while !m.is_null() {
-                arrangemon(m);
+                arrangemon(state, m);
                 m = (*m).next;
             }
         }
     }
 }
 
-fn arrangemon(m: *mut Monitor) {
+fn arrangemon(state: &State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
         libc::strncpy(
@@ -633,14 +630,14 @@ fn arrangemon(m: *mut Monitor) {
         );
         let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
         if let Some(arrange) = arrange {
-            (arrange)(m);
+            (arrange)(state, m);
         }
     }
 }
 
-fn restack(m: *mut Monitor) {
+fn restack(state: &State, m: *mut Monitor) {
     log::trace!("restack");
-    drawbar(m);
+    drawbar(state, m);
     unsafe {
         if (*m).sel.is_null() {
             return;
@@ -680,7 +677,7 @@ fn restack(m: *mut Monitor) {
     }
 }
 
-fn showhide(c: *mut Client) {
+fn showhide(state: &State, c: *mut Client) {
     log::trace!("showhide");
     unsafe {
         if c.is_null() {
@@ -695,18 +692,19 @@ fn showhide(c: *mut Client) {
                 || (*c).isfloating)
                 && !(*c).isfullscreen
             {
-                resize(c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
+                resize(state, c, (*c).x, (*c).y, (*c).w, (*c).h, 0);
             }
-            showhide((*c).snext);
+            showhide(state, (*c).snext);
         } else {
             // hide clients bottom up
-            showhide((*c).snext);
+            showhide(state, (*c).snext);
             xlib::XMoveWindow(DPY, (*c).win, width(c) * -2, (*c).y);
         }
     }
 }
 
 fn resize(
+    state: &State,
     c: *mut Client,
     mut x: i32,
     mut y: i32,
@@ -715,7 +713,7 @@ fn resize(
     interact: c_int,
 ) {
     log::trace!("resize");
-    if applysizehints(c, &mut x, &mut y, &mut w, &mut h, interact) != 0 {
+    if applysizehints(state, c, &mut x, &mut y, &mut w, &mut h, interact) != 0 {
         resizeclient(c, x, y, w, h);
     }
 }
@@ -751,7 +749,7 @@ fn resizeclient(c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
     }
 }
 
-fn resizebarwin(m: *mut Monitor) {
+fn resizebarwin(state: &State, m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
         if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
@@ -763,7 +761,7 @@ fn resizebarwin(m: *mut Monitor) {
             (*m).wx,
             (*m).by,
             w as u32,
-            BH as u32,
+            state.bh as u32,
         );
     }
 }
@@ -797,6 +795,7 @@ fn configure(c: *mut Client) {
 }
 
 fn applysizehints(
+    state: &State,
     c: *mut Client,
     x: &mut i32,
     y: &mut i32,
@@ -838,11 +837,11 @@ fn applysizehints(
                 *y = (*m).wy;
             }
         }
-        if *h < BH {
-            *h = BH;
+        if *h < state.bh {
+            *h = state.bh;
         }
-        if *w < BH {
-            *w = BH;
+        if *w < state.bh {
+            *w = state.bh;
         }
         if CONFIG.resize_hints
             || (*c).isfloating
@@ -974,13 +973,13 @@ fn updatesizehints(c: *mut Client) {
     }
 }
 
-fn pop(c: *mut Client) {
+fn pop(state: &State, c: *mut Client) {
     log::trace!("pop");
     detach(c);
     attach(c);
-    focus(c);
+    focus(state, c);
     unsafe {
-        arrange((*c).mon);
+        arrange(state, (*c).mon);
     }
 }
 
@@ -1107,7 +1106,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
     }
 }
 
-fn updatestatus() {
+fn updatestatus(state: &State) {
     log::trace!("updatestatus");
     unsafe {
         if gettextprop(
@@ -1123,34 +1122,34 @@ fn updatestatus() {
         {
             libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
         }
-        drawbar(SELMON);
-        updatesystray();
+        drawbar(state, SELMON);
+        updatesystray(state);
     }
 }
 
-fn updatesystrayicongeom(i: *mut Client, w: c_int, h: c_int) {
+fn updatesystrayicongeom(state: &State, i: *mut Client, w: c_int, h: c_int) {
     if i.is_null() {
         return;
     }
     unsafe {
         let i = &mut *i;
-        i.h = BH;
+        i.h = state.bh;
         if w == h {
-            i.w = BH;
-        } else if h == BH {
+            i.w = state.bh;
+        } else if h == state.bh {
             i.w = w;
         } else {
-            i.w = (BH as f32 * (w as f32 / h as f32)) as i32;
+            i.w = (state.bh as f32 * (w as f32 / h as f32)) as i32;
         }
-        applysizehints(i, &mut i.x, &mut i.y, &mut i.w, &mut i.h, False);
+        applysizehints(state, i, &mut i.x, &mut i.y, &mut i.w, &mut i.h, False);
         // force icons into the systray dimensions if they don't want to
-        if i.h > BH {
+        if i.h > state.bh {
             if i.w == i.h {
-                i.w = BH;
+                i.w = state.bh;
             } else {
-                i.w = (BH as f32 * (i.w as f32 / i.h as f32)) as i32;
+                i.w = (state.bh as f32 * (i.w as f32 / i.h as f32)) as i32;
             }
-            i.h = BH;
+            i.h = state.bh;
         }
     }
 }
@@ -1215,7 +1214,7 @@ const fn default_window_attributes() -> XSetWindowAttributes {
     }
 }
 
-fn updatesystray() {
+fn updatesystray(state: &State) {
     unsafe {
         let mut wa = default_window_attributes();
         let mut wc: XWindowChanges;
@@ -1241,7 +1240,7 @@ fn updatesystray() {
                 x,
                 (*m).by,
                 w,
-                BH as u32,
+                state.bh as u32,
                 0,
                 0,
                 get_scheme_color(
@@ -1322,12 +1321,12 @@ fn updatesystray() {
         });
         w = if w != 0 { w + CONFIG.systrayspacing } else { 1 };
         x -= w as i32;
-        XMoveResizeWindow(DPY, (*SYSTRAY).win, x, (*m).by, w, BH as u32);
+        XMoveResizeWindow(DPY, (*SYSTRAY).win, x, (*m).by, w, state.bh as u32);
         wc = XWindowChanges {
             x,
             y: (*m).by,
             width: w as i32,
-            height: BH,
+            height: state.bh,
             border_width: 0,
             sibling: (*m).barwin,
             stack_mode: Above,
@@ -1347,7 +1346,15 @@ fn updatesystray() {
             get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
                 .pixel,
         );
-        XFillRectangle(DPY, (*SYSTRAY).win, (*DRW).gc, 0, 0, w, BH as u32);
+        XFillRectangle(
+            DPY,
+            (*SYSTRAY).win,
+            (*DRW).gc,
+            0,
+            0,
+            w,
+            state.bh as u32,
+        );
         XSync(DPY, False);
     } // end unsafe
 }
@@ -1399,7 +1406,7 @@ fn textw(x: *const c_char) -> c_int {
     unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
 }
 
-fn drawbar(m: *mut Monitor) {
+fn drawbar(state: &State, m: *mut Monitor) {
     log::trace!("drawbar");
     unsafe {
         let mut tw = 0;
@@ -1426,14 +1433,14 @@ fn drawbar(m: *mut Monitor) {
                 (*m).ww - tw - stw as i32,
                 0,
                 tw as u32,
-                BH as u32,
+                state.bh as u32,
                 (LRPAD / 2 - 2) as u32,
                 addr_of!(STEXT) as *const _,
                 0,
             );
         }
 
-        resizebarwin(m);
+        resizebarwin(state, m);
 
         let mut c = (*m).clients;
         while !c.is_null() {
@@ -1463,7 +1470,7 @@ fn drawbar(m: *mut Monitor) {
                 x,
                 0,
                 w as u32,
-                BH as u32,
+                state.bh as u32,
                 LRPAD as u32 / 2,
                 text.as_ptr(),
                 (urg as i32) & 1 << i,
@@ -1493,14 +1500,14 @@ fn drawbar(m: *mut Monitor) {
             x,
             0,
             w as u32,
-            BH as u32,
+            state.bh as u32,
             LRPAD as u32 / 2,
             (*m).ltsymbol.as_ptr(),
             0,
         ) as i32;
 
         let w = (*m).ww - tw - stw as i32 - x;
-        if w > BH {
+        if w > state.bh {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     DRW,
@@ -1515,7 +1522,7 @@ fn drawbar(m: *mut Monitor) {
                     x,
                     0,
                     w as u32,
-                    BH as u32,
+                    state.bh as u32,
                     LRPAD as u32 / 2,
                     (*(*m).sel).name.as_ptr(),
                     0,
@@ -1533,10 +1540,17 @@ fn drawbar(m: *mut Monitor) {
                 }
             } else {
                 drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-                drw::rect(DRW, x, 0, w as u32, BH as u32, 1, 1);
+                drw::rect(DRW, x, 0, w as u32, state.bh as u32, 1, 1);
             }
         }
-        drw::map(DRW, (*m).barwin, 0, 0, (*m).ww as u32 - stw, BH as u32);
+        drw::map(
+            DRW,
+            (*m).barwin,
+            0,
+            0,
+            (*m).ww as u32 - stw,
+            state.bh as u32,
+        );
     }
 }
 
@@ -1622,7 +1636,7 @@ fn updatebars(state: &State) {
                 (*m).wx as c_int,
                 (*m).by as c_int,
                 w as c_uint,
-                BH as c_uint,
+                state.bh as c_uint,
                 0,
                 xlib::XDefaultDepth(DPY, SCREEN),
                 CopyFromParent as c_uint,
@@ -1641,7 +1655,7 @@ fn updatebars(state: &State) {
     }
 }
 
-fn updategeom() -> i32 {
+fn updategeom(state: &State) -> i32 {
     log::trace!("updategeom");
     unsafe {
         let mut dirty = 0;
@@ -1726,7 +1740,7 @@ fn updategeom() -> i32 {
                     (*m).mh = unique[i as usize].height as i32;
                     (*m).wh = unique[i as usize].height as i32;
 
-                    updatebarpos(m);
+                    updatebarpos(state, m);
                 }
                 m = (*m).next;
                 i += 1;
@@ -1770,7 +1784,7 @@ fn updategeom() -> i32 {
                 (*MONS).ww = SW;
                 (*MONS).mh = SH;
                 (*MONS).wh = SH;
-                updatebarpos(MONS);
+                updatebarpos(state, MONS);
             }
         }
         if dirty != 0 {
@@ -1965,18 +1979,18 @@ fn is_visible(c: *const Client) -> bool {
     }
 }
 
-fn updatebarpos(m: *mut Monitor) {
+fn updatebarpos(state: &State, m: *mut Monitor) {
     log::trace!("updatebarpos");
 
     unsafe {
         (*m).wy = (*m).my;
         (*m).wh = (*m).mh;
         if (*m).showbar {
-            (*m).wh -= BH;
+            (*m).wh -= state.bh;
             (*m).by = if (*m).topbar { (*m).wy } else { (*m).wy + (*m).wh };
-            (*m).wy = if (*m).topbar { (*m).wy + BH } else { (*m).wy };
+            (*m).wy = if (*m).topbar { (*m).wy + state.bh } else { (*m).wy };
         } else {
-            (*m).by = -BH;
+            (*m).by = -state.bh;
         }
     }
 }
@@ -2016,7 +2030,7 @@ fn cleanup(state: State) {
         let mut m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {
-                unmanage((*m).stack, 0);
+                unmanage(&state, (*m).stack, 0);
             }
             m = (*m).next;
         }
@@ -2058,7 +2072,7 @@ fn cleanup(state: State) {
     log::trace!("finished cleanup");
 }
 
-fn unmanage(c: *mut Client, destroyed: c_int) {
+fn unmanage(state: &State, c: *mut Client, destroyed: c_int) {
     log::trace!("unmanage");
     unsafe {
         let m = (*c).mon;
@@ -2073,7 +2087,7 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         };
 
         if !(*c).swallowing.is_null() {
-            unswallow(c);
+            unswallow(state, c);
             return;
         }
 
@@ -2081,8 +2095,8 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         if !s.is_null() {
             libc::free((*s).swallowing.cast());
             (*s).swallowing = null_mut();
-            arrange(m);
-            focus(null_mut());
+            arrange(state, m);
+            focus(state, null_mut());
             return;
         }
 
@@ -2108,8 +2122,8 @@ fn unmanage(c: *mut Client, destroyed: c_int) {
         libc::free(c.cast());
 
         if s.is_null() {
-            arrange(m);
-            focus(null_mut());
+            arrange(state, m);
+            focus(state, null_mut());
             updateclientlist();
         }
     }
@@ -2332,7 +2346,7 @@ fn run(state: &State) {
     }
 }
 
-fn scan() {
+fn scan(state: &State) {
     let mut num = 0;
     let mut d1 = 0;
     let mut d2 = 0;
@@ -2366,7 +2380,7 @@ fn scan() {
                 if (*wa.as_mut_ptr()).map_state == IsViewable
                     || getstate(*wins.offset(i as isize)) == ICONIC_STATE as i64
                 {
-                    manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(state, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             for i in 0..num {
@@ -2388,7 +2402,7 @@ fn scan() {
                         || getstate(*wins.offset(i as isize))
                             == ICONIC_STATE as i64)
                 {
-                    manage(*wins.offset(i as isize), wa.as_mut_ptr());
+                    manage(state, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
             }
             if !wins.is_null() {
@@ -2398,7 +2412,7 @@ fn scan() {
     }
 }
 
-fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
+fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
     log::trace!("manage");
     let mut trans = 0;
     unsafe {
@@ -2490,7 +2504,7 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
         log::trace!("pixel = {pixel:?}");
         xlib::XSetWindowBorder(DPY, w, pixel);
         configure(c); // propagates border width, if size doesn't change
-        updatewindowtype(c);
+        updatewindowtype(state, c);
         updatesizehints(c);
         updatewmhints(c);
         xlib::XSelectInput(
@@ -2535,12 +2549,12 @@ fn manage(w: Window, wa: *mut xlib::XWindowAttributes) {
             unfocus((*SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
-        arrange((*c).mon);
+        arrange(state, (*c).mon);
         xlib::XMapWindow(DPY, (*c).win);
         if !term.is_null() {
-            swallow(term, c);
+            swallow(state, term, c);
         }
-        focus(std::ptr::null_mut());
+        focus(state, std::ptr::null_mut());
     }
 }
 
@@ -2566,13 +2580,13 @@ fn updatewmhints(c: *mut Client) {
     }
 }
 
-fn updatewindowtype(c: *mut Client) {
+fn updatewindowtype(state: &State, c: *mut Client) {
     log::trace!("updatewindowtype");
     unsafe {
-        let state = getatomprop(c, NETATOM[Net::WMState as usize]);
+        let s = getatomprop(c, NETATOM[Net::WMState as usize]);
         let wtype = getatomprop(c, NETATOM[Net::WMWindowType as usize]);
-        if state == NETATOM[Net::WMFullscreen as usize] {
-            setfullscreen(c, true);
+        if s == NETATOM[Net::WMFullscreen as usize] {
+            setfullscreen(state, c, true);
         }
         if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
             (*c).isfloating = true;
@@ -2580,7 +2594,7 @@ fn updatewindowtype(c: *mut Client) {
     }
 }
 
-fn setfullscreen(c: *mut Client, fullscreen: bool) {
+fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
     unsafe {
         if fullscreen && !(*c).isfullscreen {
             xlib::XChangeProperty(
@@ -2628,7 +2642,7 @@ fn setfullscreen(c: *mut Client, fullscreen: bool) {
             (*c).w = (*c).oldw;
             (*c).h = (*c).oldh;
             resizeclient(c, (*c).x, (*c).y, (*c).w, (*c).h);
-            arrange((*c).mon);
+            arrange(state, (*c).mon);
         }
     }
 }
@@ -2750,7 +2764,7 @@ fn applyrules(c: *mut Client) {
     }
 }
 
-fn swallow(p: *mut Client, c: *mut Client) {
+fn swallow(state: &State, p: *mut Client, c: *mut Client) {
     unsafe {
         let c = &mut *c;
         if c.noswallow || c.isterminal {
@@ -2771,13 +2785,13 @@ fn swallow(p: *mut Client, c: *mut Client) {
         std::mem::swap(&mut p.win, &mut c.win);
         updatetitle(p);
         XMoveResizeWindow(DPY, p.win, p.x, p.y, p.w as u32, p.h as u32);
-        arrange(p.mon);
+        arrange(state, p.mon);
         configure(p);
         updateclientlist();
     }
 }
 
-fn unswallow(c: *mut Client) {
+fn unswallow(state: &State, c: *mut Client) {
     unsafe {
         let c = &mut *c;
 
@@ -2787,14 +2801,14 @@ fn unswallow(c: *mut Client) {
         c.swallowing = null_mut();
 
         // unfullscreen the client
-        setfullscreen(c, false);
+        setfullscreen(state, c, false);
         updatetitle(c);
-        arrange(c.mon);
+        arrange(state, c.mon);
         XMapWindow(DPY, c.win);
         XMoveResizeWindow(DPY, c.win, c.x, c.y, c.w as u32, c.h as u32);
         setclientstate(c, NORMAL_STATE);
-        focus(null_mut());
-        arrange(c.mon);
+        focus(state, null_mut());
+        arrange(state, c.mon);
     }
 }
 
@@ -2898,7 +2912,7 @@ fn main() {
     }
     checkotherwm();
     let state = setup();
-    scan();
+    scan(&state);
     run(&state);
     cleanup(state);
     unsafe {

@@ -38,8 +38,8 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    BH, DPY, DRW, MONS, NETATOM, NORMAL_STATE, ROOT, SCHEME, SELMON, SH, STEXT,
-    SW, SYSTRAY, WITHDRAWN_STATE,
+    DPY, DRW, MONS, NETATOM, NORMAL_STATE, ROOT, SCHEME, SELMON, SH, STEXT, SW,
+    SYSTRAY, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
@@ -52,7 +52,7 @@ pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
         if !m.is_null() && m != SELMON {
             crate::unfocus((*SELMON).sel, true);
             SELMON = m;
-            crate::focus(null_mut());
+            crate::focus(state, null_mut());
         }
         if ev.window == (*SELMON).barwin {
             let mut i = 0;
@@ -87,8 +87,8 @@ pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
         } else {
             let c = wintoclient(ev.window);
             if !c.is_null() {
-                crate::focus(c);
-                restack(SELMON);
+                crate::focus(state, c);
+                restack(state, SELMON);
                 xlib::XAllowEvents(DPY, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
@@ -111,7 +111,7 @@ pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn clientmessage(_state: &State, e: *mut XEvent) {
+pub(crate) fn clientmessage(state: &State, e: *mut XEvent) {
     unsafe {
         let cme = &(*e).client_message;
         let mut c = wintoclient(cme.window);
@@ -135,8 +135,8 @@ pub(crate) fn clientmessage(_state: &State, e: *mut XEvent) {
             let mut wa = MaybeUninit::uninit();
             if XGetWindowAttributes(DPY, (*c).win, wa.as_mut_ptr()) == 0 {
                 // use sane defaults
-                (*wa.as_mut_ptr()).width = BH;
-                (*wa.as_mut_ptr()).height = BH;
+                (*wa.as_mut_ptr()).width = state.bh;
+                (*wa.as_mut_ptr()).height = state.bh;
                 (*wa.as_mut_ptr()).border_width = 0;
             }
             let wa = wa.assume_init();
@@ -162,7 +162,7 @@ pub(crate) fn clientmessage(_state: &State, e: *mut XEvent) {
             // reuse tags field as mapped status
             c.tags = 1;
             updatesizehints(c);
-            updatesystrayicongeom(c, wa.width, wa.height);
+            updatesystrayicongeom(state, c, wa.width, wa.height);
             XAddToSaveSet(DPY, c.win);
             XSelectInput(
                 DPY,
@@ -242,8 +242,8 @@ pub(crate) fn clientmessage(_state: &State, e: *mut XEvent) {
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             XSync(DPY, False);
-            resizebarwin(SELMON);
-            updatesystray();
+            resizebarwin(state, SELMON);
+            updatesystray(state);
             setclientstate(c, NORMAL_STATE);
 
             return;
@@ -259,6 +259,7 @@ pub(crate) fn clientmessage(_state: &State, e: *mut XEvent) {
                     == NETATOM[Net::WMFullscreen as usize] as i64
             {
                 setfullscreen(
+                    state,
                     c,
                     cme.data.get_long(0) == 1 // _NET_WM_STATE_ADD
                         || (cme.data.get_long(0) == 2 // _NET_WM_STATE_TOGGLE
@@ -360,8 +361,8 @@ pub(crate) fn configurenotify(state: &State, e: *mut XEvent) {
             let dirty = SW != ev.width || SH != ev.height;
             SW = ev.width;
             SH = ev.height;
-            if updategeom() != 0 || dirty {
-                drw::resize(DRW, SW as c_uint, BH as c_uint);
+            if updategeom(state) != 0 || dirty {
+                drw::resize(DRW, SW as c_uint, state.bh as c_uint);
                 updatebars(state);
                 let mut m = MONS;
                 while !m.is_null() {
@@ -372,39 +373,39 @@ pub(crate) fn configurenotify(state: &State, e: *mut XEvent) {
                         }
                         c = (*c).next;
                     }
-                    resizebarwin(m);
+                    resizebarwin(state, m);
                     m = (*m).next;
                 }
-                focus(null_mut());
-                arrange(null_mut());
+                focus(state, null_mut());
+                arrange(state, null_mut());
             }
         }
     }
 }
 
-pub(crate) fn destroynotify(_state: &State, e: *mut XEvent) {
+pub(crate) fn destroynotify(state: &State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).destroy_window;
         let mut c = wintoclient(ev.window);
         if !c.is_null() {
-            unmanage(c, 1);
+            unmanage(state, c, 1);
         } else {
             c = swallowingclient(ev.window);
             if !c.is_null() {
-                unmanage((*c).swallowing, 1);
+                unmanage(state, (*c).swallowing, 1);
             } else {
                 c = wintosystrayicon(ev.window);
                 if !c.is_null() {
                     removesystrayicon(c);
-                    resizebarwin(SELMON);
-                    updatesystray();
+                    resizebarwin(state, SELMON);
+                    updatesystray(state);
                 }
             }
         }
     }
 }
 
-pub(crate) fn enternotify(_state: &State, e: *mut XEvent) {
+pub(crate) fn enternotify(state: &State, e: *mut XEvent) {
     log::trace!("enternotify");
     unsafe {
         let ev = &mut (*e).crossing;
@@ -421,7 +422,7 @@ pub(crate) fn enternotify(_state: &State, e: *mut XEvent) {
         } else if c.is_null() || c == (*SELMON).sel {
             return;
         }
-        focus(c)
+        focus(state, c)
     }
 }
 
@@ -431,9 +432,9 @@ pub(crate) fn expose(_state: &State, e: *mut XEvent) {
         if ev.count == 0 {
             let m = wintomon(ev.window);
             if !m.is_null() {
-                drawbar(m);
+                drawbar(_state, m);
                 if m == SELMON {
-                    updatesystray();
+                    updatesystray(_state);
                 }
             }
         }
@@ -520,8 +521,8 @@ pub(crate) fn maprequest(_state: &State, e: *mut XEvent) {
                 (*SYSTRAY).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
-            resizebarwin(SELMON);
-            updatesystray();
+            resizebarwin(_state, SELMON);
+            updatesystray(_state);
         }
         log::trace!("maprequest: XGetWindowAttributes");
         let res = xlib::XGetWindowAttributes(DPY, ev.window, addr_of_mut!(WA));
@@ -530,7 +531,7 @@ pub(crate) fn maprequest(_state: &State, e: *mut XEvent) {
             return;
         }
         if wintoclient(ev.window).is_null() {
-            manage(ev.window, addr_of_mut!(WA));
+            manage(_state, ev.window, addr_of_mut!(WA));
         }
     }
 }
@@ -547,7 +548,7 @@ pub(crate) fn motionnotify(_state: &State, e: *mut XEvent) {
         if m != MON && !MON.is_null() {
             unfocus((*SELMON).sel, true);
             SELMON = m;
-            focus(null_mut());
+            focus(_state, null_mut());
         }
         MON = m;
     }
@@ -563,16 +564,16 @@ pub(crate) fn propertynotify(_state: &State, e: *mut XEvent) {
         if !c.is_null() {
             if ev.atom == XA_WM_NORMAL_HINTS {
                 updatesizehints(c);
-                updatesystrayicongeom(c, (*c).w, (*c).h);
+                updatesystrayicongeom(_state, c, (*c).w, (*c).h);
             } else {
                 updatesystrayiconstate(c, ev);
             }
-            resizebarwin(SELMON);
-            updatesystray();
+            resizebarwin(_state, SELMON);
+            updatesystray(_state);
         }
 
         if ev.window == ROOT && ev.atom == XA_WM_NAME {
-            updatestatus();
+            updatestatus(_state);
         } else if ev.state == PropertyDelete {
             return; // ignore
         } else {
@@ -589,7 +590,7 @@ pub(crate) fn propertynotify(_state: &State, e: *mut XEvent) {
                     {
                         c.isfloating = !wintoclient(trans).is_null();
                         if c.isfloating {
-                            arrange(c.mon);
+                            arrange(_state, c.mon);
                         }
                     }
                 }
@@ -598,7 +599,7 @@ pub(crate) fn propertynotify(_state: &State, e: *mut XEvent) {
                 }
                 XA_WM_HINTS => {
                     updatewmhints(c);
-                    drawbars();
+                    drawbars(_state);
                 }
                 _ => {}
             }
@@ -606,11 +607,11 @@ pub(crate) fn propertynotify(_state: &State, e: *mut XEvent) {
             {
                 updatetitle(c);
                 if c as *mut _ == (*c.mon).sel {
-                    drawbar(c.mon);
+                    drawbar(_state, c.mon);
                 }
             }
             if ev.atom == NETATOM[Net::WMWindowType as usize] {
-                updatewindowtype(c);
+                updatewindowtype(_state, c);
             }
         }
     }
@@ -625,7 +626,7 @@ pub(crate) fn unmapnotify(_state: &State, e: *mut XEvent) {
             if ev.send_event != 0 {
                 setclientstate(c, WITHDRAWN_STATE);
             } else {
-                unmanage(c, 0);
+                unmanage(_state, c, 0);
             }
         } else {
             c = wintosystrayicon(ev.window);
@@ -634,7 +635,7 @@ pub(crate) fn unmapnotify(_state: &State, e: *mut XEvent) {
                 // their windows but do _not_ destroy them. we map those windows
                 // back
                 XMapRaised(DPY, (*c).win);
-                updatesystray();
+                updatesystray(_state);
             }
         }
     }
@@ -646,9 +647,9 @@ pub(crate) fn resizerequest(_state: &State, e: *mut XEvent) {
         let ev = &(*e).resize_request;
         let i = wintosystrayicon(ev.window);
         if !i.is_null() {
-            updatesystrayicongeom(i, ev.width, ev.height);
-            resizebarwin(SELMON);
-            updatesystray();
+            updatesystrayicongeom(_state, i, ev.width, ev.height);
+            resizebarwin(_state, SELMON);
+            updatesystray(_state);
         }
     }
 }

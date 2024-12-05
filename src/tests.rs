@@ -36,7 +36,7 @@ fn main() {
         }
         checkotherwm();
         let state = setup();
-        scan();
+        scan(&state);
 
         // instead of calling `run`, manually send some XEvents
 

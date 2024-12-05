@@ -3,9 +3,9 @@ use std::{cmp::min, ffi::c_uint};
 use libc::c_int;
 
 use crate::{height, is_visible, nexttiled, resize};
-use rwm::Monitor;
+use rwm::{Monitor, State};
 
-pub(crate) fn monocle(m: *mut Monitor) {
+pub(crate) fn monocle(state: &State, m: *mut Monitor) {
     unsafe {
         let mut n = 0;
         let mut c;
@@ -24,12 +24,12 @@ pub(crate) fn monocle(m: *mut Monitor) {
             );
         }
         cfor!((c = nexttiled((*m).clients); !c.is_null(); c = nexttiled((*c).next)) {
-            resize(c, (*m).wx, (*m).wy, (*m).ww - 2 * (*c).bw, (*m).wh - 2 * (*c).bw, 0);
+            resize(state, c, (*m).wx, (*m).wy, (*m).ww - 2 * (*c).bw, (*m).wh - 2 * (*c).bw, 0);
         });
     }
 }
 
-pub(crate) fn tile(m: *mut Monitor) {
+pub(crate) fn tile(state: &State, m: *mut Monitor) {
     log::trace!("tile");
     unsafe {
         let mut i;
@@ -67,6 +67,7 @@ pub(crate) fn tile(m: *mut Monitor) {
             if i < (*m).nmaster {
                 h = ((*m).wh - my) / (min(n, (*m).nmaster) - i);
                 resize(
+                    state,
                     c,
                     (*m).wx,
                     (*m).wy + my,
@@ -81,6 +82,7 @@ pub(crate) fn tile(m: *mut Monitor) {
             } else {
                 h = ((*m).wh - ty) / (n - i);
                 resize(
+                    state,
                     c,
                     (*m).wx + mw as c_int,
                     (*m).wy + ty,

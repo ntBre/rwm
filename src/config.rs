@@ -24,7 +24,7 @@ use crate::{
     key_handlers::*,
     layouts::{monocle, tile},
 };
-use rwm::{Arg, Button, Layout, Monitor, Rule};
+use rwm::{Arg, Button, Layout, Monitor, Rule, State};
 
 mod fig_env;
 pub mod key;
@@ -284,7 +284,7 @@ fn get_layouts(
         // LEAK but okay since this should hang around for the whole program
         let symbol = symbol.into_raw();
 
-        type F = fn(*mut Monitor);
+        type F = fn(&State, *mut Monitor);
         let arrange = match &layout[1] {
             Value::Str(s) if s == "tile" => Some(tile as F),
             Value::Str(s) if s == "monocle" => Some(monocle as F),
