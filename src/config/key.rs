@@ -9,7 +9,7 @@ use x11::xlib::KeySym;
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
-    pub func: Option<fn(&State, *const Arg)>,
+    pub func: Option<fn(&mut State, *const Arg)>,
     pub arg: Arg,
 }
 
@@ -17,7 +17,7 @@ impl Key {
     pub const fn new(
         mod_: c_uint,
         keysym: u32,
-        func: fn(&State, *const Arg),
+        func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
         Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
@@ -34,10 +34,10 @@ pub(crate) fn conv<T: Clone>(opt: Option<&T>) -> Result<T, FigError> {
     }
 }
 
-type FnMap = HashMap<&'static str, fn(&State, *const Arg)>;
+type FnMap = HashMap<&'static str, fn(&mut State, *const Arg)>;
 pub(super) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
     use crate::key_handlers::*;
-    type FN = fn(&State, *const Arg);
+    type FN = fn(&mut State, *const Arg);
     HashMap::from([
         ("focusmon", focusmon as FN),
         ("focusstack", focusstack as FN),

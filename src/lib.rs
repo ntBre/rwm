@@ -54,7 +54,7 @@ pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<fn(&State, *const Arg)>,
+    pub func: Option<fn(&mut State, *const Arg)>,
     pub arg: Arg,
 }
 
@@ -63,7 +63,7 @@ impl Button {
         click: Clk,
         mask: c_uint,
         button: c_uint,
-        func: fn(&State, *const Arg),
+        func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
         Self { click: click as c_uint, mask, button, func: Some(func), arg }
@@ -99,7 +99,7 @@ pub struct Systray {
 #[derive(Debug, Copy, Clone)]
 pub struct Layout {
     pub symbol: *const c_char,
-    pub arrange: Option<fn(&State, *mut Monitor)>,
+    pub arrange: Option<fn(&mut State, *mut Monitor)>,
 }
 
 pub struct Pertag {
@@ -200,6 +200,8 @@ pub struct Cursors {
 pub struct State {
     /// Bar height
     pub bh: c_int,
+    /// X display screen geometry width
+    pub sw: c_int,
     pub wmatom: [Atom; WM::Last as usize],
     pub netatom: [Atom; Net::Last as usize],
     pub xatom: [Atom; XEmbed::Last as usize],

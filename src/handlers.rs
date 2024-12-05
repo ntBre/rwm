@@ -38,11 +38,11 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    DRW, MONS, NORMAL_STATE, ROOT, SCHEME, SELMON, SH, STEXT, SW, SYSTRAY,
+    DRW, MONS, NORMAL_STATE, ROOT, SCHEME, SELMON, SH, STEXT, SYSTRAY,
     WITHDRAWN_STATE,
 };
 
-pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
+pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
     unsafe {
         let mut arg = Arg::I(0);
         let ev = &(*e).button;
@@ -111,7 +111,7 @@ pub(crate) fn buttonpress(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn clientmessage(state: &State, e: *mut XEvent) {
+pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
     unsafe {
         let cme = &(*e).client_message;
         let mut c = wintoclient(cme.window);
@@ -279,7 +279,7 @@ pub(crate) fn clientmessage(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn configurerequest(state: &State, e: *mut XEvent) {
+pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).configure_request;
         let c = wintoclient(ev.window);
@@ -357,16 +357,16 @@ pub(crate) fn configurerequest(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn configurenotify(state: &State, e: *mut XEvent) {
+pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).configure;
         /* TODO: updategeom handling sucks, needs to be simplified */
         if ev.window == ROOT {
-            let dirty = SW != ev.width || SH != ev.height;
-            SW = ev.width;
+            let dirty = state.sw != ev.width || SH != ev.height;
+            state.sw = ev.width;
             SH = ev.height;
             if updategeom(state) != 0 || dirty {
-                drw::resize(DRW, SW as c_uint, state.bh as c_uint);
+                drw::resize(DRW, state.sw as c_uint, state.bh as c_uint);
                 updatebars(state);
                 let mut m = MONS;
                 while !m.is_null() {
@@ -394,7 +394,7 @@ pub(crate) fn configurenotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn destroynotify(state: &State, e: *mut XEvent) {
+pub(crate) fn destroynotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).destroy_window;
         let mut c = wintoclient(ev.window);
@@ -416,7 +416,7 @@ pub(crate) fn destroynotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn enternotify(state: &State, e: *mut XEvent) {
+pub(crate) fn enternotify(state: &mut State, e: *mut XEvent) {
     log::trace!("enternotify");
     unsafe {
         let ev = &mut (*e).crossing;
@@ -438,7 +438,7 @@ pub(crate) fn enternotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn expose(state: &State, e: *mut XEvent) {
+pub(crate) fn expose(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).expose;
         if ev.count == 0 {
@@ -454,7 +454,7 @@ pub(crate) fn expose(state: &State, e: *mut XEvent) {
 }
 
 /* there are some broken focus acquiring clients needing extra handling */
-pub(crate) fn focusin(state: &State, e: *mut XEvent) {
+pub(crate) fn focusin(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).focus_change;
         if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
@@ -463,7 +463,7 @@ pub(crate) fn focusin(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn keypress(state: &State, e: *mut XEvent) {
+pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
         let keysym =
@@ -479,7 +479,7 @@ pub(crate) fn keypress(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn mappingnotify(state: &State, e: *mut XEvent) {
+pub(crate) fn mappingnotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).mapping;
         xlib::XRefreshKeyboardMapping(ev);
@@ -489,7 +489,7 @@ pub(crate) fn mappingnotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn maprequest(state: &State, e: *mut XEvent) {
+pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
     static mut WA: XWindowAttributes = XWindowAttributes {
         x: 0,
         y: 0,
@@ -551,7 +551,7 @@ pub(crate) fn maprequest(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn motionnotify(state: &State, e: *mut XEvent) {
+pub(crate) fn motionnotify(state: &mut State, e: *mut XEvent) {
     log::trace!("motionnotify");
     static mut MON: *mut Monitor = null_mut();
     unsafe {
@@ -569,7 +569,7 @@ pub(crate) fn motionnotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn propertynotify(state: &State, e: *mut XEvent) {
+pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
     log::trace!("propertynotify");
     unsafe {
         let mut trans: Window = 0;
@@ -634,7 +634,7 @@ pub(crate) fn propertynotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn unmapnotify(state: &State, e: *mut XEvent) {
+pub(crate) fn unmapnotify(state: &mut State, e: *mut XEvent) {
     log::trace!("unmapnotify");
     unsafe {
         let ev = &(*e).unmap;
@@ -658,7 +658,7 @@ pub(crate) fn unmapnotify(state: &State, e: *mut XEvent) {
     }
 }
 
-pub(crate) fn resizerequest(state: &State, e: *mut XEvent) {
+pub(crate) fn resizerequest(state: &mut State, e: *mut XEvent) {
     log::trace!("resizerequest");
     unsafe {
         let ev = &(*e).resize_request;

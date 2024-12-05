@@ -152,9 +152,6 @@ const BROKEN: &CStr = c"broken";
 
 static mut STEXT: [c_char; 256] = ['\0' as c_char; 256];
 
-/// X display screen geometry width
-static mut SW: c_int = 0;
-
 /// X display screen geometry height
 static mut SH: c_int = 0;
 
@@ -262,10 +259,10 @@ fn setup(dpy: *mut Display) -> State {
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
         SCREEN = xlib::XDefaultScreen(dpy);
-        SW = xlib::XDisplayWidth(dpy, SCREEN);
         SH = xlib::XDisplayHeight(dpy, SCREEN);
         ROOT = xlib::XRootWindow(dpy, SCREEN);
-        DRW = drw::create(dpy, SCREEN, ROOT, SW as u32, SH as u32);
+        let sw = xlib::XDisplayWidth(dpy, SCREEN);
+        DRW = drw::create(dpy, SCREEN, ROOT, sw as u32, SH as u32);
         if drw::fontset_create(DRW, &CONFIG.fonts).is_null() {
             panic!("no fonts could be loaded");
         }
@@ -279,6 +276,7 @@ fn setup(dpy: *mut Display) -> State {
         };
         let mut state = State {
             bh: (*(*DRW).fonts).h as i32 + 2,
+            sw,
             cursors,
             wmatom: Default::default(),
             netatom: Default::default(),
@@ -286,7 +284,7 @@ fn setup(dpy: *mut Display) -> State {
             dpy,
         };
 
-        updategeom(&state);
+        updategeom(&mut state);
 
         /* init atoms */
         let utf8string = XInternAtom(state.dpy, c"UTF8_STRING".as_ptr(), False);
@@ -352,11 +350,11 @@ fn setup(dpy: *mut Display) -> State {
         }
 
         // init system tray
-        updatesystray(&state);
+        updatesystray(&mut state);
 
         /* init bars */
-        updatebars(&state);
-        updatestatus(&state);
+        updatebars(&mut state);
+        updatestatus(&mut state);
 
         /* supporting window for NetWMCheck */
         WMCHECKWIN =
@@ -425,14 +423,14 @@ fn setup(dpy: *mut Display) -> State {
             &mut wa,
         );
         xlib::XSelectInput(state.dpy, ROOT, wa.event_mask);
-        grabkeys(&state);
-        focus(&state, null_mut());
+        grabkeys(&mut state);
+        focus(&mut state, null_mut());
 
         state
     }
 }
 
-fn focus(state: &State, mut c: *mut Client) {
+fn focus(state: &mut State, mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     unsafe {
         if c.is_null() || !is_visible(c) {
@@ -477,7 +475,7 @@ fn focus(state: &State, mut c: *mut Client) {
     }
 }
 
-fn drawbars(state: &State) {
+fn drawbars(state: &mut State) {
     log::trace!("drawbars");
     unsafe {
         let mut m = MONS;
@@ -488,7 +486,7 @@ fn drawbars(state: &State) {
     }
 }
 
-fn setfocus(state: &State, c: *mut Client) {
+fn setfocus(state: &mut State, c: *mut Client) {
     log::trace!("setfocus");
     unsafe {
         if (*c).neverfocus == 0 {
@@ -525,7 +523,7 @@ fn setfocus(state: &State, c: *mut Client) {
 
 #[allow(clippy::too_many_arguments)]
 fn sendevent(
-    state: &State,
+    state: &mut State,
     w: Window,
     proto: Atom,
     mask: c_int,
@@ -573,7 +571,7 @@ fn sendevent(
     }
 }
 
-fn grabbuttons(state: &State, c: *mut Client, focused: bool) {
+fn grabbuttons(state: &mut State, c: *mut Client, focused: bool) {
     log::trace!("grabbuttons");
     unsafe {
         updatenumlockmask(state);
@@ -614,7 +612,7 @@ fn grabbuttons(state: &State, c: *mut Client, focused: bool) {
     }
 }
 
-fn arrange(state: &State, mut m: *mut Monitor) {
+fn arrange(state: &mut State, mut m: *mut Monitor) {
     log::trace!("arrange");
     unsafe {
         if !m.is_null() {
@@ -640,7 +638,7 @@ fn arrange(state: &State, mut m: *mut Monitor) {
     }
 }
 
-fn arrangemon(state: &State, m: *mut Monitor) {
+fn arrangemon(state: &mut State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
         libc::strncpy(
@@ -655,7 +653,7 @@ fn arrangemon(state: &State, m: *mut Monitor) {
     }
 }
 
-fn restack(state: &State, m: *mut Monitor) {
+fn restack(state: &mut State, m: *mut Monitor) {
     log::trace!("restack");
     drawbar(state, m);
     unsafe {
@@ -697,7 +695,7 @@ fn restack(state: &State, m: *mut Monitor) {
     }
 }
 
-fn showhide(state: &State, c: *mut Client) {
+fn showhide(state: &mut State, c: *mut Client) {
     log::trace!("showhide");
     unsafe {
         if c.is_null() {
@@ -724,7 +722,7 @@ fn showhide(state: &State, c: *mut Client) {
 }
 
 fn resize(
-    state: &State,
+    state: &mut State,
     c: *mut Client,
     mut x: i32,
     mut y: i32,
@@ -738,7 +736,14 @@ fn resize(
     }
 }
 
-fn resizeclient(state: &State, c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
+fn resizeclient(
+    state: &mut State,
+    c: *mut Client,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+) {
     log::trace!("resizeclient");
     unsafe {
         (*c).oldx = (*c).x;
@@ -769,7 +774,7 @@ fn resizeclient(state: &State, c: *mut Client, x: i32, y: i32, w: i32, h: i32) {
     }
 }
 
-fn resizebarwin(state: &State, m: *mut Monitor) {
+fn resizebarwin(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
         if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
@@ -786,7 +791,7 @@ fn resizebarwin(state: &State, m: *mut Monitor) {
     }
 }
 
-fn configure(state: &State, c: *mut Client) {
+fn configure(state: &mut State, c: *mut Client) {
     log::trace!("configure");
     unsafe {
         let mut ce = xlib::XConfigureEvent {
@@ -815,7 +820,7 @@ fn configure(state: &State, c: *mut Client) {
 }
 
 fn applysizehints(
-    state: &State,
+    state: &mut State,
     c: *mut Client,
     x: &mut i32,
     y: &mut i32,
@@ -831,8 +836,8 @@ fn applysizehints(
         *w = 1.max(*w);
         *h = 1.max(*h);
         if interact {
-            if *x > SW {
-                *x = SW - width(c);
+            if *x > state.sw {
+                *x = state.sw - width(c);
             }
             if *y > SH {
                 *y = SH - height(c);
@@ -913,7 +918,7 @@ fn applysizehints(
     }
 }
 
-fn updatesizehints(state: &State, c: *mut Client) {
+fn updatesizehints(state: &mut State, c: *mut Client) {
     log::trace!("updatesizehints");
     let mut msize: i64 = 0;
     let mut size = xlib::XSizeHints {
@@ -995,7 +1000,7 @@ fn updatesizehints(state: &State, c: *mut Client) {
     }
 }
 
-fn pop(state: &State, c: *mut Client) {
+fn pop(state: &mut State, c: *mut Client) {
     log::trace!("pop");
     detach(c);
     attach(c);
@@ -1026,7 +1031,7 @@ fn nexttiled(mut c: *mut Client) -> *mut Client {
     }
 }
 
-fn grabkeys(state: &State) {
+fn grabkeys(state: &mut State) {
     log::trace!("grabkeys");
     unsafe {
         updatenumlockmask(state);
@@ -1067,7 +1072,7 @@ fn grabkeys(state: &State) {
     }
 }
 
-fn updatenumlockmask(state: &State) {
+fn updatenumlockmask(state: &mut State) {
     log::trace!("updatenumlockmask");
     unsafe {
         NUMLOCKMASK = 0;
@@ -1087,7 +1092,7 @@ fn updatenumlockmask(state: &State) {
     }
 }
 
-fn seturgent(state: &State, c: *mut Client, urg: bool) {
+fn seturgent(state: &mut State, c: *mut Client, urg: bool) {
     log::trace!("seturgent");
     unsafe {
         (*c).isurgent = urg as c_int;
@@ -1105,7 +1110,7 @@ fn seturgent(state: &State, c: *mut Client, urg: bool) {
     }
 }
 
-fn unfocus(state: &State, c: *mut Client, setfocus: bool) {
+fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
     log::trace!("unfocus");
     if c.is_null() {
         return;
@@ -1133,7 +1138,7 @@ fn unfocus(state: &State, c: *mut Client, setfocus: bool) {
     }
 }
 
-fn updatestatus(state: &State) {
+fn updatestatus(state: &mut State) {
     log::trace!("updatestatus");
     unsafe {
         if gettextprop(
@@ -1155,7 +1160,12 @@ fn updatestatus(state: &State) {
     }
 }
 
-fn updatesystrayicongeom(state: &State, i: *mut Client, w: c_int, h: c_int) {
+fn updatesystrayicongeom(
+    state: &mut State,
+    i: *mut Client,
+    w: c_int,
+    h: c_int,
+) {
     if i.is_null() {
         return;
     }
@@ -1183,7 +1193,7 @@ fn updatesystrayicongeom(state: &State, i: *mut Client, w: c_int, h: c_int) {
 }
 
 fn updatesystrayiconstate(
-    state: &State,
+    state: &mut State,
     i: *mut Client,
     ev: *mut XPropertyEvent,
 ) {
@@ -1248,7 +1258,7 @@ const fn default_window_attributes() -> XSetWindowAttributes {
     }
 }
 
-fn updatesystray(state: &State) {
+fn updatesystray(state: &mut State) {
     unsafe {
         let mut wa = default_window_attributes();
         let mut wc: XWindowChanges;
@@ -1450,7 +1460,7 @@ fn textw(x: *const c_char) -> c_int {
     unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
 }
 
-fn drawbar(state: &State, m: *mut Monitor) {
+fn drawbar(state: &mut State, m: *mut Monitor) {
     log::trace!("drawbar");
     unsafe {
         let mut tw = 0;
@@ -1599,7 +1609,7 @@ fn drawbar(state: &State, m: *mut Monitor) {
 }
 
 fn gettextprop(
-    state: &State,
+    state: &mut State,
     w: Window,
     atom: Atom,
     text: *mut i8,
@@ -1645,7 +1655,7 @@ fn gettextprop(
     1
 }
 
-fn updatebars(state: &State) {
+fn updatebars(state: &mut State) {
     log::trace!("updatebars");
     let mut wa = xlib::XSetWindowAttributes {
         override_redirect: True,
@@ -1709,7 +1719,7 @@ fn updatebars(state: &State) {
     }
 }
 
-fn updategeom(state: &State) -> i32 {
+fn updategeom(state: &mut State) -> i32 {
     log::trace!("updategeom");
     unsafe {
         let mut dirty = 0;
@@ -1834,10 +1844,10 @@ fn updategeom(state: &State) -> i32 {
             if MONS.is_null() {
                 MONS = createmon();
             }
-            if (*MONS).mw != SW || (*MONS).mh != SH {
+            if (*MONS).mw != state.sw || (*MONS).mh != SH {
                 dirty = 1;
-                (*MONS).mw = SW;
-                (*MONS).ww = SW;
+                (*MONS).mw = state.sw;
+                (*MONS).ww = state.sw;
                 (*MONS).mh = SH;
                 (*MONS).wh = SH;
                 updatebarpos(state, MONS);
@@ -1851,7 +1861,7 @@ fn updategeom(state: &State) -> i32 {
     }
 }
 
-fn wintomon(state: &State, w: Window) -> *mut Monitor {
+fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
     log::trace!("wintomon");
     unsafe {
         let mut x = 0;
@@ -1962,7 +1972,7 @@ fn cleanmask(mask: u32) -> u32 {
     }
 }
 
-fn getrootptr(state: &State, x: *mut c_int, y: *mut c_int) -> c_int {
+fn getrootptr(state: &mut State, x: *mut c_int, y: *mut c_int) -> c_int {
     unsafe {
         let mut di = 0;
         let mut dui = 0;
@@ -1975,7 +1985,7 @@ fn getrootptr(state: &State, x: *mut c_int, y: *mut c_int) -> c_int {
 }
 
 /// remove `mon` from the linked list of `Monitor`s in `MONS` and free it.
-fn cleanupmon(state: &State, mon: *mut Monitor) {
+fn cleanupmon(state: &mut State, mon: *mut Monitor) {
     unsafe {
         if mon == MONS {
             MONS = (*MONS).next;
@@ -2036,7 +2046,7 @@ fn is_visible(c: *const Client) -> bool {
     }
 }
 
-fn updatebarpos(state: &State, m: *mut Monitor) {
+fn updatebarpos(state: &mut State, m: *mut Monitor) {
     log::trace!("updatebarpos");
 
     unsafe {
@@ -2075,7 +2085,7 @@ fn isuniquegeom(
     }
 }
 
-fn cleanup(state: &State) {
+fn cleanup(state: &mut State) {
     log::trace!("entering cleanup");
 
     unsafe {
@@ -2129,7 +2139,7 @@ fn cleanup(state: &State) {
     log::trace!("finished cleanup");
 }
 
-fn unmanage(state: &State, c: *mut Client, destroyed: c_int) {
+fn unmanage(state: &mut State, c: *mut Client, destroyed: c_int) {
     log::trace!("unmanage");
     unsafe {
         let m = (*c).mon;
@@ -2328,7 +2338,7 @@ fn swallowingclient(w: Window) -> *mut Client {
     }
 }
 
-fn updateclientlist(state: &State) {
+fn updateclientlist(state: &mut State) {
     unsafe {
         xlib::XDeleteProperty(
             state.dpy,
@@ -2356,7 +2366,7 @@ fn updateclientlist(state: &State) {
     }
 }
 
-fn setclientstate(s: &State, c: *mut Client, state: usize) {
+fn setclientstate(s: &mut State, c: *mut Client, state: usize) {
     let mut data: [c_long; 2] = [state as c_long, XNONE as c_long];
     let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
@@ -2373,12 +2383,12 @@ fn setclientstate(s: &State, c: *mut Client, state: usize) {
     }
 }
 
-type HandlerFn = fn(&State, *mut xlib::XEvent);
+type HandlerFn = fn(&mut State, *mut xlib::XEvent);
 
 static HANDLER: LazyLock<[HandlerFn; x11::xlib::LASTEvent as usize]> =
     LazyLock::new(|| {
-        fn dh(_state: &State, _ev: *mut xlib::XEvent) {}
-        let mut ret = [dh as fn(state: &State, *mut xlib::XEvent);
+        fn dh(_state: &mut State, _ev: *mut xlib::XEvent) {}
+        let mut ret = [dh as fn(state: &mut State, *mut xlib::XEvent);
             x11::xlib::LASTEvent as usize];
         ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
         ret[x11::xlib::ClientMessage as usize] = handlers::clientmessage;
@@ -2399,7 +2409,7 @@ static HANDLER: LazyLock<[HandlerFn; x11::xlib::LASTEvent as usize]> =
     });
 
 /// main event loop
-fn run(state: &State) {
+fn run(state: &mut State) {
     unsafe {
         xlib::XSync(state.dpy, False);
         let mut ev: MaybeUninit<xlib::XEvent> = MaybeUninit::uninit();
@@ -2412,7 +2422,7 @@ fn run(state: &State) {
     }
 }
 
-fn scan(state: &State) {
+fn scan(state: &mut State) {
     let mut num = 0;
     let mut d1 = 0;
     let mut d2 = 0;
@@ -2479,7 +2489,7 @@ fn scan(state: &State) {
     }
 }
 
-fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
+fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
     log::trace!("manage");
     let mut trans = 0;
     unsafe {
@@ -2606,7 +2616,7 @@ fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
         xlib::XMoveResizeWindow(
             state.dpy,
             (*c).win,
-            (*c).x + 2 * SW,
+            (*c).x + 2 * state.sw,
             (*c).y,
             (*c).w as u32,
             (*c).h as u32,
@@ -2625,7 +2635,7 @@ fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
     }
 }
 
-fn updatewmhints(state: &State, c: *mut Client) {
+fn updatewmhints(state: &mut State, c: *mut Client) {
     log::trace!("updatewmhints");
     const URGENT: i64 = xlib::XUrgencyHint;
     unsafe {
@@ -2647,7 +2657,7 @@ fn updatewmhints(state: &State, c: *mut Client) {
     }
 }
 
-fn updatewindowtype(state: &State, c: *mut Client) {
+fn updatewindowtype(state: &mut State, c: *mut Client) {
     log::trace!("updatewindowtype");
     unsafe {
         let s = getatomprop(state, c, state.netatom[Net::WMState as usize]);
@@ -2662,7 +2672,7 @@ fn updatewindowtype(state: &State, c: *mut Client) {
     }
 }
 
-fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
+fn setfullscreen(state: &mut State, c: *mut Client, fullscreen: bool) {
     unsafe {
         if fullscreen && !(*c).isfullscreen {
             xlib::XChangeProperty(
@@ -2716,7 +2726,7 @@ fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
     }
 }
 
-fn getatomprop(state: &State, c: *mut Client, prop: Atom) -> Atom {
+fn getatomprop(state: &mut State, c: *mut Client, prop: Atom) -> Atom {
     let mut di = 0;
     let mut dl = 0;
     let mut p = std::ptr::null_mut();
@@ -2776,7 +2786,7 @@ fn getsystraywidth() -> c_uint {
     }
 }
 
-fn applyrules(state: &State, c: *mut Client) {
+fn applyrules(state: &mut State, c: *mut Client) {
     log::trace!("applyrules");
     unsafe {
         let mut ch = xlib::XClassHint {
@@ -2833,7 +2843,7 @@ fn applyrules(state: &State, c: *mut Client) {
     }
 }
 
-fn swallow(state: &State, p: *mut Client, c: *mut Client) {
+fn swallow(state: &mut State, p: *mut Client, c: *mut Client) {
     unsafe {
         let c = &mut *c;
         if c.noswallow || c.isterminal {
@@ -2860,7 +2870,7 @@ fn swallow(state: &State, p: *mut Client, c: *mut Client) {
     }
 }
 
-fn unswallow(state: &State, c: *mut Client) {
+fn unswallow(state: &mut State, c: *mut Client) {
     unsafe {
         let c = &mut *c;
 
@@ -2888,7 +2898,7 @@ const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 static SCRATCHTAG: LazyLock<u32> = LazyLock::new(|| 1 << CONFIG.tags.len());
 
-fn updatetitle(state: &State, c: *mut Client) {
+fn updatetitle(state: &mut State, c: *mut Client) {
     log::trace!("updatetitle");
     unsafe {
         if gettextprop(
@@ -2917,7 +2927,7 @@ fn updatetitle(state: &State, c: *mut Client) {
     }
 }
 
-fn getstate(state: &State, w: Window) -> c_long {
+fn getstate(state: &mut State, w: Window) -> c_long {
     let mut format = 0;
     let mut result: c_long = -1;
     let mut p: *mut c_uchar = std::ptr::null_mut();
@@ -2981,10 +2991,10 @@ fn main() {
     }
 
     checkotherwm(dpy);
-    let state = setup(dpy);
-    scan(&state);
-    run(&state);
-    cleanup(&state);
+    let mut state = setup(dpy);
+    scan(&mut state);
+    run(&mut state);
+    cleanup(&mut state);
     unsafe {
         let State { dpy, cursors, .. } = state;
 

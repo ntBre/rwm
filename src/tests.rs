@@ -34,36 +34,34 @@ fn main() {
             XCON = Box::into_raw(Box::new(xcon));
         }
         checkotherwm(dpy);
-        let state = setup(dpy);
-        scan(&state);
+        let mut state = setup(dpy);
+        scan(&mut state);
 
         // instead of calling `run`, manually send some XEvents
 
         // test that a mouse click on the initial (tiling) layout icon
         // switches to floating mode
-        handlers::buttonpress(
-            &state,
-            &mut Event::button(
-                (unsafe { *SELMON }).barwin,
-                Button1,
-                CONFIG
-                    .tags
-                    .iter()
-                    .map(|tag| textw(tag.as_ptr()))
-                    .sum::<i32>()
-                    + 5,
-                state.dpy,
-                0,
-            )
-            .into_button(),
-        );
+        let mut button = Event::button(
+            (unsafe { *SELMON }).barwin,
+            Button1,
+            CONFIG
+                .tags
+                .iter()
+                .map(|tag| textw(tag.as_ptr()))
+                .sum::<i32>()
+                + 5,
+            state.dpy,
+            0,
+        )
+        .into_button();
+        handlers::buttonpress(&mut state, &mut button);
         unsafe {
             assert!((*(*SELMON).lt[(*SELMON).sellt as usize])
                 .arrange
                 .is_none());
         }
 
-        cleanup(&state);
+        cleanup(&mut state);
 
         unsafe {
             let State { dpy, cursors, .. } = state;

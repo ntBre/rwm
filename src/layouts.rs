@@ -5,7 +5,7 @@ use libc::c_int;
 use crate::{height, is_visible, nexttiled, resize};
 use rwm::{Monitor, State};
 
-pub(crate) fn monocle(state: &State, m: *mut Monitor) {
+pub(crate) fn monocle(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut n = 0;
         let mut c;
@@ -29,7 +29,7 @@ pub(crate) fn monocle(state: &State, m: *mut Monitor) {
     }
 }
 
-pub(crate) fn tile(state: &State, m: *mut Monitor) {
+pub(crate) fn tile(state: &mut State, m: *mut Monitor) {
     log::trace!("tile");
     unsafe {
         let mut i;

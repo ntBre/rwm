@@ -284,7 +284,7 @@ fn get_layouts(
         // LEAK but okay since this should hang around for the whole program
         let symbol = symbol.into_raw();
 
-        type F = fn(&State, *mut Monitor);
+        type F = fn(&mut State, *mut Monitor);
         let arrange = match &layout[1] {
             Value::Str(s) if s == "tile" => Some(tile as F),
             Value::Str(s) if s == "monocle" => Some(monocle as F),
