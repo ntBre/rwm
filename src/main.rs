@@ -2085,19 +2085,19 @@ fn isuniquegeom(
     }
 }
 
-fn cleanup(state: &mut State) {
+fn cleanup(mut state: State) {
     log::trace!("entering cleanup");
 
     unsafe {
         let a = Arg::Ui(!0);
-        view(state, &a);
+        view(&mut state, &a);
         (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
         let mut m = MONS;
         while !m.is_null() {
             while !(*m).stack.is_null() {
-                unmanage(state, (*m).stack, 0);
+                unmanage(&mut state, (*m).stack, 0);
             }
             m = (*m).next;
         }
@@ -2105,7 +2105,7 @@ fn cleanup(state: &mut State) {
         xlib::XUngrabKey(state.dpy, AnyKey, AnyModifier, ROOT);
 
         while !MONS.is_null() {
-            cleanupmon(state, MONS);
+            cleanupmon(&mut state, MONS);
         }
 
         if CONFIG.showsystray {
@@ -2134,6 +2134,17 @@ fn cleanup(state: &mut State) {
             ROOT,
             state.netatom[Net::ActiveWindow as usize],
         );
+
+        let State { dpy, cursors, .. } = state;
+
+        // this needs to be dropped before DRW
+        drop(cursors);
+
+        drw::free(DRW);
+        xlib::XCloseDisplay(dpy);
+
+        #[cfg(target_os = "linux")]
+        drop(Box::from_raw(XCON));
     }
 
     log::trace!("finished cleanup");
@@ -2994,17 +3005,5 @@ fn main() {
     let mut state = setup(dpy);
     scan(&mut state);
     run(&mut state);
-    cleanup(&mut state);
-    unsafe {
-        let State { dpy, cursors, .. } = state;
-
-        // this needs to be dropped before DRW
-        drop(cursors);
-
-        drw::free(DRW);
-        xlib::XCloseDisplay(dpy);
-
-        #[cfg(target_os = "linux")]
-        drop(Box::from_raw(XCON));
-    }
+    cleanup(state);
 }

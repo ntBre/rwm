@@ -61,21 +61,7 @@ fn main() {
                 .is_none());
         }
 
-        cleanup(&mut state);
-
-        unsafe {
-            let State { dpy, cursors, .. } = state;
-
-            // this needs to be dropped before DRW
-            drop(cursors);
-
-            drw::free(DRW);
-
-            xlib::XCloseDisplay(dpy);
-
-            #[cfg(target_os = "linux")]
-            drop(Box::from_raw(XCON));
-        }
+        cleanup(state);
 
         break 'defer true;
     };
