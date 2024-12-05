@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr xinit xorg
-          echo 'allowed_users = anybody' >> /etc/X11/Xwrapper.config
+          sudo echo 'allowed_users = anybody' >> /etc/X11/Xwrapper.config
           startx
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
