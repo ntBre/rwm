@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr, CString};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
@@ -13,12 +15,12 @@ use x11::xlib::{
     self, CapButt, Display, Drawable, False, JoinMiter, LineSolid, GC,
 };
 
-use crate::die;
 use crate::enums::Col;
+use crate::util::die;
 use crate::util::{between, ecalloc};
 use crate::Clr;
-use rwm::Cursor as Cur;
-use rwm::Window;
+use crate::Cursor as Cur;
+use crate::Window;
 
 // defined in drw.c
 const UTF_SIZ: usize = 4;
@@ -113,7 +115,8 @@ fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
     }
 }
 
-pub(crate) fn create(
+/// # Safety
+pub unsafe fn create(
     dpy: *mut Display,
     screen: c_int,
     root: Window,
@@ -147,7 +150,8 @@ pub(crate) fn create(
     }
 }
 
-pub(crate) fn free(drw: *mut Drw) {
+/// # Safety
+pub unsafe fn free(drw: *mut Drw) {
     unsafe {
         xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
         xlib::XFreeGC((*drw).dpy, (*drw).gc);
@@ -156,7 +160,8 @@ pub(crate) fn free(drw: *mut Drw) {
     }
 }
 
-pub(crate) fn rect(
+/// # Safety
+pub unsafe fn rect(
     drw: *mut Drw,
     x: c_int,
     y: c_int,
@@ -202,32 +207,28 @@ pub(crate) fn rect(
     }
 }
 
-pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
-    if drw.is_null() {
-        return std::ptr::null_mut();
-    }
+/// # Safety
+pub unsafe fn cur_create(drw: *mut Drw, shape: c_int) -> Cur {
+    assert!(!drw.is_null());
     unsafe {
-        let cur: *mut Cur = crate::util::ecalloc(1, size_of::<Cur>()).cast();
-        if cur.is_null() {
-            return std::ptr::null_mut();
+        Cur {
+            cursor: xlib::XCreateFontCursor((*drw).dpy, shape as c_uint),
+            drw,
         }
-        (*cur).cursor = xlib::XCreateFontCursor((*drw).dpy, shape as c_uint);
-        cur
     }
 }
 
-pub(crate) fn cur_free(drw: *mut Drw, cursor: *mut Cur) {
-    if cursor.is_null() {
-        return;
-    }
-
-    unsafe {
-        xlib::XFreeCursor((*drw).dpy, (*cursor).cursor);
-        libc::free(cursor.cast());
+impl Drop for Cur {
+    fn drop(&mut self) {
+        unsafe {
+            log::trace!("dropping cur: {}", self.cursor);
+            xlib::XFreeCursor((*self.drw).dpy, self.cursor);
+        }
     }
 }
 
-pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
+/// # Safety
+pub unsafe fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     if !drw.is_null() {
         unsafe {
             (*drw).scheme = scm;
@@ -235,7 +236,8 @@ pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     }
 }
 
-pub(crate) fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
+/// # Safety
+pub unsafe fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
     log::trace!("fontset_create");
     unsafe {
         let mut ret: *mut Fnt = null_mut();
@@ -365,7 +367,7 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
     }
 }
 
-pub(crate) fn scm_create(
+pub fn scm_create(
     drw: *mut Drw,
     clrnames: &[CString],
     clrcount: usize,
@@ -385,7 +387,8 @@ pub(crate) fn scm_create(
     ret
 }
 
-pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
+/// # Safety
+pub unsafe fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
     unsafe {
         if drw.is_null() || (*drw).fonts.is_null() || text.is_null() {
             return 0;
@@ -395,7 +398,7 @@ pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn text(
+pub unsafe fn text(
     drw: *mut Drw,
     mut x: c_int,
     y: c_int,
@@ -733,7 +736,7 @@ fn font_getexts(
     }
 }
 
-pub(crate) fn map(
+pub unsafe fn map(
     drw: *mut Drw,
     win: Window,
     x: c_int,
@@ -761,7 +764,7 @@ pub(crate) fn map(
     }
 }
 
-pub(crate) fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+pub unsafe fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
     unsafe {
         if drw.is_null() {
             return;

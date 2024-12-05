@@ -13,17 +13,18 @@ use x11::xlib::{
 };
 
 use crate::config::CONFIG;
-use crate::enums::{Cur, WM};
+use crate::enums::WM;
 use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
-    width, xerror, xerrordummy, BH, CURSOR, DPY, HANDLER, MONS, MOUSEMASK,
-    ROOT, SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
+    width, xerror, xerrordummy, BH, DPY, HANDLER, MONS, MOUSEMASK, ROOT,
+    SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
 };
+use rwm::State;
 use rwm::{Arg, Client, Monitor};
 
-pub(crate) fn togglebar(_arg: *const Arg) {
+pub(crate) fn togglebar(_state: &State, _arg: *const Arg) {
     unsafe {
         (*(*SELMON).pertag).showbars[(*(*SELMON).pertag).curtag as usize] =
             !((*SELMON).showbar);
@@ -55,7 +56,7 @@ pub(crate) fn togglebar(_arg: *const Arg) {
     }
 }
 
-pub(crate) fn focusstack(arg: *const Arg) {
+pub(crate) fn focusstack(_state: &State, arg: *const Arg) {
     unsafe {
         let mut c: *mut Client = null_mut();
         let mut i: *mut Client;
@@ -92,7 +93,7 @@ pub(crate) fn focusstack(arg: *const Arg) {
 }
 
 /// Increase the number of windows in the master area.
-pub(crate) fn incnmaster(arg: *const Arg) {
+pub(crate) fn incnmaster(_state: &State, arg: *const Arg) {
     unsafe {
         (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize] =
             std::cmp::max((*SELMON).nmaster + (*arg).i(), 0);
@@ -106,7 +107,7 @@ pub(crate) fn incnmaster(arg: *const Arg) {
 /// greater than 1.0 sets the fraction absolutely, while fractional values add
 /// to the current value. Total values are restricted to the range [0.05, 0.95]
 /// to leave at least 5% of the screen for other windows.
-pub(crate) fn setmfact(arg: *const Arg) {
+pub(crate) fn setmfact(_state: &State, arg: *const Arg) {
     unsafe {
         if arg.is_null()
             || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
@@ -130,7 +131,7 @@ pub(crate) fn setmfact(arg: *const Arg) {
 
 /// Move the selected window to the master area. The current master is pushed to
 /// the top of the stack.
-pub(crate) fn zoom(_arg: *const Arg) {
+pub(crate) fn zoom(_state: &State, _arg: *const Arg) {
     unsafe {
         let mut c = (*SELMON).sel;
         if (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
@@ -150,7 +151,7 @@ pub(crate) fn zoom(_arg: *const Arg) {
 }
 
 /// View the tag identified by `arg.ui`.
-pub(crate) fn view(arg: *const Arg) {
+pub(crate) fn view(_state: &State, arg: *const Arg) {
     log::trace!("view");
     unsafe {
         if (*arg).ui() & *TAGMASK
@@ -187,7 +188,7 @@ pub(crate) fn view(arg: *const Arg) {
             [pertag.curtag as usize][((*SELMON).sellt ^ 1) as usize];
 
         if (*SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
-            togglebar(null_mut());
+            togglebar(_state, null_mut());
         }
 
         focus(null_mut());
@@ -195,7 +196,7 @@ pub(crate) fn view(arg: *const Arg) {
     }
 }
 
-pub(crate) fn killclient(_arg: *const Arg) {
+pub(crate) fn killclient(_state: &State, _arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -223,7 +224,7 @@ pub(crate) fn killclient(_arg: *const Arg) {
     }
 }
 
-pub(crate) fn setlayout(arg: *const Arg) {
+pub(crate) fn setlayout(_: &State, arg: *const Arg) {
     log::trace!("setlayout: {arg:?}");
     unsafe {
         if arg.is_null()
@@ -259,7 +260,7 @@ pub(crate) fn setlayout(arg: *const Arg) {
     }
 }
 
-pub(crate) fn togglefloating(_arg: *const Arg) {
+pub(crate) fn togglefloating(_state: &State, _arg: *const Arg) {
     log::trace!("togglefloating: {_arg:?}");
     unsafe {
         if (*SELMON).sel.is_null() {
@@ -284,7 +285,7 @@ pub(crate) fn togglefloating(_arg: *const Arg) {
 /// From the [stacker patch](https://dwm.suckless.org/patches/stacker/). This
 /// should only be called with an ISINC arg, in their parlance, so also inline
 /// their stackpos function, in the branch where this is true
-pub(crate) fn pushstack(arg: *const Arg) {
+pub(crate) fn pushstack(_state: &State, arg: *const Arg) {
     fn modulo(n: c_int, m: c_int) -> c_int {
         if n % m < 0 {
             (n % m) + m
@@ -339,7 +340,7 @@ pub(crate) fn pushstack(arg: *const Arg) {
     }
 }
 
-pub(crate) fn tag(arg: *const Arg) {
+pub(crate) fn tag(_state: &State, arg: *const Arg) {
     unsafe {
         if !(*SELMON).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {
             (*(*SELMON).sel).tags = (*arg).ui() & *TAGMASK;
@@ -367,7 +368,7 @@ fn dirtomon(dir: i32) -> *mut Monitor {
     }
 }
 
-pub(crate) fn focusmon(arg: *const Arg) {
+pub(crate) fn focusmon(_state: &State, arg: *const Arg) {
     unsafe {
         if (*MONS).next.is_null() {
             return;
@@ -401,7 +402,7 @@ fn sendmon(c: *mut Client, m: *mut Monitor) {
     }
 }
 
-pub(crate) fn tagmon(arg: *const Arg) {
+pub(crate) fn tagmon(_state: &State, arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
             return;
@@ -410,7 +411,7 @@ pub(crate) fn tagmon(arg: *const Arg) {
     }
 }
 
-pub(crate) fn toggleview(arg: *const Arg) {
+pub(crate) fn toggleview(_state: &State, arg: *const Arg) {
     unsafe {
         let newtagset = (*SELMON).tagset[(*SELMON).seltags as usize]
             ^ ((*arg).ui() & *TAGMASK);
@@ -449,7 +450,7 @@ pub(crate) fn toggleview(arg: *const Arg) {
                 != (*(*SELMON).pertag).showbars
                     [(*(*SELMON).pertag).curtag as usize]
             {
-                togglebar(null_mut());
+                togglebar(_state, null_mut());
             }
 
             focus(null_mut());
@@ -458,7 +459,7 @@ pub(crate) fn toggleview(arg: *const Arg) {
     }
 }
 
-pub(crate) fn quit(_arg: *const Arg) {
+pub(crate) fn quit(_state: &State, _arg: *const Arg) {
     unsafe {
         crate::RUNNING = false;
     }
@@ -470,7 +471,7 @@ const EXPOSE: i32 = Expose;
 const MAP_REQUEST: i32 = MapRequest;
 const MOTION_NOTIFY: i32 = MotionNotify;
 
-pub(crate) fn movemouse(_arg: *const Arg) {
+pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
     log::trace!("movemouse");
     unsafe {
         let c = (*SELMON).sel;
@@ -492,7 +493,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
             GrabModeAsync,
             GrabModeAsync,
             XNONE as u64,
-            (*CURSOR[Cur::Move as usize]).cursor,
+            state.cursors.move_.cursor,
             CurrentTime,
         ) != GrabSuccess
         {
@@ -516,7 +517,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
             );
             match ev.type_ {
                 CONFIGURE_REQUEST | EXPOSE | MAP_REQUEST => {
-                    HANDLER[ev.type_ as usize](&mut ev);
+                    HANDLER[ev.type_ as usize](state, &mut ev);
                 }
                 MOTION_NOTIFY => {
                     if ev.motion.time - lasttime <= 1000 / 60 {
@@ -548,7 +549,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
                         && ((nx - c.x).abs() > CONFIG.snap as c_int
                             || (ny - c.y).abs() > CONFIG.snap as c_int)
                     {
-                        togglefloating(null_mut());
+                        togglefloating(state, null_mut());
                     }
                     if (*(*SELMON).lt[(*SELMON).sellt as usize])
                         .arrange
@@ -574,7 +575,7 @@ pub(crate) fn movemouse(_arg: *const Arg) {
     }
 }
 
-pub(crate) fn resizemouse(_arg: *const Arg) {
+pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
     log::trace!("resizemouse");
     unsafe {
         let c = (*SELMON).sel;
@@ -596,7 +597,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
             GrabModeAsync,
             GrabModeAsync,
             XNONE as u64,
-            (*CURSOR[Cur::Resize as usize]).cursor,
+            state.cursors.resize.cursor,
             CurrentTime,
         ) != GrabSuccess
         {
@@ -626,7 +627,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
             );
             match ev.type_ {
                 CONFIGURE_REQUEST | EXPOSE | MAP_REQUEST => {
-                    HANDLER[ev.type_ as usize](&mut ev);
+                    HANDLER[ev.type_ as usize](state, &mut ev);
                 }
                 MOTION_NOTIFY => {
                     if ev.motion.time - lasttime <= 1000 / 60 {
@@ -646,7 +647,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
                         && ((nw - c.w).abs() > CONFIG.snap as c_int
                             || (nh - c.h).abs() > CONFIG.snap as c_int)
                     {
-                        togglefloating(null_mut());
+                        togglefloating(state, null_mut());
                     }
                     if (*(*SELMON).lt[(*SELMON).sellt as usize])
                         .arrange
@@ -685,7 +686,7 @@ pub(crate) fn resizemouse(_arg: *const Arg) {
     }
 }
 
-pub(crate) fn spawn(arg: *const Arg) {
+pub(crate) fn spawn(_state: &State, arg: *const Arg) {
     unsafe {
         let mut argv = (*arg).v();
         if argv == *CONFIG.dmenucmd {
@@ -706,7 +707,7 @@ pub(crate) fn spawn(arg: *const Arg) {
 }
 
 /// Move the current window to the tag specified by `arg.ui`.
-pub(crate) fn toggletag(arg: *const Arg) {
+pub(crate) fn toggletag(_state: &State, arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -724,7 +725,7 @@ pub(crate) fn toggletag(arg: *const Arg) {
 ///
 /// adapted from: https://old.reddit.com/r/dwm/comments/avhkgb/fullscreen_mode/
 /// for fixing problems with steam games
-pub(crate) fn fullscreen(_: *const Arg) {
+pub(crate) fn fullscreen(_: &State, _: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -733,7 +734,7 @@ pub(crate) fn fullscreen(_: *const Arg) {
     }
 }
 
-pub(crate) fn togglescratch(arg: *const Arg) {
+pub(crate) fn togglescratch(_state: &State, arg: *const Arg) {
     unsafe {
         let mut c: *mut Client;
         let mut found = false;
@@ -759,7 +760,7 @@ pub(crate) fn togglescratch(arg: *const Arg) {
                 restack(SELMON);
             }
         } else {
-            spawn(arg);
+            spawn(_state, arg);
         }
     }
 }
