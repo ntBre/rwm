@@ -42,7 +42,7 @@ pub struct Fnt {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Drw {
     pub w: c_uint,
     pub h: c_uint,
@@ -119,45 +119,42 @@ pub(crate) fn create(
     root: Window,
     w: c_uint,
     h: c_uint,
-) -> *mut Drw {
+) -> Drw {
     unsafe {
-        let drw: *mut Drw = crate::util::ecalloc(1, size_of::<Drw>()).cast();
-        (*drw).dpy = dpy;
-        (*drw).screen = screen;
-        (*drw).root = root;
-        (*drw).w = w;
-        (*drw).h = h;
-        (*drw).drawable = xlib::XCreatePixmap(
-            dpy,
-            root,
+        let drw = Drw {
+            drawable: xlib::XCreatePixmap(
+                dpy,
+                root,
+                w,
+                h,
+                xlib::XDefaultDepth(dpy, screen) as u32,
+            ),
             w,
             h,
-            xlib::XDefaultDepth(dpy, screen) as u32,
-        );
-        (*drw).gc = xlib::XCreateGC(dpy, root, 0, std::ptr::null_mut());
-        xlib::XSetLineAttributes(
             dpy,
-            (*drw).gc,
-            1,
-            LineSolid,
-            CapButt,
-            JoinMiter,
-        );
+            screen,
+            root,
+            gc: xlib::XCreateGC(dpy, root, 0, null_mut()),
+            scheme: null_mut(),
+            fonts: null_mut(),
+        };
+        xlib::XSetLineAttributes(dpy, drw.gc, 1, LineSolid, CapButt, JoinMiter);
         drw
     }
 }
 
-pub(crate) fn free(drw: *mut Drw) {
-    unsafe {
-        xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
-        xlib::XFreeGC((*drw).dpy, (*drw).gc);
-        fontset_free((*drw).fonts);
-        libc::free(drw.cast());
+impl Drop for Drw {
+    fn drop(&mut self) {
+        unsafe {
+            xlib::XFreePixmap(self.dpy, self.drawable);
+            xlib::XFreeGC(self.dpy, self.gc);
+            fontset_free(self.fonts);
+        }
     }
 }
 
 pub(crate) fn rect(
-    drw: *mut Drw,
+    drw: Option<&mut Drw>,
     x: c_int,
     y: c_int,
     w: c_uint,
@@ -166,33 +163,28 @@ pub(crate) fn rect(
     invert: c_int,
 ) {
     unsafe {
-        if drw.is_null() || (*drw).scheme.is_null() {
+        let Some(drw) = drw else {
+            return;
+        };
+        if drw.scheme.is_null() {
             return;
         }
         xlib::XSetForeground(
-            (*drw).dpy,
-            (*drw).gc,
+            drw.dpy,
+            drw.gc,
             if invert != 0 {
-                (*(*drw).scheme.offset(Col::Bg as isize)).pixel
+                (*drw.scheme.offset(Col::Bg as isize)).pixel
             } else {
-                (*(*drw).scheme.offset(Col::Fg as isize)).pixel
+                (*drw.scheme.offset(Col::Fg as isize)).pixel
             },
         );
         if filled != 0 {
-            xlib::XFillRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
-                x,
-                y,
-                w,
-                h,
-            );
+            xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
         } else {
             xlib::XDrawRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
+                drw.dpy,
+                drw.drawable,
+                drw.gc,
                 x,
                 y,
                 w - 1,
@@ -202,58 +194,58 @@ pub(crate) fn rect(
     }
 }
 
-pub(crate) fn cur_create(drw: *mut Drw, shape: c_int) -> *mut Cur {
-    if drw.is_null() {
+pub(crate) fn cur_create(drw: Option<&mut Drw>, shape: c_int) -> *mut Cur {
+    let Some(drw) = drw else {
         return std::ptr::null_mut();
-    }
+    };
+
     unsafe {
         let cur: *mut Cur = crate::util::ecalloc(1, size_of::<Cur>()).cast();
         if cur.is_null() {
             return std::ptr::null_mut();
         }
-        (*cur).cursor = xlib::XCreateFontCursor((*drw).dpy, shape as c_uint);
+        (*cur).cursor = xlib::XCreateFontCursor(drw.dpy, shape as c_uint);
         cur
     }
 }
 
-pub(crate) fn cur_free(drw: *mut Drw, cursor: *mut Cur) {
+pub(crate) fn cur_free(drw: &mut Drw, cursor: *mut Cur) {
     if cursor.is_null() {
         return;
     }
 
     unsafe {
-        xlib::XFreeCursor((*drw).dpy, (*cursor).cursor);
+        xlib::XFreeCursor(drw.dpy, (*cursor).cursor);
         libc::free(cursor.cast());
     }
 }
 
-pub(crate) fn setscheme(drw: *mut Drw, scm: *mut Clr) {
-    if !drw.is_null() {
-        unsafe {
-            (*drw).scheme = scm;
-        }
+pub(crate) fn setscheme(drw: Option<&mut Drw>, scm: *mut Clr) {
+    if let Some(drw) = drw {
+        drw.scheme = scm;
     }
 }
 
-pub(crate) fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
-    log::trace!("fontset_create");
-    unsafe {
-        let mut ret: *mut Fnt = null_mut();
+impl Drw {
+    pub(crate) fn fontset_create(&mut self, fonts: &[CString]) -> *mut Fnt {
+        log::trace!("fontset_create");
+        unsafe {
+            let mut ret: *mut Fnt = null_mut();
 
-        // since fonts is a & not a *, it can't be null, but it could be empty
-        if drw.is_null() || fonts.is_empty() {
-            return null_mut();
-        }
-
-        for font in fonts.iter().rev() {
-            let cur = xfont_create(drw, font.as_ptr(), null_mut());
-            if !cur.is_null() {
-                (*cur).next = ret;
-                ret = cur;
+            if fonts.is_empty() {
+                return null_mut();
             }
+
+            for font in fonts.iter().rev() {
+                let cur = xfont_create(self, font.as_ptr(), null_mut());
+                if !cur.is_null() {
+                    (*cur).next = ret;
+                    ret = cur;
+                }
+            }
+            self.fonts = ret;
+            ret
         }
-        (*drw).fonts = ret;
-        ret
     }
 }
 
@@ -366,13 +358,14 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
 }
 
 pub(crate) fn scm_create(
-    drw: *mut Drw,
+    drw: Option<&mut Drw>,
     clrnames: &[CString],
     clrcount: usize,
 ) -> *mut Clr {
-    if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
+    if drw.is_none() || clrnames.is_empty() || clrcount < 2 {
         return null_mut();
     }
+    let drw = drw.unwrap();
     let ret: *mut Clr = ecalloc(clrcount, size_of::<xft::XftColor>()).cast();
     if ret.is_null() {
         return null_mut();
@@ -385,18 +378,22 @@ pub(crate) fn scm_create(
     ret
 }
 
-pub(crate) fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
-    unsafe {
-        if drw.is_null() || (*drw).fonts.is_null() || text.is_null() {
-            return 0;
-        }
+pub(crate) fn fontset_getwidth(
+    drw: Option<&mut Drw>,
+    text: *const c_char,
+) -> c_uint {
+    let Some(drw) = drw else {
+        return 0;
+    };
+    if drw.fonts.is_null() || text.is_null() {
+        return 0;
     }
-    self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
+    self::text(Some(drw), 0, 0, 0, 0, 0, text, 0) as c_uint
 }
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn text(
-    drw: *mut Drw,
+    drw: Option<&mut Drw>,
     mut x: c_int,
     y: c_int,
     mut w: c_uint,
@@ -454,10 +451,13 @@ pub(crate) fn text(
             NoMatches { codepoint: [0; NOMATCHES_LEN], idx: 0 };
         static mut ELLIPSIS_WIDTH: c_uint = 0;
 
-        if drw.is_null()
-            || (render != 0 && ((*drw).scheme.is_null() || w == 0))
+        let Some(drw) = drw else {
+            return 0;
+        };
+
+        if (render != 0 && (drw.scheme.is_null() || w == 0))
             || text.is_null()
-            || (*drw).fonts.is_null()
+            || drw.fonts.is_null()
         {
             return 0;
         }
@@ -490,7 +490,7 @@ pub(crate) fn text(
 
         usedfont = drw.fonts;
         if ELLIPSIS_WIDTH == 0 && render != 0 {
-            ELLIPSIS_WIDTH = fontset_getwidth(drw, c"...".as_ptr());
+            ELLIPSIS_WIDTH = fontset_getwidth(Some(drw), c"...".as_ptr());
         }
         log::trace!("text: entering loop");
         'no_match: loop {
@@ -592,7 +592,7 @@ pub(crate) fn text(
             }
             if render != 0 && overflow != 0 {
                 self::text(
-                    drw,
+                    Some(drw),
                     ellipsis_x,
                     y,
                     ellipsis_w,
@@ -734,49 +734,38 @@ fn font_getexts(
 }
 
 pub(crate) fn map(
-    drw: *mut Drw,
+    drw: Option<&mut Drw>,
     win: Window,
     x: c_int,
     y: c_int,
     w: c_uint,
     h: c_uint,
 ) {
-    if drw.is_null() {
+    let Some(drw) = drw else {
         return;
-    }
+    };
     unsafe {
-        xlib::XCopyArea(
-            (*drw).dpy,
-            (*drw).drawable,
-            win,
-            (*drw).gc,
-            x,
-            y,
-            w,
-            h,
-            x,
-            y,
-        );
-        xlib::XSync((*drw).dpy, False);
+        xlib::XCopyArea(drw.dpy, drw.drawable, win, drw.gc, x, y, w, h, x, y);
+        xlib::XSync(drw.dpy, False);
     }
 }
 
-pub(crate) fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+pub(crate) fn resize(drw: Option<&mut Drw>, w: c_uint, h: c_uint) {
     unsafe {
-        if drw.is_null() {
+        let Some(drw) = drw else {
             return;
+        };
+        drw.w = w;
+        drw.h = h;
+        if drw.drawable != 0 {
+            xlib::XFreePixmap(drw.dpy, drw.drawable);
         }
-        (*drw).w = w;
-        (*drw).h = h;
-        if (*drw).drawable != 0 {
-            xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
-        }
-        (*drw).drawable = xlib::XCreatePixmap(
-            (*drw).dpy,
-            (*drw).root,
+        drw.drawable = xlib::XCreatePixmap(
+            drw.dpy,
+            drw.root,
             w,
             h,
-            xlib::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
+            xlib::XDefaultDepth(drw.dpy, drw.screen) as c_uint,
         );
     }
 }

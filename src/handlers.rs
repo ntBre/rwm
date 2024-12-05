@@ -360,7 +360,7 @@ pub(crate) fn configurenotify(e: *mut XEvent) {
             SW = ev.width;
             SH = ev.height;
             if updategeom() != 0 || dirty {
-                drw::resize(DRW, SW as c_uint, BH as c_uint);
+                drw::resize(DRW.as_mut(), SW as c_uint, BH as c_uint);
                 updatebars();
                 let mut m = MONS;
                 while !m.is_null() {

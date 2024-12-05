@@ -137,7 +137,7 @@ static mut XATOM: [Atom; XEmbed::Last as usize] = [0; XEmbed::Last as usize];
 
 static mut DPY: *mut Display = null_mut();
 
-static mut DRW: *mut Drw = std::ptr::null_mut();
+static mut DRW: Option<Drw> = None;
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
@@ -276,12 +276,17 @@ fn setup() {
         SW = xlib::XDisplayWidth(DPY, SCREEN);
         SH = xlib::XDisplayHeight(DPY, SCREEN);
         ROOT = xlib::XRootWindow(DPY, SCREEN);
-        DRW = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
-        if drw::fontset_create(DRW, &CONFIG.fonts).is_null() {
+        DRW = Some(drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32));
+        if DRW
+            .as_mut()
+            .unwrap()
+            .fontset_create(&CONFIG.fonts)
+            .is_null()
+        {
             panic!("no fonts could be loaded");
         }
-        LRPAD = (*(*DRW).fonts).h as i32;
-        BH = (*(*DRW).fonts).h as i32 + 2;
+        LRPAD = (*DRW.as_mut().unwrap().fonts).h as i32;
+        BH = (*DRW.as_mut().unwrap().fonts).h as i32 + 2;
         updategeom();
 
         /* init atoms */
@@ -335,15 +340,19 @@ fn setup() {
             XInternAtom(DPY, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init cursors */
-        CURSOR[Cur::Normal as usize] = drw::cur_create(DRW, XC_LEFT_PTR as i32);
-        CURSOR[Cur::Resize as usize] = drw::cur_create(DRW, XC_SIZING as i32);
-        CURSOR[Cur::Move as usize] = drw::cur_create(DRW, XC_FLEUR as i32);
+        CURSOR[Cur::Normal as usize] =
+            drw::cur_create(DRW.as_mut(), XC_LEFT_PTR as i32);
+        CURSOR[Cur::Resize as usize] =
+            drw::cur_create(DRW.as_mut(), XC_SIZING as i32);
+        CURSOR[Cur::Move as usize] =
+            drw::cur_create(DRW.as_mut(), XC_FLEUR as i32);
 
         /* init appearance */
         SCHEME =
             util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..CONFIG.colors.len() {
-            *SCHEME.add(i) = drw::scm_create(DRW, &CONFIG.colors[i], 3);
+            *SCHEME.add(i) =
+                drw::scm_create(DRW.as_mut(), &CONFIG.colors[i], 3);
         }
 
         // init system tray
@@ -1340,11 +1349,19 @@ fn updatesystray() {
         // redraw background
         XSetForeground(
             DPY,
-            (*DRW).gc,
+            DRW.as_mut().unwrap().gc,
             get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
                 .pixel,
         );
-        XFillRectangle(DPY, (*SYSTRAY).win, (*DRW).gc, 0, 0, w, BH as u32);
+        XFillRectangle(
+            DPY,
+            (*SYSTRAY).win,
+            DRW.as_mut().unwrap().gc,
+            0,
+            0,
+            w,
+            BH as u32,
+        );
         XSync(DPY, False);
     } // end unsafe
 }
@@ -1393,7 +1410,7 @@ fn systraytomon(m: *mut Monitor) -> *mut Monitor {
 
 fn textw(x: *const c_char) -> c_int {
     log::trace!("textw");
-    unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
+    unsafe { drw::fontset_getwidth(DRW.as_mut(), x) as c_int + LRPAD }
 }
 
 fn drawbar(m: *mut Monitor) {
@@ -1401,8 +1418,8 @@ fn drawbar(m: *mut Monitor) {
     unsafe {
         let mut tw = 0;
         let mut stw = 0;
-        let boxs = (*(*DRW).fonts).h / 9;
-        let boxw = (*(*DRW).fonts).h / 6 + 2;
+        let boxs = (*DRW.as_ref().unwrap().fonts).h / 9;
+        let boxw = (*DRW.as_ref().unwrap().fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
         if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
@@ -1416,10 +1433,10 @@ fn drawbar(m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
             // status is only drawn on selected monitor
-            drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
+            drw::setscheme(DRW.as_mut(), *SCHEME.add(Scheme::Norm as usize));
             tw = textw(addr_of!(STEXT) as *const _) - LRPAD / 2 + 2; // 2px right padding
             drw::text(
-                DRW,
+                DRW.as_mut(),
                 (*m).ww - tw - stw as i32,
                 0,
                 tw as u32,
@@ -1446,7 +1463,7 @@ fn drawbar(m: *mut Monitor) {
             let text = tag.to_owned();
             let w = textw(text.as_ptr());
             drw::setscheme(
-                DRW,
+                DRW.as_mut(),
                 *SCHEME.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
                         Scheme::Sel as usize
@@ -1456,7 +1473,7 @@ fn drawbar(m: *mut Monitor) {
                 ),
             );
             drw::text(
-                DRW,
+                DRW.as_mut(),
                 x,
                 0,
                 w as u32,
@@ -1468,7 +1485,7 @@ fn drawbar(m: *mut Monitor) {
 
             if (occ & 1 << i) != 0 {
                 drw::rect(
-                    DRW,
+                    DRW.as_mut(),
                     x + boxs as i32,
                     boxs as i32,
                     boxw,
@@ -1484,9 +1501,9 @@ fn drawbar(m: *mut Monitor) {
         }
 
         let w = textw((*m).ltsymbol.as_ptr());
-        drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
+        drw::setscheme(DRW.as_mut(), *SCHEME.add(Scheme::Norm as usize));
         x = drw::text(
-            DRW,
+            DRW.as_mut(),
             x,
             0,
             w as u32,
@@ -1500,7 +1517,7 @@ fn drawbar(m: *mut Monitor) {
         if w > BH {
             if !(*m).sel.is_null() {
                 drw::setscheme(
-                    DRW,
+                    DRW.as_mut(),
                     *SCHEME.offset(if m == SELMON {
                         Scheme::Sel as isize
                     } else {
@@ -1508,7 +1525,7 @@ fn drawbar(m: *mut Monitor) {
                     }),
                 );
                 drw::text(
-                    DRW,
+                    DRW.as_mut(),
                     x,
                     0,
                     w as u32,
@@ -1519,7 +1536,7 @@ fn drawbar(m: *mut Monitor) {
                 );
                 if (*(*m).sel).isfloating {
                     drw::rect(
-                        DRW,
+                        DRW.as_mut(),
                         x + boxs as i32,
                         boxs as i32,
                         boxw,
@@ -1529,11 +1546,21 @@ fn drawbar(m: *mut Monitor) {
                     );
                 }
             } else {
-                drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-                drw::rect(DRW, x, 0, w as u32, BH as u32, 1, 1);
+                drw::setscheme(
+                    DRW.as_mut(),
+                    *SCHEME.add(Scheme::Norm as usize),
+                );
+                drw::rect(DRW.as_mut(), x, 0, w as u32, BH as u32, 1, 1);
             }
         }
-        drw::map(DRW, (*m).barwin, 0, 0, (*m).ww as u32 - stw, BH as u32);
+        drw::map(
+            DRW.as_mut(),
+            (*m).barwin,
+            0,
+            0,
+            (*m).ww as u32 - stw,
+            BH as u32,
+        );
     }
 }
 
@@ -2035,7 +2062,7 @@ fn cleanup() {
         }
 
         for cur in CURSOR {
-            drw::cur_free(DRW, cur);
+            drw::cur_free(DRW.as_mut().unwrap(), cur);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
@@ -2046,7 +2073,6 @@ fn cleanup() {
         libc::free(SCHEME.cast());
 
         xlib::XDestroyWindow(DPY, WMCHECKWIN);
-        drw::free(DRW);
         xlib::XSync(DPY, False);
         xlib::XSetInputFocus(
             DPY,
