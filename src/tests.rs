@@ -35,7 +35,7 @@ fn main() {
             XCON = Box::into_raw(Box::new(xcon));
         }
         checkotherwm();
-        let state = setup();
+        let mut state = setup();
         scan();
 
         // instead of calling `run`, manually send some XEvents
@@ -64,7 +64,7 @@ fn main() {
                 .is_none());
         }
 
-        cleanup(&state);
+        cleanup(&mut state);
         unsafe {
             xlib::XCloseDisplay(DPY);
 

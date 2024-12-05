@@ -2007,7 +2007,7 @@ fn isuniquegeom(
     }
 }
 
-fn cleanup(state: &State) {
+fn cleanup(state: &mut State) {
     log::trace!("entering cleanup");
 
     unsafe {
@@ -2035,6 +2035,10 @@ fn cleanup(state: &State) {
             XDestroyWindow(DPY, (*SYSTRAY).win);
             libc::free(SYSTRAY.cast());
         }
+
+        drw::cur_free(DRW, &mut state.cursors.move_);
+        drw::cur_free(DRW, &mut state.cursors.normal);
+        drw::cur_free(DRW, &mut state.cursors.resize);
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..CONFIG.colors.len() {
@@ -2296,7 +2300,7 @@ fn setclientstate(c: *mut Client, state: usize) {
 static HANDLER: LazyLock<
     [fn(&State, *mut xlib::XEvent); x11::xlib::LASTEvent as usize],
 > = LazyLock::new(|| {
-    fn dh(state: &State, _ev: *mut xlib::XEvent) {}
+    fn dh(_state: &State, _ev: *mut xlib::XEvent) {}
     let mut ret = [dh as fn(state: &State, *mut xlib::XEvent);
         x11::xlib::LASTEvent as usize];
     ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
@@ -2896,10 +2900,10 @@ fn main() {
         }
     }
     checkotherwm();
-    let state = setup();
+    let mut state = setup();
     scan();
     run(&state);
-    cleanup(&state);
+    cleanup(&mut state);
     unsafe {
         xlib::XCloseDisplay(DPY);
 
