@@ -276,12 +276,13 @@ fn setup() {
         SW = xlib::XDisplayWidth(DPY, SCREEN);
         SH = xlib::XDisplayHeight(DPY, SCREEN);
         ROOT = xlib::XRootWindow(DPY, SCREEN);
-        DRW = Some(drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32));
-        if drw::fontset_create(DRW.as_mut(), &CONFIG.fonts).is_null() {
+        // DRW = Some();
+        let mut drw = drw::create(DPY, SCREEN, ROOT, SW as u32, SH as u32);
+        if drw::fontset_create(&mut drw, &CONFIG.fonts).is_null() {
             panic!("no fonts could be loaded");
         }
-        LRPAD = (*DRW.as_mut().unwrap().fonts).h as i32;
-        BH = (*DRW.as_mut().unwrap().fonts).h as i32 + 2;
+        LRPAD = (*drw.fonts).h as i32;
+        BH = (*drw.fonts).h as i32 + 2;
         updategeom();
 
         /* init atoms */
@@ -336,18 +337,16 @@ fn setup() {
 
         /* init cursors */
         CURSOR[Cur::Normal as usize] =
-            drw::cur_create(DRW.as_mut(), XC_LEFT_PTR as i32);
+            drw::cur_create(&mut drw, XC_LEFT_PTR as i32);
         CURSOR[Cur::Resize as usize] =
-            drw::cur_create(DRW.as_mut(), XC_SIZING as i32);
-        CURSOR[Cur::Move as usize] =
-            drw::cur_create(DRW.as_mut(), XC_FLEUR as i32);
+            drw::cur_create(&mut drw, XC_SIZING as i32);
+        CURSOR[Cur::Move as usize] = drw::cur_create(&mut drw, XC_FLEUR as i32);
 
         /* init appearance */
         SCHEME =
             util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..CONFIG.colors.len() {
-            *SCHEME.add(i) =
-                drw::scm_create(DRW.as_mut(), &CONFIG.colors[i], 3);
+            *SCHEME.add(i) = drw::scm_create(&mut drw, &CONFIG.colors[i], 3);
         }
 
         // init system tray
@@ -1344,7 +1343,7 @@ fn updatesystray() {
         // redraw background
         XSetForeground(
             DPY,
-            DRW.as_mut().unwrap().gc,
+            DRW.as_ref().unwrap().gc,
             get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
                 .pixel,
         );

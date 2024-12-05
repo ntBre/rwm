@@ -194,11 +194,7 @@ pub(crate) fn rect(
     }
 }
 
-pub(crate) fn cur_create(drw: Option<&mut Drw>, shape: c_int) -> *mut Cur {
-    let Some(drw) = drw else {
-        return std::ptr::null_mut();
-    };
-
+pub(crate) fn cur_create(drw: &mut Drw, shape: c_int) -> *mut Cur {
     unsafe {
         let cur: *mut Cur = crate::util::ecalloc(1, size_of::<Cur>()).cast();
         if cur.is_null() {
@@ -226,18 +222,12 @@ pub(crate) fn setscheme(drw: Option<&mut Drw>, scm: *mut Clr) {
     }
 }
 
-pub(crate) fn fontset_create(
-    drw: Option<&mut Drw>,
-    fonts: &[CString],
-) -> *mut Fnt {
+pub(crate) fn fontset_create(drw: &mut Drw, fonts: &[CString]) -> *mut Fnt {
     log::trace!("fontset_create");
     unsafe {
         let mut ret: *mut Fnt = null_mut();
 
         // since fonts is a & not a *, it can't be null, but it could be empty
-        let Some(drw) = drw else {
-            return null_mut();
-        };
         if fonts.is_empty() {
             return null_mut();
         }
@@ -363,14 +353,13 @@ fn clr_create(drw: *mut Drw, dest: *mut Clr, clrname: *const c_char) {
 }
 
 pub(crate) fn scm_create(
-    drw: Option<&mut Drw>,
+    drw: &mut Drw,
     clrnames: &[CString],
     clrcount: usize,
 ) -> *mut Clr {
-    if drw.is_none() || clrnames.is_empty() || clrcount < 2 {
+    if clrnames.is_empty() || clrcount < 2 {
         return null_mut();
     }
-    let drw = drw.unwrap();
     let ret: *mut Clr = ecalloc(clrcount, size_of::<xft::XftColor>()).cast();
     if ret.is_null() {
         return null_mut();
