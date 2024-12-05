@@ -2907,3 +2907,88 @@ fn main() {
         drop(Box::from_raw(XCON));
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use xlib::{Button1, XButtonEvent, XEvent};
+
+    use super::*;
+
+    use std::{process::Command, thread::sleep, time::Duration};
+
+    #[test]
+    fn main() {
+        // setup xephyr
+        let mut cmd = Command::new("Xephyr").arg(":1").spawn().unwrap();
+        // TODO this is pretty hacky, figure out a better way to wait for this.
+        // Looping on XOpenDisplay is one idea, but if the display name gets out
+        // of sync somehow this will cause an infinite loop
+        sleep(Duration::from_millis(500));
+
+        // goto for killing xephyr no matter what
+        let ok = loop {
+            unsafe {
+                DPY = xlib::XOpenDisplay(c":1.0".as_ptr());
+                if DPY.is_null() {
+                    eprintln!("can't open display");
+                    break false;
+                }
+                let Ok((xcon, _)) = Connection::connect(None) else {
+                    eprintln!("rwm: cannot get xcb connection");
+                    break false;
+                };
+                XCON = Box::into_raw(Box::new(xcon));
+            }
+            checkotherwm();
+            setup();
+            scan();
+
+            // instead of calling `run`, manually send some XEvents
+
+            // test that a mouse click on the initial (tiling) layout icon
+            // switches to floating mode
+            handlers::buttonpress(&mut XEvent {
+                button: XButtonEvent {
+                    window: (unsafe { *SELMON }).barwin,
+                    button: Button1,
+                    x: CONFIG
+                        .tags
+                        .iter()
+                        .map(|tag| textw(tag.as_ptr()))
+                        .sum::<i32>()
+                        + 5,
+                    display: unsafe { DPY },
+                    state: 0,
+                    // these fields aren't used by `buttonpress`
+                    type_: 0,
+                    serial: 0,
+                    send_event: 0,
+                    root: 0,
+                    subwindow: 0,
+                    time: 0,
+                    y: 0,
+                    x_root: 0,
+                    y_root: 0,
+                    same_screen: 0,
+                },
+            });
+            unsafe {
+                assert!((*(*SELMON).lt[(*SELMON).sellt as usize])
+                    .arrange
+                    .is_none());
+            }
+
+            cleanup();
+            unsafe {
+                xlib::XCloseDisplay(DPY);
+                drop(Box::from_raw(XCON));
+            }
+            break true;
+        };
+
+        // kill xephyr when finished
+        cmd.kill().unwrap();
+
+        assert!(ok);
+    }
+}
