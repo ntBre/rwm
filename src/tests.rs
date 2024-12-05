@@ -35,7 +35,7 @@ fn main() {
             XCON = Box::into_raw(Box::new(xcon));
         }
         checkotherwm();
-        setup();
+        let state = setup();
         scan();
 
         // instead of calling `run`, manually send some XEvents
@@ -43,6 +43,7 @@ fn main() {
         // test that a mouse click on the initial (tiling) layout icon
         // switches to floating mode
         handlers::buttonpress(
+            &state,
             &mut Event::button(
                 (unsafe { *SELMON }).barwin,
                 Button1,
@@ -63,7 +64,7 @@ fn main() {
                 .is_none());
         }
 
-        cleanup();
+        cleanup(&state);
         unsafe {
             xlib::XCloseDisplay(DPY);
 

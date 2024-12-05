@@ -1,11 +1,16 @@
 use std::ffi::{c_char, c_int, c_uint};
 
+use drw::Drw;
 use enums::Clk;
+use x11::xft::XftColor;
 
+pub mod drw;
 pub mod enums;
 pub mod events;
+pub mod util;
 
 pub type Window = u64;
+pub type Clr = XftColor;
 
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -46,7 +51,7 @@ pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<fn(*const Arg)>,
+    pub func: Option<fn(&State, *const Arg)>,
     pub arg: Arg,
 }
 
@@ -55,7 +60,7 @@ impl Button {
         click: Clk,
         mask: c_uint,
         button: c_uint,
-        func: fn(*const Arg),
+        func: fn(&State, *const Arg),
         arg: Arg,
     ) -> Self {
         Self { click: click as c_uint, mask, button, func: Some(func), arg }
@@ -66,6 +71,7 @@ unsafe impl Sync for Button {}
 
 pub struct Cursor {
     pub cursor: x11::xlib::Cursor,
+    drw: *mut Drw,
 }
 
 #[repr(C)]
@@ -180,4 +186,14 @@ pub struct Client {
     pub swallowing: *mut Client,
     pub mon: *mut Monitor,
     pub win: Window,
+}
+
+pub struct Cursors {
+    pub normal: Cursor,
+    pub resize: Cursor,
+    pub move_: Cursor,
+}
+
+pub struct State {
+    pub cursors: Cursors,
 }

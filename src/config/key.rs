@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::c_uint, sync::LazyLock};
 
 use fig::{FigError, Value};
-use rwm::Arg;
+use rwm::{Arg, State};
 use x11::xlib::KeySym;
 
 #[repr(C)]
@@ -9,7 +9,7 @@ use x11::xlib::KeySym;
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
-    pub func: Option<fn(*const Arg)>,
+    pub func: Option<fn(&State, *const Arg)>,
     pub arg: Arg,
 }
 
@@ -17,7 +17,7 @@ impl Key {
     pub const fn new(
         mod_: c_uint,
         keysym: u32,
-        func: fn(*const Arg),
+        func: fn(&State, *const Arg),
         arg: Arg,
     ) -> Self {
         Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
@@ -34,10 +34,10 @@ pub(crate) fn conv<T: Clone>(opt: Option<&T>) -> Result<T, FigError> {
     }
 }
 
-type FnMap = HashMap<&'static str, fn(*const Arg)>;
+type FnMap = HashMap<&'static str, fn(&State, *const Arg)>;
 pub(super) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
     use crate::key_handlers::*;
-    type FN = fn(*const Arg);
+    type FN = fn(&State, *const Arg);
     HashMap::from([
         ("focusmon", focusmon as FN),
         ("focusstack", focusstack as FN),

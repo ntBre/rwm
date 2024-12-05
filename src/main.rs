@@ -12,7 +12,6 @@ use key_handlers::view;
 use libc::{c_long, c_uchar, pid_t, sigaction};
 use rwm::enums::XEmbed;
 use x11::keysym::XK_Num_Lock;
-use x11::xft::XftColor;
 use x11::xlib::{
     self, Above, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable,
     BadMatch, BadWindow, Below, ButtonPressMask, ButtonReleaseMask,
@@ -38,12 +37,15 @@ use x11::xlib::{
 #[cfg(target_os = "linux")]
 use xcb::Connection;
 
-use rwm::{Arg, Client, Cursor, Layout, Monitor, Pertag, Systray, Window};
+use rwm::{
+    drw, util, Arg, Client, Clr, Layout, Monitor, Pertag, State, Systray,
+    Window,
+};
 
 use config::CONFIG;
-use drw::Drw;
-use enums::{Clk, Col, Cur, Net, Scheme, WM};
-use util::{die, ecalloc};
+use enums::{Clk, Col, Net, Scheme, WM};
+use rwm::drw::Drw;
+use rwm::util::{die, ecalloc};
 
 macro_rules! cfor {
     ((; $cond:expr; $step:expr) $body:block ) => {
@@ -142,8 +144,8 @@ static mut DRW: *mut Drw = std::ptr::null_mut();
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
 
-static mut CURSOR: [*mut Cursor; Cur::Last as usize] =
-    [null_mut(); Cur::Last as usize];
+// static mut CURSOR: [*mut Cursor; Cur::Last as usize] =
+//     [null_mut(); Cur::Last as usize];
 
 static mut SCHEME: *mut *mut Clr = null_mut();
 
@@ -180,7 +182,6 @@ static mut LRPAD: c_int = 0;
 static mut NUMLOCKMASK: c_uint = 0;
 
 type Atom = c_ulong;
-type Clr = XftColor;
 
 fn createmon() -> *mut Monitor {
     log::trace!("createmon");
@@ -238,7 +239,7 @@ fn checkotherwm() {
     }
 }
 
-fn setup() {
+fn setup() -> State {
     log::trace!("setup");
     unsafe {
         let mut wa = xlib::XSetWindowAttributes {
@@ -335,9 +336,12 @@ fn setup() {
             XInternAtom(DPY, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init cursors */
-        CURSOR[Cur::Normal as usize] = drw::cur_create(DRW, XC_LEFT_PTR as i32);
-        CURSOR[Cur::Resize as usize] = drw::cur_create(DRW, XC_SIZING as i32);
-        CURSOR[Cur::Move as usize] = drw::cur_create(DRW, XC_FLEUR as i32);
+        let cursors = rwm::Cursors {
+            normal: drw::cur_create(DRW, XC_LEFT_PTR as i32),
+            resize: drw::cur_create(DRW, XC_SIZING as i32),
+            move_: drw::cur_create(DRW, XC_FLEUR as i32),
+        };
+        let state = State { cursors };
 
         /* init appearance */
         SCHEME =
@@ -350,7 +354,7 @@ fn setup() {
         updatesystray();
 
         /* init bars */
-        updatebars();
+        updatebars(&state);
         updatestatus();
 
         /* supporting window for NetWMCheck */
@@ -399,7 +403,7 @@ fn setup() {
         xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
 
         // /* select events */
-        wa.cursor = (*CURSOR[Cur::Normal as usize]).cursor;
+        wa.cursor = state.cursors.normal.cursor;
         wa.event_mask = SubstructureRedirectMask
             | SubstructureNotifyMask
             | ButtonPressMask
@@ -417,6 +421,8 @@ fn setup() {
         xlib::XSelectInput(DPY, ROOT, wa.event_mask);
         grabkeys();
         focus(null_mut());
+
+        state
     }
 }
 
@@ -1578,7 +1584,7 @@ fn gettextprop(w: Window, atom: Atom, text: *mut i8, size: u32) -> c_int {
     1
 }
 
-fn updatebars() {
+fn updatebars(state: &State) {
     log::trace!("updatebars");
     let mut wa = xlib::XSetWindowAttributes {
         override_redirect: True,
@@ -1627,11 +1633,7 @@ fn updatebars() {
                 CWOverrideRedirect | CWBackPixmap | CWEventMask,
                 &mut wa,
             );
-            xlib::XDefineCursor(
-                DPY,
-                (*m).barwin,
-                (*CURSOR[Cur::Normal as usize]).cursor,
-            );
+            xlib::XDefineCursor(DPY, (*m).barwin, state.cursors.normal.cursor);
             if CONFIG.showsystray && m == systraytomon(m) {
                 xlib::XMapRaised(DPY, (*SYSTRAY).win);
             }
@@ -2005,12 +2007,12 @@ fn isuniquegeom(
     }
 }
 
-fn cleanup() {
+fn cleanup(state: &State) {
     log::trace!("entering cleanup");
 
     unsafe {
         let a = Arg::Ui(!0);
-        view(&a);
+        view(state, &a);
         (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
@@ -2032,10 +2034,6 @@ fn cleanup() {
             XUnmapWindow(DPY, (*SYSTRAY).win);
             XDestroyWindow(DPY, (*SYSTRAY).win);
             libc::free(SYSTRAY.cast());
-        }
-
-        for cur in CURSOR {
-            drw::cur_free(DRW, cur);
         }
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
@@ -2296,10 +2294,11 @@ fn setclientstate(c: *mut Client, state: usize) {
 }
 
 static HANDLER: LazyLock<
-    [fn(*mut xlib::XEvent); x11::xlib::LASTEvent as usize],
+    [fn(&State, *mut xlib::XEvent); x11::xlib::LASTEvent as usize],
 > = LazyLock::new(|| {
-    fn dh(_ev: *mut xlib::XEvent) {}
-    let mut ret = [dh as fn(*mut xlib::XEvent); x11::xlib::LASTEvent as usize];
+    fn dh(state: &State, _ev: *mut xlib::XEvent) {}
+    let mut ret = [dh as fn(state: &State, *mut xlib::XEvent);
+        x11::xlib::LASTEvent as usize];
     ret[x11::xlib::ButtonPress as usize] = handlers::buttonpress;
     ret[x11::xlib::ClientMessage as usize] = handlers::clientmessage;
     ret[x11::xlib::ConfigureRequest as usize] = handlers::configurerequest;
@@ -2319,14 +2318,14 @@ static HANDLER: LazyLock<
 });
 
 /// main event loop
-fn run() {
+fn run(state: &State) {
     unsafe {
         xlib::XSync(DPY, False);
         let mut ev: MaybeUninit<xlib::XEvent> = MaybeUninit::uninit();
         while RUNNING && xlib::XNextEvent(DPY, ev.as_mut_ptr()) == 0 {
             let mut ev: xlib::XEvent = ev.assume_init();
             if let Some(handler) = HANDLER.get(ev.type_ as usize) {
-                handler(&mut ev);
+                handler(state, &mut ev);
             }
         }
     }
@@ -2866,7 +2865,6 @@ fn getstate(w: Window) -> c_long {
 }
 
 mod config;
-mod drw;
 pub use rwm::enums;
 use xembed::{
     XEMBED_EMBEDDED_VERSION, XEMBED_MAPPED, XEMBED_WINDOW_ACTIVATE,
@@ -2875,7 +2873,6 @@ use xembed::{
 mod handlers;
 mod key_handlers;
 mod layouts;
-mod util;
 mod xembed;
 
 #[cfg(test)]
@@ -2899,10 +2896,10 @@ fn main() {
         }
     }
     checkotherwm();
-    setup();
+    let state = setup();
     scan();
-    run();
-    cleanup();
+    run(&state);
+    cleanup(&state);
     unsafe {
         xlib::XCloseDisplay(DPY);
 
