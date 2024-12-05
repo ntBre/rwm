@@ -2910,7 +2910,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use xlib::{Button1, XButtonEvent, XEvent};
+    use rwm::events::Event;
+    use xlib::Button1;
 
     use super::*;
 
@@ -2945,31 +2946,21 @@ mod tests {
 
             // test that a mouse click on the initial (tiling) layout icon
             // switches to floating mode
-            handlers::buttonpress(&mut XEvent {
-                button: XButtonEvent {
-                    window: (unsafe { *SELMON }).barwin,
-                    button: Button1,
-                    x: CONFIG
+            handlers::buttonpress(
+                &mut Event::button(
+                    (unsafe { *SELMON }).barwin,
+                    Button1,
+                    CONFIG
                         .tags
                         .iter()
                         .map(|tag| textw(tag.as_ptr()))
                         .sum::<i32>()
                         + 5,
-                    display: unsafe { DPY },
-                    state: 0,
-                    // these fields aren't used by `buttonpress`
-                    type_: 0,
-                    serial: 0,
-                    send_event: 0,
-                    root: 0,
-                    subwindow: 0,
-                    time: 0,
-                    y: 0,
-                    x_root: 0,
-                    y_root: 0,
-                    same_screen: 0,
-                },
-            });
+                    unsafe { DPY },
+                    0,
+                )
+                .into_button(),
+            );
             unsafe {
                 assert!((*(*SELMON).lt[(*SELMON).sellt as usize])
                     .arrange
