@@ -133,10 +133,6 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut WMATOM: [Atom; WM::Last as usize] = [0; WM::Last as usize];
-static mut NETATOM: [Atom; Net::Last as usize] = [0; Net::Last as usize];
-static mut XATOM: [Atom; XEmbed::Last as usize] = [0; XEmbed::Last as usize];
-
 static mut DPY: *mut Display = null_mut();
 
 static mut DRW: *mut Drw = std::ptr::null_mut();
@@ -283,58 +279,64 @@ fn setup() -> State {
             resize: drw::cur_create(DRW, XC_SIZING as i32),
             move_: drw::cur_create(DRW, XC_FLEUR as i32),
         };
-        let state = State { bh: (*(*DRW).fonts).h as i32 + 2, cursors };
+        let mut state = State {
+            bh: (*(*DRW).fonts).h as i32 + 2,
+            cursors,
+            wmatom: Default::default(),
+            netatom: Default::default(),
+            xatom: Default::default(),
+        };
 
         updategeom(&state);
 
         /* init atoms */
         let utf8string = XInternAtom(DPY, c"UTF8_STRING".as_ptr(), False);
-        WMATOM[WM::Protocols as usize] =
+        state.wmatom[WM::Protocols as usize] =
             XInternAtom(DPY, c"WM_PROTOCOLS".as_ptr(), False);
-        WMATOM[WM::Delete as usize] =
+        state.wmatom[WM::Delete as usize] =
             XInternAtom(DPY, c"WM_DELETE_WINDOW".as_ptr(), False);
-        WMATOM[WM::State as usize] =
+        state.wmatom[WM::State as usize] =
             XInternAtom(DPY, c"WM_STATE".as_ptr(), False);
-        WMATOM[WM::TakeFocus as usize] =
+        state.wmatom[WM::TakeFocus as usize] =
             XInternAtom(DPY, c"WM_TAKE_FOCUS".as_ptr(), False);
 
-        NETATOM[Net::ActiveWindow as usize] =
+        state.netatom[Net::ActiveWindow as usize] =
             XInternAtom(DPY, c"_NET_ACTIVE_WINDOW".as_ptr(), False);
-        NETATOM[Net::Supported as usize] =
+        state.netatom[Net::Supported as usize] =
             XInternAtom(DPY, c"_NET_SUPPORTED".as_ptr(), False);
 
-        NETATOM[Net::SystemTray as usize] =
+        state.netatom[Net::SystemTray as usize] =
             XInternAtom(DPY, c"_NET_SYSTEM_TRAY_S0".as_ptr(), False);
-        NETATOM[Net::SystemTrayOP as usize] =
+        state.netatom[Net::SystemTrayOP as usize] =
             XInternAtom(DPY, c"_NET_SYSTEM_TRAY_OPCODE".as_ptr(), False);
-        NETATOM[Net::SystemTrayOrientation as usize] =
+        state.netatom[Net::SystemTrayOrientation as usize] =
             XInternAtom(DPY, c"_NET_SYSTEM_TRAY_ORIENTATION".as_ptr(), False);
-        NETATOM[Net::SystemTrayOrientationHorz as usize] = XInternAtom(
+        state.netatom[Net::SystemTrayOrientationHorz as usize] = XInternAtom(
             DPY,
             c"_NET_SYSTEM_TRAY_ORIENTATION_HORZ".as_ptr(),
             False,
         );
 
-        NETATOM[Net::WMName as usize] =
+        state.netatom[Net::WMName as usize] =
             XInternAtom(DPY, c"_NET_WM_NAME".as_ptr(), False);
-        NETATOM[Net::WMState as usize] =
+        state.netatom[Net::WMState as usize] =
             XInternAtom(DPY, c"_NET_WM_STATE".as_ptr(), False);
-        NETATOM[Net::WMCheck as usize] =
+        state.netatom[Net::WMCheck as usize] =
             XInternAtom(DPY, c"_NET_SUPPORTING_WM_CHECK".as_ptr(), False);
-        NETATOM[Net::WMFullscreen as usize] =
+        state.netatom[Net::WMFullscreen as usize] =
             XInternAtom(DPY, c"_NET_WM_STATE_FULLSCREEN".as_ptr(), False);
-        NETATOM[Net::WMWindowType as usize] =
+        state.netatom[Net::WMWindowType as usize] =
             XInternAtom(DPY, c"_NET_WM_WINDOW_TYPE".as_ptr(), False);
-        NETATOM[Net::WMWindowTypeDialog as usize] =
+        state.netatom[Net::WMWindowTypeDialog as usize] =
             XInternAtom(DPY, c"_NET_WM_WINDOW_TYPE_DIALOG".as_ptr(), False);
-        NETATOM[Net::ClientList as usize] =
+        state.netatom[Net::ClientList as usize] =
             XInternAtom(DPY, c"_NET_CLIENT_LIST".as_ptr(), False);
 
-        XATOM[XEmbed::Manager as usize] =
+        state.xatom[XEmbed::Manager as usize] =
             XInternAtom(DPY, c"MANAGER".as_ptr(), False);
-        XATOM[XEmbed::XEmbed as usize] =
+        state.xatom[XEmbed::XEmbed as usize] =
             XInternAtom(DPY, c"_XEMBED".as_ptr(), False);
-        XATOM[XEmbed::XEmbedInfo as usize] =
+        state.xatom[XEmbed::XEmbedInfo as usize] =
             XInternAtom(DPY, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init appearance */
@@ -356,7 +358,7 @@ fn setup() -> State {
         xlib::XChangeProperty(
             DPY,
             WMCHECKWIN,
-            NETATOM[Net::WMCheck as usize],
+            state.netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
@@ -366,7 +368,7 @@ fn setup() -> State {
         xlib::XChangeProperty(
             DPY,
             WMCHECKWIN,
-            NETATOM[Net::WMName as usize],
+            state.netatom[Net::WMName as usize],
             utf8string,
             8,
             PropModeReplace,
@@ -376,7 +378,7 @@ fn setup() -> State {
         xlib::XChangeProperty(
             DPY,
             ROOT,
-            NETATOM[Net::WMCheck as usize],
+            state.netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
@@ -387,14 +389,18 @@ fn setup() -> State {
         xlib::XChangeProperty(
             DPY,
             ROOT,
-            NETATOM[Net::Supported as usize],
+            state.netatom[Net::Supported as usize],
             XA_ATOM,
             32,
             PropModeReplace,
-            &raw mut NETATOM as *mut c_uchar,
+            &raw mut state.netatom as *mut c_uchar,
             Net::Last as i32,
         );
-        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
+        xlib::XDeleteProperty(
+            DPY,
+            ROOT,
+            state.netatom[Net::ClientList as usize],
+        );
 
         // /* select events */
         wa.cursor = state.cursors.normal.cursor;
@@ -430,7 +436,7 @@ fn focus(state: &State, mut c: *mut Client) {
             }
         }
         if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-            unfocus((*SELMON).sel, false);
+            unfocus(state, (*SELMON).sel, false);
         }
         if !c.is_null() {
             if (*c).mon != SELMON {
@@ -446,13 +452,13 @@ fn focus(state: &State, mut c: *mut Client) {
                 .offset(Col::Border as isize))
             .pixel;
             xlib::XSetWindowBorder(DPY, (*c).win, color);
-            setfocus(c);
+            setfocus(state, c);
         } else {
             xlib::XSetInputFocus(DPY, ROOT, RevertToPointerRoot, CurrentTime);
             xlib::XDeleteProperty(
                 DPY,
                 ROOT,
-                NETATOM[Net::ActiveWindow as usize],
+                state.netatom[Net::ActiveWindow as usize],
             );
         }
         (*SELMON).sel = c;
@@ -471,7 +477,7 @@ fn drawbars(state: &State) {
     }
 }
 
-fn setfocus(c: *mut Client) {
+fn setfocus(state: &State, c: *mut Client) {
     log::trace!("setfocus");
     unsafe {
         if (*c).neverfocus == 0 {
@@ -484,7 +490,7 @@ fn setfocus(c: *mut Client) {
             xlib::XChangeProperty(
                 DPY,
                 ROOT,
-                NETATOM[Net::ActiveWindow as usize],
+                state.netatom[Net::ActiveWindow as usize],
                 XA_WINDOW,
                 32,
                 PropModeReplace,
@@ -493,10 +499,11 @@ fn setfocus(c: *mut Client) {
             );
         }
         sendevent(
+            state,
             (*c).win,
-            WMATOM[WM::TakeFocus as usize],
+            state.wmatom[WM::TakeFocus as usize],
             NoEventMask as i32,
-            WMATOM[WM::TakeFocus as usize] as i64,
+            state.wmatom[WM::TakeFocus as usize] as i64,
             CurrentTime as i64,
             0,
             0,
@@ -507,6 +514,7 @@ fn setfocus(c: *mut Client) {
 
 #[allow(clippy::too_many_arguments)]
 fn sendevent(
+    state: &State,
     w: Window,
     proto: Atom,
     mask: c_int,
@@ -522,10 +530,10 @@ fn sendevent(
     let mt;
     let mut exists = 0;
     unsafe {
-        if proto == WMATOM[WM::TakeFocus as usize]
-            || proto == WMATOM[WM::Delete as usize]
+        if proto == state.wmatom[WM::TakeFocus as usize]
+            || proto == state.wmatom[WM::Delete as usize]
         {
-            mt = WMATOM[WM::Protocols as usize];
+            mt = state.wmatom[WM::Protocols as usize];
             if xlib::XGetWMProtocols(DPY, w, &mut protocols, &mut n) != 0 {
                 while exists == 0 && n > 0 {
                     exists = (*protocols.offset(n as isize) == proto) as c_int;
@@ -1083,7 +1091,7 @@ fn seturgent(c: *mut Client, urg: bool) {
     }
 }
 
-fn unfocus(c: *mut Client, setfocus: bool) {
+fn unfocus(state: &State, c: *mut Client, setfocus: bool) {
     log::trace!("unfocus");
     if c.is_null() {
         return;
@@ -1100,7 +1108,7 @@ fn unfocus(c: *mut Client, setfocus: bool) {
             xlib::XDeleteProperty(
                 DPY,
                 ROOT,
-                NETATOM[Net::ActiveWindow as usize],
+                state.netatom[Net::ActiveWindow as usize],
             );
         }
     }
@@ -1154,15 +1162,20 @@ fn updatesystrayicongeom(state: &State, i: *mut Client, w: c_int, h: c_int) {
     }
 }
 
-fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
+fn updatesystrayiconstate(
+    state: &State,
+    i: *mut Client,
+    ev: *mut XPropertyEvent,
+) {
     unsafe {
         let mut flags: Atom = 0;
         let code;
         if !CONFIG.showsystray
             || i.is_null()
-            || (*ev).atom != XATOM[XEmbed::XEmbedInfo as usize]
+            || (*ev).atom != state.xatom[XEmbed::XEmbedInfo as usize]
         {
-            flags = getatomprop(i, XATOM[XEmbed::XEmbedInfo as usize]);
+            flags =
+                getatomprop(state, i, state.xatom[XEmbed::XEmbedInfo as usize]);
             if flags == 0 {
                 return;
             }
@@ -1172,18 +1185,19 @@ fn updatesystrayiconstate(i: *mut Client, ev: *mut XPropertyEvent) {
             i.tags = 1;
             code = XEMBED_WINDOW_ACTIVATE;
             XMapRaised(DPY, i.win);
-            setclientstate(i, NORMAL_STATE);
+            setclientstate(state, i, NORMAL_STATE);
         } else if (flags & XEMBED_MAPPED) == 0 && i.tags != 0 {
             i.tags = 0;
             code = XEMBED_WINDOW_DEACTIVATE;
             XUnmapWindow(DPY, i.win);
-            setclientstate(i, WITHDRAWN_STATE);
+            setclientstate(state, i, WITHDRAWN_STATE);
         } else {
             return;
         }
         sendevent(
+            state,
             i.win,
-            XATOM[XEmbed::XEmbed as usize],
+            state.xatom[XEmbed::XEmbed as usize],
             StructureNotifyMask as i32,
             CurrentTime as i64,
             code as i64,
@@ -1262,12 +1276,12 @@ fn updatesystray(state: &State) {
             XChangeProperty(
                 DPY,
                 (*SYSTRAY).win,
-                NETATOM[Net::SystemTrayOrientation as usize],
+                state.netatom[Net::SystemTrayOrientation as usize],
                 XA_CARDINAL,
                 32,
                 PropModeReplace,
-                &NETATOM[Net::SystemTrayOrientationHorz as usize] as *const _
-                    as *const _,
+                &state.netatom[Net::SystemTrayOrientationHorz as usize]
+                    as *const _ as *const _,
                 1,
             );
             XChangeWindowAttributes(
@@ -1279,19 +1293,20 @@ fn updatesystray(state: &State) {
             XMapRaised(DPY, (*SYSTRAY).win);
             XSetSelectionOwner(
                 DPY,
-                NETATOM[Net::SystemTray as usize],
+                state.netatom[Net::SystemTray as usize],
                 (*SYSTRAY).win,
                 CurrentTime,
             );
-            if XGetSelectionOwner(DPY, NETATOM[Net::SystemTray as usize])
+            if XGetSelectionOwner(DPY, state.netatom[Net::SystemTray as usize])
                 == (*SYSTRAY).win
             {
                 sendevent(
+                    state,
                     ROOT,
-                    XATOM[XEmbed::Manager as usize],
+                    state.xatom[XEmbed::Manager as usize],
                     StructureNotifyMask as i32,
                     CurrentTime as i64,
-                    NETATOM[Net::SystemTray as usize] as i64,
+                    state.netatom[Net::SystemTray as usize] as i64,
                     (*SYSTRAY).win as i64,
                     0_i64,
                     0_i64,
@@ -2047,9 +2062,6 @@ fn cleanup(state: State) {
             libc::free(SYSTRAY.cast());
         }
 
-        // this needs to be dropped before DRW
-        drop(state);
-
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..CONFIG.colors.len() {
             let tmp: *mut Clr = *SCHEME.add(i);
@@ -2058,7 +2070,6 @@ fn cleanup(state: State) {
         libc::free(SCHEME.cast());
 
         xlib::XDestroyWindow(DPY, WMCHECKWIN);
-        drw::free(DRW);
         xlib::XSync(DPY, False);
         xlib::XSetInputFocus(
             DPY,
@@ -2066,7 +2077,16 @@ fn cleanup(state: State) {
             RevertToPointerRoot,
             CurrentTime,
         );
-        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ActiveWindow as usize]);
+        xlib::XDeleteProperty(
+            DPY,
+            ROOT,
+            state.netatom[Net::ActiveWindow as usize],
+        );
+
+        // this needs to be dropped before DRW
+        drop(state);
+
+        drw::free(DRW);
     }
 
     log::trace!("finished cleanup");
@@ -2114,7 +2134,7 @@ fn unmanage(state: &State, c: *mut Client, destroyed: c_int) {
                 &mut wc,
             ); /* restore border */
             xlib::XUngrabButton(DPY, AnyButton as u32, AnyModifier, (*c).win);
-            setclientstate(c, WITHDRAWN_STATE);
+            setclientstate(state, c, WITHDRAWN_STATE);
             xlib::XSync(DPY, False);
             xlib::XSetErrorHandler(Some(xerror));
             xlib::XUngrabServer(DPY);
@@ -2124,7 +2144,7 @@ fn unmanage(state: &State, c: *mut Client, destroyed: c_int) {
         if s.is_null() {
             arrange(state, m);
             focus(state, null_mut());
-            updateclientlist();
+            updateclientlist(state);
         }
     }
 }
@@ -2266,9 +2286,13 @@ fn swallowingclient(w: Window) -> *mut Client {
     }
 }
 
-fn updateclientlist() {
+fn updateclientlist(state: &State) {
     unsafe {
-        xlib::XDeleteProperty(DPY, ROOT, NETATOM[Net::ClientList as usize]);
+        xlib::XDeleteProperty(
+            DPY,
+            ROOT,
+            state.netatom[Net::ClientList as usize],
+        );
         let mut m = MONS;
         while !m.is_null() {
             let mut c = (*m).clients;
@@ -2276,7 +2300,7 @@ fn updateclientlist() {
                 xlib::XChangeProperty(
                     DPY,
                     ROOT,
-                    NETATOM[Net::ClientList as usize],
+                    state.netatom[Net::ClientList as usize],
                     XA_WINDOW,
                     32,
                     PropModeAppend,
@@ -2290,15 +2314,15 @@ fn updateclientlist() {
     }
 }
 
-fn setclientstate(c: *mut Client, state: usize) {
+fn setclientstate(s: &State, c: *mut Client, state: usize) {
     let mut data: [c_long; 2] = [state as c_long, XNONE as c_long];
     let ptr: *mut c_uchar = data.as_mut_ptr().cast();
     unsafe {
         xlib::XChangeProperty(
             DPY,
             (*c).win,
-            WMATOM[WM::State as usize],
-            WMATOM[WM::State as usize],
+            s.wmatom[WM::State as usize],
+            s.wmatom[WM::State as usize],
             32,
             PropModeReplace,
             ptr,
@@ -2378,7 +2402,8 @@ fn scan(state: &State) {
                     continue;
                 }
                 if (*wa.as_mut_ptr()).map_state == IsViewable
-                    || getstate(*wins.offset(i as isize)) == ICONIC_STATE as i64
+                    || getstate(state, *wins.offset(i as isize))
+                        == ICONIC_STATE as i64
                 {
                     manage(state, *wins.offset(i as isize), wa.as_mut_ptr());
                 }
@@ -2399,7 +2424,7 @@ fn scan(state: &State) {
                     &mut d1,
                 ) != 0
                     && ((*wa.as_mut_ptr()).map_state == IsViewable
-                        || getstate(*wins.offset(i as isize))
+                        || getstate(state, *wins.offset(i as isize))
                             == ICONIC_STATE as i64)
                 {
                     manage(state, *wins.offset(i as isize), wa.as_mut_ptr());
@@ -2432,7 +2457,7 @@ fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
 
         let mut term: *mut Client = null_mut();
 
-        updatetitle(c);
+        updatetitle(state, c);
         log::trace!("manage: XGetTransientForHint");
         if xlib::XGetTransientForHint(DPY, w, &mut trans) != 0 {
             let t = wintoclient(trans);
@@ -2528,7 +2553,7 @@ fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
         xlib::XChangeProperty(
             DPY,
             ROOT,
-            NETATOM[Net::ClientList as usize],
+            state.netatom[Net::ClientList as usize],
             XA_WINDOW,
             32,
             PropModeAppend,
@@ -2544,9 +2569,9 @@ fn manage(state: &State, w: Window, wa: *mut xlib::XWindowAttributes) {
             (*c).w as u32,
             (*c).h as u32,
         );
-        setclientstate(c, NORMAL_STATE);
+        setclientstate(state, c, NORMAL_STATE);
         if (*c).mon == SELMON {
-            unfocus((*SELMON).sel, false);
+            unfocus(state, (*SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
         arrange(state, (*c).mon);
@@ -2583,12 +2608,13 @@ fn updatewmhints(c: *mut Client) {
 fn updatewindowtype(state: &State, c: *mut Client) {
     log::trace!("updatewindowtype");
     unsafe {
-        let s = getatomprop(c, NETATOM[Net::WMState as usize]);
-        let wtype = getatomprop(c, NETATOM[Net::WMWindowType as usize]);
-        if s == NETATOM[Net::WMFullscreen as usize] {
+        let s = getatomprop(state, c, state.netatom[Net::WMState as usize]);
+        let wtype =
+            getatomprop(state, c, state.netatom[Net::WMWindowType as usize]);
+        if s == state.netatom[Net::WMFullscreen as usize] {
             setfullscreen(state, c, true);
         }
-        if wtype == NETATOM[Net::WMWindowTypeDialog as usize] {
+        if wtype == state.netatom[Net::WMWindowTypeDialog as usize] {
             (*c).isfloating = true;
         }
     }
@@ -2600,14 +2626,14 @@ fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
             xlib::XChangeProperty(
                 DPY,
                 (*c).win,
-                NETATOM[Net::WMState as usize],
+                state.netatom[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
                 // trying to emulate (unsigned char*)&netatom[NetWMFullscreen],
                 // so take a reference and then cast
-                &mut NETATOM[Net::WMFullscreen as usize] as *mut u64
-                    as *mut c_uchar,
+                &state.netatom[Net::WMFullscreen as usize] as *const u64
+                    as *const c_uchar,
                 1,
             );
             (*c).isfullscreen = true;
@@ -2627,7 +2653,7 @@ fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
             xlib::XChangeProperty(
                 DPY,
                 (*c).win,
-                NETATOM[Net::WMState as usize],
+                state.netatom[Net::WMState as usize],
                 XA_ATOM,
                 32,
                 PropModeReplace,
@@ -2647,7 +2673,7 @@ fn setfullscreen(state: &State, c: *mut Client, fullscreen: bool) {
     }
 }
 
-fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
+fn getatomprop(state: &State, c: *mut Client, prop: Atom) -> Atom {
     let mut di = 0;
     let mut dl = 0;
     let mut p = std::ptr::null_mut();
@@ -2657,8 +2683,8 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
         // FIXME (systray author) getatomprop should return the number of items
         // and a pointer to the stored data instead of this workaround
         let mut req = XA_ATOM;
-        if prop == XATOM[XEmbed::XEmbedInfo as usize] {
-            req = XATOM[XEmbed::XEmbedInfo as usize];
+        if prop == state.xatom[XEmbed::XEmbedInfo as usize] {
+            req = state.xatom[XEmbed::XEmbedInfo as usize];
         }
         if xlib::XGetWindowProperty(
             DPY,
@@ -2679,7 +2705,7 @@ fn getatomprop(c: *mut Client, prop: Atom) -> Atom {
             // the C code is *(Atom *)p. is that different from (Atom) *p?
             // that's closer to what I had before
             atom = *(p as *mut Atom);
-            if da == XATOM[XEmbed::XEmbedInfo as usize] && dl == 2 {
+            if da == state.xatom[XEmbed::XEmbedInfo as usize] && dl == 2 {
                 atom = *(p as *mut Atom).add(1);
             }
             XFree(p.cast());
@@ -2776,18 +2802,18 @@ fn swallow(state: &State, p: *mut Client, c: *mut Client) {
         detach(c);
         detachstack(c);
 
-        setclientstate(c, WITHDRAWN_STATE);
+        setclientstate(state, c, WITHDRAWN_STATE);
         let p = &mut *p;
         XUnmapWindow(DPY, p.win);
         p.swallowing = c;
         c.mon = p.mon;
 
         std::mem::swap(&mut p.win, &mut c.win);
-        updatetitle(p);
+        updatetitle(state, p);
         XMoveResizeWindow(DPY, p.win, p.x, p.y, p.w as u32, p.h as u32);
         arrange(state, p.mon);
         configure(p);
-        updateclientlist();
+        updateclientlist(state);
     }
 }
 
@@ -2802,11 +2828,11 @@ fn unswallow(state: &State, c: *mut Client) {
 
         // unfullscreen the client
         setfullscreen(state, c, false);
-        updatetitle(c);
+        updatetitle(state, c);
         arrange(state, c.mon);
         XMapWindow(DPY, c.win);
         XMoveResizeWindow(DPY, c.win, c.x, c.y, c.w as u32, c.h as u32);
-        setclientstate(c, NORMAL_STATE);
+        setclientstate(state, c, NORMAL_STATE);
         focus(state, null_mut());
         arrange(state, c.mon);
     }
@@ -2819,12 +2845,12 @@ const MOUSEMASK: i64 = BUTTONMASK | PointerMotionMask;
 
 static SCRATCHTAG: LazyLock<u32> = LazyLock::new(|| 1 << CONFIG.tags.len());
 
-fn updatetitle(c: *mut Client) {
+fn updatetitle(state: &State, c: *mut Client) {
     log::trace!("updatetitle");
     unsafe {
         if gettextprop(
             (*c).win,
-            NETATOM[Net::WMName as usize],
+            state.netatom[Net::WMName as usize],
             &mut (*c).name as *mut _,
             size_of_val(&(*c).name) as u32,
         ) == 0
@@ -2846,7 +2872,7 @@ fn updatetitle(c: *mut Client) {
     }
 }
 
-fn getstate(w: Window) -> c_long {
+fn getstate(state: &State, w: Window) -> c_long {
     let mut format = 0;
     let mut result: c_long = -1;
     let mut p: *mut c_uchar = std::ptr::null_mut();
@@ -2857,11 +2883,11 @@ fn getstate(w: Window) -> c_long {
         let cond = xlib::XGetWindowProperty(
             DPY,
             w,
-            WMATOM[WM::State as usize],
+            state.wmatom[WM::State as usize],
             0,
             2,
             False,
-            WMATOM[WM::State as usize],
+            state.wmatom[WM::State as usize],
             &mut real,
             &mut format,
             &mut n,

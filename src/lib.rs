@@ -1,8 +1,8 @@
 use std::ffi::{c_char, c_int, c_uint};
 
 use drw::Drw;
-use enums::Clk;
-use x11::xft::XftColor;
+use enums::{Clk, Net, XEmbed, WM};
+use x11::{xft::XftColor, xlib::Atom};
 
 pub mod drw;
 pub mod enums;
@@ -197,5 +197,8 @@ pub struct Cursors {
 pub struct State {
     /// Bar height
     pub bh: c_int,
+    pub wmatom: [Atom; WM::Last as usize],
+    pub netatom: [Atom; Net::Last as usize],
+    pub xatom: [Atom; XEmbed::Last as usize],
     pub cursors: Cursors,
 }

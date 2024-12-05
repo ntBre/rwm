@@ -19,7 +19,7 @@ use crate::{
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
     width, xerror, xerrordummy, DPY, HANDLER, MONS, MOUSEMASK, ROOT,
-    SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, WMATOM, XNONE,
+    SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, XNONE,
 };
 use rwm::State;
 use rwm::{Arg, Client, Monitor};
@@ -196,17 +196,18 @@ pub(crate) fn view(_state: &State, arg: *const Arg) {
     }
 }
 
-pub(crate) fn killclient(_state: &State, _arg: *const Arg) {
+pub(crate) fn killclient(state: &State, _arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
         }
 
         if sendevent(
+            state,
             (*(*SELMON).sel).win,
-            WMATOM[WM::Delete as usize],
+            state.wmatom[WM::Delete as usize],
             NoEventMask as i32,
-            WMATOM[WM::Delete as usize] as i64,
+            state.wmatom[WM::Delete as usize] as i64,
             CurrentTime as i64,
             0,
             0,
@@ -368,7 +369,7 @@ fn dirtomon(dir: i32) -> *mut Monitor {
     }
 }
 
-pub(crate) fn focusmon(_state: &State, arg: *const Arg) {
+pub(crate) fn focusmon(state: &State, arg: *const Arg) {
     unsafe {
         if (*MONS).next.is_null() {
             return;
@@ -377,19 +378,19 @@ pub(crate) fn focusmon(_state: &State, arg: *const Arg) {
         if m == SELMON {
             return;
         }
-        unfocus((*SELMON).sel, false);
+        unfocus(state, (*SELMON).sel, false);
         SELMON = m;
-        focus(_state, null_mut());
+        focus(state, null_mut());
     }
 }
 
-fn sendmon(_state: &State, c: *mut Client, m: *mut Monitor) {
+fn sendmon(state: &State, c: *mut Client, m: *mut Monitor) {
     unsafe {
         if (*c).mon == m {
             return;
         }
 
-        unfocus(c, true);
+        unfocus(state, c, true);
         detach(c);
         detachstack(c);
         (*c).mon = m;
@@ -397,8 +398,8 @@ fn sendmon(_state: &State, c: *mut Client, m: *mut Monitor) {
         (*c).tags = (*m).tagset[(*m).seltags as usize];
         attach(c);
         attachstack(c);
-        focus(_state, null_mut());
-        arrange(_state, null_mut());
+        focus(state, null_mut());
+        arrange(state, null_mut());
     }
 }
 
