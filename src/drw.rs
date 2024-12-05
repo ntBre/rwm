@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr, CString};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
@@ -113,6 +115,7 @@ fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
     }
 }
 
+/// # Safety
 pub unsafe fn create(
     dpy: *mut Display,
     screen: c_int,
@@ -147,6 +150,7 @@ pub unsafe fn create(
     }
 }
 
+/// # Safety
 pub unsafe fn free(drw: *mut Drw) {
     unsafe {
         xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
@@ -156,7 +160,8 @@ pub unsafe fn free(drw: *mut Drw) {
     }
 }
 
-pub fn rect(
+/// # Safety
+pub unsafe fn rect(
     drw: *mut Drw,
     x: c_int,
     y: c_int,
@@ -202,7 +207,8 @@ pub fn rect(
     }
 }
 
-pub fn cur_create(drw: *mut Drw, shape: c_int) -> Cur {
+/// # Safety
+pub unsafe fn cur_create(drw: *mut Drw, shape: c_int) -> Cur {
     assert!(!drw.is_null());
     unsafe {
         Cur {
@@ -221,7 +227,8 @@ impl Drop for Cur {
     }
 }
 
-pub fn setscheme(drw: *mut Drw, scm: *mut Clr) {
+/// # Safety
+pub unsafe fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     if !drw.is_null() {
         unsafe {
             (*drw).scheme = scm;
@@ -229,6 +236,7 @@ pub fn setscheme(drw: *mut Drw, scm: *mut Clr) {
     }
 }
 
+/// # Safety
 pub unsafe fn fontset_create(drw: *mut Drw, fonts: &[CString]) -> *mut Fnt {
     log::trace!("fontset_create");
     unsafe {
@@ -379,7 +387,8 @@ pub fn scm_create(
     ret
 }
 
-pub fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
+/// # Safety
+pub unsafe fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
     unsafe {
         if drw.is_null() || (*drw).fonts.is_null() || text.is_null() {
             return 0;
@@ -389,7 +398,7 @@ pub fn fontset_getwidth(drw: *mut Drw, text: *const c_char) -> c_uint {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn text(
+pub unsafe fn text(
     drw: *mut Drw,
     mut x: c_int,
     y: c_int,
@@ -727,7 +736,7 @@ fn font_getexts(
     }
 }
 
-pub fn map(
+pub unsafe fn map(
     drw: *mut Drw,
     win: Window,
     x: c_int,
@@ -755,7 +764,7 @@ pub fn map(
     }
 }
 
-pub fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+pub unsafe fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
     unsafe {
         if drw.is_null() {
             return;
