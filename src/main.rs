@@ -2981,6 +2981,7 @@ mod tests {
 
         // kill xephyr when finished
         cmd.kill().unwrap();
+        cmd.try_wait().unwrap();
 
         assert!(ok);
     }
