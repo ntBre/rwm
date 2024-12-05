@@ -188,7 +188,7 @@ pub(crate) fn view(_state: &State, arg: *const Arg) {
             [pertag.curtag as usize][((*SELMON).sellt ^ 1) as usize];
 
         if (*SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
-            togglebar(&_state, null_mut());
+            togglebar(_state, null_mut());
         }
 
         focus(null_mut());
@@ -549,7 +549,7 @@ pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
                         && ((nx - c.x).abs() > CONFIG.snap as c_int
                             || (ny - c.y).abs() > CONFIG.snap as c_int)
                     {
-                        togglefloating(&state, null_mut());
+                        togglefloating(state, null_mut());
                     }
                     if (*(*SELMON).lt[(*SELMON).sellt as usize])
                         .arrange
