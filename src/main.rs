@@ -2920,7 +2920,8 @@ mod tests {
     #[test]
     fn main() {
         // setup xephyr
-        let mut cmd = Command::new("Xephyr").arg(":1").spawn().unwrap();
+        let mut cmd =
+            Command::new("Xephyr").arg("-ac").arg(":1").spawn().unwrap();
 
         // wait for xephyr to start
         unsafe {
