@@ -2930,13 +2930,13 @@ mod tests {
         }
 
         // goto for killing xephyr no matter what
-        let ok = loop {
+        let ok = 'defer: {
             unsafe {
                 let xcon = match Connection::connect(Some(":1.0")) {
                     Ok((xcon, _)) => xcon,
                     Err(e) => {
                         eprintln!("rwm: cannot get xcb connection: {e:?}");
-                        break false;
+                        break 'defer false;
                     }
                 };
                 XCON = Box::into_raw(Box::new(xcon));
@@ -2975,7 +2975,8 @@ mod tests {
                 xlib::XCloseDisplay(DPY);
                 drop(Box::from_raw(XCON));
             }
-            break true;
+
+            break 'defer true;
         };
 
         // kill xephyr when finished
