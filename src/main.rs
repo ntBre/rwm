@@ -2036,9 +2036,9 @@ fn cleanup(state: &mut State) {
             libc::free(SYSTRAY.cast());
         }
 
-        drw::cur_free(DRW, &mut state.cursors.move_);
-        drw::cur_free(DRW, &mut state.cursors.normal);
-        drw::cur_free(DRW, &mut state.cursors.resize);
+        drw::cur_free(&mut state.cursors.move_);
+        drw::cur_free(&mut state.cursors.normal);
+        drw::cur_free(&mut state.cursors.resize);
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..CONFIG.colors.len() {
