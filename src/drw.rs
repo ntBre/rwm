@@ -226,26 +226,31 @@ pub(crate) fn setscheme(drw: Option<&mut Drw>, scm: *mut Clr) {
     }
 }
 
-impl Drw {
-    pub(crate) fn fontset_create(&mut self, fonts: &[CString]) -> *mut Fnt {
-        log::trace!("fontset_create");
-        unsafe {
-            let mut ret: *mut Fnt = null_mut();
+pub(crate) fn fontset_create(
+    drw: Option<&mut Drw>,
+    fonts: &[CString],
+) -> *mut Fnt {
+    log::trace!("fontset_create");
+    unsafe {
+        let mut ret: *mut Fnt = null_mut();
 
-            if fonts.is_empty() {
-                return null_mut();
-            }
-
-            for font in fonts.iter().rev() {
-                let cur = xfont_create(self, font.as_ptr(), null_mut());
-                if !cur.is_null() {
-                    (*cur).next = ret;
-                    ret = cur;
-                }
-            }
-            self.fonts = ret;
-            ret
+        // since fonts is a & not a *, it can't be null, but it could be empty
+        let Some(drw) = drw else {
+            return null_mut();
+        };
+        if fonts.is_empty() {
+            return null_mut();
         }
+
+        for font in fonts.iter().rev() {
+            let cur = xfont_create(drw, font.as_ptr(), null_mut());
+            if !cur.is_null() {
+                (*cur).next = ret;
+                ret = cur;
+            }
+        }
+        drw.fonts = ret;
+        ret
     }
 }
 
