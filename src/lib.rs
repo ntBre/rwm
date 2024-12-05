@@ -3,6 +3,7 @@ use std::ffi::{c_char, c_int, c_uint};
 use enums::Clk;
 
 pub mod enums;
+pub mod events;
 
 pub type Window = u64;
 

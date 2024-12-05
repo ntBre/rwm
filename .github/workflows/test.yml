@@ -24,11 +24,13 @@ jobs:
         if: ${{ ! matrix.is_mac }}
         run: |
           sudo apt-get update
-          sudo apt-get install libxft-dev libxinerama-dev
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
         run: |
           brew install libxft libxinerama
+          brew install --cask xquartz
+          echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -39,5 +41,3 @@ jobs:
       # https://twitter.com/jonhoo/status/1571290371124260865
       - name: cargo test --locked
         run: cargo test --locked --all-features --lib --bins --tests --examples -- --test-threads=1
-      - name: cargo bench
-        run: cargo bench
