@@ -2920,7 +2920,11 @@ mod tests {
     #[test]
     fn main() {
         // setup xephyr
+        #[cfg(target_os = "linux")]
         let mut cmd = Command::new("Xvfb").arg(":1").spawn().unwrap();
+
+        #[cfg(not(target_os = "linux"))]
+        let mut cmd = Command::new("xvfb").arg(":1").spawn().unwrap();
 
         // wait for xephyr to start
         unsafe {
