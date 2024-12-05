@@ -2914,25 +2914,23 @@ mod tests {
 
     use super::*;
 
-    use std::{process::Command, thread::sleep, time::Duration};
+    use std::process::Command;
 
     #[test]
     fn main() {
         // setup xephyr
         let mut cmd = Command::new("Xephyr").arg(":1").spawn().unwrap();
-        // TODO this is pretty hacky, figure out a better way to wait for this.
-        // Looping on XOpenDisplay is one idea, but if the display name gets out
-        // of sync somehow this will cause an infinite loop
-        sleep(Duration::from_millis(500));
+
+        // wait for xephyr to start
+        unsafe {
+            while DPY.is_null() {
+                DPY = xlib::XOpenDisplay(c":1.0".as_ptr());
+            }
+        }
 
         // goto for killing xephyr no matter what
         let ok = loop {
             unsafe {
-                DPY = xlib::XOpenDisplay(c":1.0".as_ptr());
-                if DPY.is_null() {
-                    eprintln!("can't open display");
-                    break false;
-                }
                 let Ok((xcon, _)) = Connection::connect(None) else {
                     eprintln!("rwm: cannot get xcb connection");
                     break false;
