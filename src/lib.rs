@@ -206,5 +206,6 @@ pub struct State {
     pub netatom: [Atom; Net::Last as usize],
     pub xatom: [Atom; XEmbed::Last as usize],
     pub dpy: *mut Display,
+    pub drw: *mut Drw,
     pub cursors: Cursors,
 }

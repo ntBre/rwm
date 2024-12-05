@@ -44,7 +44,7 @@ use rwm::{
 
 use config::CONFIG;
 use enums::{Clk, Col, Net, Scheme, WM};
-use rwm::drw::Drw;
+use rwm::drw::{fontset_create, Drw};
 use rwm::util::{die, ecalloc};
 
 macro_rules! cfor {
@@ -133,7 +133,7 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut DRW: *mut Drw = std::ptr::null_mut();
+// static mut DRW: *mut Drw = std::ptr::null_mut();
 
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
@@ -262,26 +262,27 @@ fn setup(dpy: *mut Display) -> State {
         SH = xlib::XDisplayHeight(dpy, SCREEN);
         ROOT = xlib::XRootWindow(dpy, SCREEN);
         let sw = xlib::XDisplayWidth(dpy, SCREEN);
-        DRW = drw::create(dpy, SCREEN, ROOT, sw as u32, SH as u32);
-        if drw::fontset_create(DRW, &CONFIG.fonts).is_null() {
+        let drw = drw::create(dpy, SCREEN, ROOT, sw as u32, SH as u32);
+        if fontset_create(drw, &CONFIG.fonts).is_null() {
             panic!("no fonts could be loaded");
         }
-        LRPAD = (*(*DRW).fonts).h as i32;
+        LRPAD = (*(*drw).fonts).h as i32;
 
         /* init cursors */
         let cursors = rwm::Cursors {
-            normal: drw::cur_create(DRW, XC_LEFT_PTR as i32),
-            resize: drw::cur_create(DRW, XC_SIZING as i32),
-            move_: drw::cur_create(DRW, XC_FLEUR as i32),
+            normal: drw::cur_create(drw, XC_LEFT_PTR as i32),
+            resize: drw::cur_create(drw, XC_SIZING as i32),
+            move_: drw::cur_create(drw, XC_FLEUR as i32),
         };
         let mut state = State {
-            bh: (*(*DRW).fonts).h as i32 + 2,
+            bh: (*(*drw).fonts).h as i32 + 2,
             sw,
             cursors,
             wmatom: Default::default(),
             netatom: Default::default(),
             xatom: Default::default(),
             dpy,
+            drw,
         };
 
         updategeom(&mut state);
@@ -346,7 +347,7 @@ fn setup(dpy: *mut Display) -> State {
         SCHEME =
             util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..CONFIG.colors.len() {
-            *SCHEME.add(i) = drw::scm_create(DRW, &CONFIG.colors[i], 3);
+            *SCHEME.add(i) = drw::scm_create(drw, &CONFIG.colors[i], 3);
         }
 
         // init system tray
@@ -1265,7 +1266,7 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(addr_of!(STEXT) as *const _) - LRPAD
+        let sw = textw(state.drw, addr_of!(STEXT) as *const _) - LRPAD
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
@@ -1396,14 +1397,14 @@ fn updatesystray(state: &mut State) {
         // redraw background
         XSetForeground(
             state.dpy,
-            (*DRW).gc,
+            (*state.drw).gc,
             get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
                 .pixel,
         );
         XFillRectangle(
             state.dpy,
             (*SYSTRAY).win,
-            (*DRW).gc,
+            (*state.drw).gc,
             0,
             0,
             w,
@@ -1455,9 +1456,9 @@ fn systraytomon(m: *mut Monitor) -> *mut Monitor {
     }
 }
 
-fn textw(x: *const c_char) -> c_int {
+fn textw(drw: *mut Drw, x: *const c_char) -> c_int {
     log::trace!("textw");
-    unsafe { drw::fontset_getwidth(DRW, x) as c_int + LRPAD }
+    unsafe { drw::fontset_getwidth(drw, x) as c_int + LRPAD }
 }
 
 fn drawbar(state: &mut State, m: *mut Monitor) {
@@ -1465,8 +1466,8 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut tw = 0;
         let mut stw = 0;
-        let boxs = (*(*DRW).fonts).h / 9;
-        let boxw = (*(*DRW).fonts).h / 6 + 2;
+        let boxs = (*(*state.drw).fonts).h / 9;
+        let boxw = (*(*state.drw).fonts).h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
         if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
@@ -1480,10 +1481,10 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == SELMON {
             // status is only drawn on selected monitor
-            drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(addr_of!(STEXT) as *const _) - LRPAD / 2 + 2; // 2px right padding
+            drw::setscheme(state.drw, *SCHEME.add(Scheme::Norm as usize));
+            tw = textw(state.drw, addr_of!(STEXT) as *const _) - LRPAD / 2 + 2; // 2px right padding
             drw::text(
-                DRW,
+                state.drw,
                 (*m).ww - tw - stw as i32,
                 0,
                 tw as u32,
@@ -1508,9 +1509,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         let mut x = 0;
         for (i, tag) in CONFIG.tags.iter().enumerate() {
             let text = tag.to_owned();
-            let w = textw(text.as_ptr());
+            let w = textw(state.drw, text.as_ptr());
             drw::setscheme(
-                DRW,
+                state.drw,
                 *SCHEME.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
                         Scheme::Sel as usize
@@ -1520,7 +1521,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 ),
             );
             drw::text(
-                DRW,
+                state.drw,
                 x,
                 0,
                 w as u32,
@@ -1532,7 +1533,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
 
             if (occ & 1 << i) != 0 {
                 drw::rect(
-                    DRW,
+                    state.drw,
                     x + boxs as i32,
                     boxs as i32,
                     boxw,
@@ -1547,10 +1548,10 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             x += w as i32;
         }
 
-        let w = textw((*m).ltsymbol.as_ptr());
-        drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
+        let w = textw(state.drw, (*m).ltsymbol.as_ptr());
+        drw::setscheme(state.drw, *SCHEME.add(Scheme::Norm as usize));
         x = drw::text(
-            DRW,
+            state.drw,
             x,
             0,
             w as u32,
@@ -1564,7 +1565,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if w > state.bh {
             if !(*m).sel.is_null() {
                 drw::setscheme(
-                    DRW,
+                    state.drw,
                     *SCHEME.offset(if m == SELMON {
                         Scheme::Sel as isize
                     } else {
@@ -1572,7 +1573,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     }),
                 );
                 drw::text(
-                    DRW,
+                    state.drw,
                     x,
                     0,
                     w as u32,
@@ -1583,7 +1584,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 );
                 if (*(*m).sel).isfloating {
                     drw::rect(
-                        DRW,
+                        state.drw,
                         x + boxs as i32,
                         boxs as i32,
                         boxw,
@@ -1593,12 +1594,12 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     );
                 }
             } else {
-                drw::setscheme(DRW, *SCHEME.add(Scheme::Norm as usize));
-                drw::rect(DRW, x, 0, w as u32, state.bh as u32, 1, 1);
+                drw::setscheme(state.drw, *SCHEME.add(Scheme::Norm as usize));
+                drw::rect(state.drw, x, 0, w as u32, state.bh as u32, 1, 1);
             }
         }
         drw::map(
-            DRW,
+            state.drw,
             (*m).barwin,
             0,
             0,
@@ -2135,12 +2136,12 @@ fn cleanup(mut state: State) {
             state.netatom[Net::ActiveWindow as usize],
         );
 
-        let State { dpy, cursors, .. } = state;
+        let State { dpy, drw, cursors, .. } = state;
 
         // this needs to be dropped before DRW
         drop(cursors);
 
-        drw::free(DRW);
+        drw::free(drw);
         xlib::XCloseDisplay(dpy);
 
         #[cfg(target_os = "linux")]
