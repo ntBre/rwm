@@ -28,7 +28,12 @@ jobs:
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
         run: |
-          brew install libxft libxinerama xquartz
+          brew install libxft libxinerama
+          brew install --cask xquartz
+          export PATH=$PATH:/opt/X11/bin
+          which xvfb
+          which Xvfb
+          ls /opt/X11
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
