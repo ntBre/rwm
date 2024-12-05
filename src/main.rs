@@ -2214,7 +2214,7 @@ fn unmanage(state: &mut State, c: *mut Client, destroyed: c_int) {
 
 /// I'm just using the OpenBSD version of the code in the patch rather than the
 /// Linux version that uses XCB
-fn winpid(w: Window) -> pid_t {
+fn winpid(_state: &mut State, w: Window) -> pid_t {
     let mut result = 0;
 
     #[cfg(target_os = "linux")]
@@ -2253,9 +2253,9 @@ fn winpid(w: Window) -> pid_t {
         let mut bytes: c_ulong = 0;
         let mut prop: *mut c_uchar = null_mut();
         if XGetWindowProperty(
-            state.dpy,
+            _state.dpy,
             w,
-            XInternAtom(state.dpy, c"_NET_WM_PID".as_ptr(), 0),
+            XInternAtom(_state.dpy, c"_NET_WM_PID".as_ptr(), 0),
             0,
             1,
             False,
@@ -2507,7 +2507,7 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         let wa = *wa;
         let c: *mut Client = util::ecalloc(1, size_of::<Client>()) as *mut _;
         (*c).win = w;
-        (*c).pid = winpid(w);
+        (*c).pid = winpid(state, w);
         (*c).x = wa.x;
         (*c).oldx = wa.x;
         (*c).y = wa.y;
