@@ -2932,9 +2932,12 @@ mod tests {
         // goto for killing xephyr no matter what
         let ok = loop {
             unsafe {
-                let Ok((xcon, _)) = Connection::connect(None) else {
-                    eprintln!("rwm: cannot get xcb connection");
-                    break false;
+                let xcon = match Connection::connect(None) {
+                    Ok((xcon, _)) => xcon,
+                    Err(e) => {
+                        eprintln!("rwm: cannot get xcb connection: {e:?}");
+                        break false;
+                    }
                 };
                 XCON = Box::into_raw(Box::new(xcon));
             }
