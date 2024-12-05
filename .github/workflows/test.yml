@@ -24,7 +24,8 @@ jobs:
         if: ${{ ! matrix.is_mac }}
         run: |
           sudo apt-get update
-          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr xinit
+          startx
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
         run: |
