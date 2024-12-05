@@ -2931,6 +2931,7 @@ mod tests {
 
         // goto for killing xephyr no matter what
         let ok = 'defer: {
+            #[cfg(target_os = "linux")]
             unsafe {
                 let xcon = match Connection::connect(Some(":1.0")) {
                     Ok((xcon, _)) => xcon,
@@ -2973,6 +2974,8 @@ mod tests {
             cleanup();
             unsafe {
                 xlib::XCloseDisplay(DPY);
+
+                #[cfg(target_os = "linux")]
                 drop(Box::from_raw(XCON));
             }
 
