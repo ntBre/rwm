@@ -144,9 +144,6 @@ static mut DRW: *mut Drw = std::ptr::null_mut();
 static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
 
-// static mut CURSOR: [*mut Cursor; Cur::Last as usize] =
-//     [null_mut(); Cur::Last as usize];
-
 static mut SCHEME: *mut *mut Clr = null_mut();
 
 fn get_scheme_color(scheme: *mut *mut Clr, i: usize, j: usize) -> Clr {
