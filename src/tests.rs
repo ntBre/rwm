@@ -15,10 +15,9 @@ fn main() {
     let mut cmd = Command::new("xvfb").arg(":1").spawn().unwrap();
 
     // wait for xephyr to start
-    unsafe {
-        while DPY.is_null() {
-            DPY = xlib::XOpenDisplay(c":1.0".as_ptr());
-        }
+    let mut dpy = unsafe { xlib::XOpenDisplay(c":1.0".as_ptr()) };
+    while dpy.is_null() {
+        dpy = unsafe { xlib::XOpenDisplay(c":1.0".as_ptr()) };
     }
 
     // goto for killing xephyr no matter what
@@ -34,8 +33,8 @@ fn main() {
             };
             XCON = Box::into_raw(Box::new(xcon));
         }
-        checkotherwm();
-        let state = setup();
+        checkotherwm(dpy);
+        let state = setup(dpy);
         scan(&state);
 
         // instead of calling `run`, manually send some XEvents
@@ -53,7 +52,7 @@ fn main() {
                     .map(|tag| textw(tag.as_ptr()))
                     .sum::<i32>()
                     + 5,
-                unsafe { DPY },
+                state.dpy,
                 0,
             )
             .into_button(),
@@ -64,9 +63,17 @@ fn main() {
                 .is_none());
         }
 
-        cleanup(state);
+        cleanup(&state);
+
         unsafe {
-            xlib::XCloseDisplay(DPY);
+            let State { dpy, cursors, .. } = state;
+
+            // this needs to be dropped before DRW
+            drop(cursors);
+
+            drw::free(DRW);
+
+            xlib::XCloseDisplay(dpy);
 
             #[cfg(target_os = "linux")]
             drop(Box::from_raw(XCON));

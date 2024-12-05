@@ -18,8 +18,8 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
-    width, xerror, xerrordummy, DPY, HANDLER, MONS, MOUSEMASK, ROOT,
-    SCRATCHTAG, SELMON, SYSTRAY, TAGMASK, XNONE,
+    width, xerror, xerrordummy, HANDLER, MONS, MOUSEMASK, ROOT, SCRATCHTAG,
+    SELMON, SYSTRAY, TAGMASK, XNONE,
 };
 use rwm::State;
 use rwm::{Arg, Client, Monitor};
@@ -50,13 +50,13 @@ pub(crate) fn togglebar(state: &State, _arg: *const Arg) {
                     wc.y = (*SELMON).mh - state.bh;
                 }
             }
-            XConfigureWindow(DPY, (*SYSTRAY).win, CWY as u32, &mut wc);
+            XConfigureWindow(state.dpy, (*SYSTRAY).win, CWY as u32, &mut wc);
         }
         arrange(state, SELMON);
     }
 }
 
-pub(crate) fn focusstack(_state: &State, arg: *const Arg) {
+pub(crate) fn focusstack(state: &State, arg: *const Arg) {
     unsafe {
         let mut c: *mut Client = null_mut();
         let mut i: *mut Client;
@@ -86,20 +86,20 @@ pub(crate) fn focusstack(_state: &State, arg: *const Arg) {
             }
         }
         if !c.is_null() {
-            focus(_state, c);
-            restack(_state, SELMON);
+            focus(state, c);
+            restack(state, SELMON);
         }
     }
 }
 
 /// Increase the number of windows in the master area.
-pub(crate) fn incnmaster(_state: &State, arg: *const Arg) {
+pub(crate) fn incnmaster(state: &State, arg: *const Arg) {
     unsafe {
         (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize] =
             std::cmp::max((*SELMON).nmaster + (*arg).i(), 0);
         (*SELMON).nmaster =
             (*(*SELMON).pertag).nmasters[(*(*SELMON).pertag).curtag as usize];
-        arrange(_state, SELMON);
+        arrange(state, SELMON);
     }
 }
 
@@ -107,7 +107,7 @@ pub(crate) fn incnmaster(_state: &State, arg: *const Arg) {
 /// greater than 1.0 sets the fraction absolutely, while fractional values add
 /// to the current value. Total values are restricted to the range [0.05, 0.95]
 /// to leave at least 5% of the screen for other windows.
-pub(crate) fn setmfact(_state: &State, arg: *const Arg) {
+pub(crate) fn setmfact(state: &State, arg: *const Arg) {
     unsafe {
         if arg.is_null()
             || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
@@ -125,13 +125,13 @@ pub(crate) fn setmfact(_state: &State, arg: *const Arg) {
         (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize] = f;
         (*SELMON).mfact =
             (*(*SELMON).pertag).mfacts[(*(*SELMON).pertag).curtag as usize];
-        arrange(_state, SELMON);
+        arrange(state, SELMON);
     }
 }
 
 /// Move the selected window to the master area. The current master is pushed to
 /// the top of the stack.
-pub(crate) fn zoom(_state: &State, _arg: *const Arg) {
+pub(crate) fn zoom(state: &State, _arg: *const Arg) {
     unsafe {
         let mut c = (*SELMON).sel;
         if (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
@@ -146,12 +146,12 @@ pub(crate) fn zoom(_state: &State, _arg: *const Arg) {
                 return;
             }
         }
-        pop(_state, c);
+        pop(state, c);
     }
 }
 
 /// View the tag identified by `arg.ui`.
-pub(crate) fn view(_state: &State, arg: *const Arg) {
+pub(crate) fn view(state: &State, arg: *const Arg) {
     log::trace!("view");
     unsafe {
         if (*arg).ui() & *TAGMASK
@@ -188,11 +188,11 @@ pub(crate) fn view(_state: &State, arg: *const Arg) {
             [pertag.curtag as usize][((*SELMON).sellt ^ 1) as usize];
 
         if (*SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
-            togglebar(_state, null_mut());
+            togglebar(state, null_mut());
         }
 
-        focus(_state, null_mut());
-        arrange(_state, SELMON);
+        focus(state, null_mut());
+        arrange(state, SELMON);
     }
 }
 
@@ -214,18 +214,18 @@ pub(crate) fn killclient(state: &State, _arg: *const Arg) {
             0,
         ) == 0
         {
-            XGrabServer(DPY);
+            XGrabServer(state.dpy);
             XSetErrorHandler(Some(xerrordummy));
-            XSetCloseDownMode(DPY, DestroyAll);
-            XKillClient(DPY, (*(*SELMON).sel).win);
-            XSync(DPY, False);
+            XSetCloseDownMode(state.dpy, DestroyAll);
+            XKillClient(state.dpy, (*(*SELMON).sel).win);
+            XSync(state.dpy, False);
             XSetErrorHandler(Some(xerror));
-            XUngrabServer(DPY);
+            XUngrabServer(state.dpy);
         }
     }
 }
 
-pub(crate) fn setlayout(_state: &State, arg: *const Arg) {
+pub(crate) fn setlayout(state: &State, arg: *const Arg) {
     log::trace!("setlayout: {arg:?}");
     unsafe {
         if arg.is_null()
@@ -254,14 +254,14 @@ pub(crate) fn setlayout(_state: &State, arg: *const Arg) {
             size_of_val(&(*SELMON).ltsymbol),
         );
         if !(*SELMON).sel.is_null() {
-            arrange(_state, SELMON);
+            arrange(state, SELMON);
         } else {
-            drawbar(_state, SELMON);
+            drawbar(state, SELMON);
         }
     }
 }
 
-pub(crate) fn togglefloating(_state: &State, _arg: *const Arg) {
+pub(crate) fn togglefloating(state: &State, _arg: *const Arg) {
     log::trace!("togglefloating: {_arg:?}");
     unsafe {
         if (*SELMON).sel.is_null() {
@@ -275,9 +275,9 @@ pub(crate) fn togglefloating(_state: &State, _arg: *const Arg) {
             !(*(*SELMON).sel).isfloating || (*(*SELMON).sel).isfixed != 0;
         if (*(*SELMON).sel).isfloating {
             let sel = &mut *(*SELMON).sel;
-            resize(_state, sel, sel.x, sel.y, sel.w, sel.h, 0);
+            resize(state, sel, sel.x, sel.y, sel.w, sel.h, 0);
         }
-        arrange(_state, SELMON);
+        arrange(state, SELMON);
     }
 }
 
@@ -286,7 +286,7 @@ pub(crate) fn togglefloating(_state: &State, _arg: *const Arg) {
 /// From the [stacker patch](https://dwm.suckless.org/patches/stacker/). This
 /// should only be called with an ISINC arg, in their parlance, so also inline
 /// their stackpos function, in the branch where this is true
-pub(crate) fn pushstack(_state: &State, arg: *const Arg) {
+pub(crate) fn pushstack(state: &State, arg: *const Arg) {
     fn modulo(n: c_int, m: c_int) -> c_int {
         if n % m < 0 {
             (n % m) + m
@@ -337,16 +337,16 @@ pub(crate) fn pushstack(_state: &State, arg: *const Arg) {
                 (*c).next = sel;
             }
         }
-        arrange(_state, SELMON);
+        arrange(state, SELMON);
     }
 }
 
-pub(crate) fn tag(_state: &State, arg: *const Arg) {
+pub(crate) fn tag(state: &State, arg: *const Arg) {
     unsafe {
         if !(*SELMON).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {
             (*(*SELMON).sel).tags = (*arg).ui() & *TAGMASK;
-            focus(_state, null_mut());
-            arrange(_state, SELMON);
+            focus(state, null_mut());
+            arrange(state, SELMON);
         }
     }
 }
@@ -403,16 +403,16 @@ fn sendmon(state: &State, c: *mut Client, m: *mut Monitor) {
     }
 }
 
-pub(crate) fn tagmon(_state: &State, arg: *const Arg) {
+pub(crate) fn tagmon(state: &State, arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() || (*MONS).next.is_null() {
             return;
         }
-        sendmon(_state, (*SELMON).sel, dirtomon((*arg).i()));
+        sendmon(state, (*SELMON).sel, dirtomon((*arg).i()));
     }
 }
 
-pub(crate) fn toggleview(_state: &State, arg: *const Arg) {
+pub(crate) fn toggleview(state: &State, arg: *const Arg) {
     unsafe {
         let newtagset = (*SELMON).tagset[(*SELMON).seltags as usize]
             ^ ((*arg).ui() & *TAGMASK);
@@ -451,11 +451,11 @@ pub(crate) fn toggleview(_state: &State, arg: *const Arg) {
                 != (*(*SELMON).pertag).showbars
                     [(*(*SELMON).pertag).curtag as usize]
             {
-                togglebar(_state, null_mut());
+                togglebar(state, null_mut());
             }
 
-            focus(_state, null_mut());
-            arrange(_state, SELMON);
+            focus(state, null_mut());
+            arrange(state, SELMON);
         }
     }
 }
@@ -487,7 +487,7 @@ pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
         let ocx = c.x;
         let ocy = c.y;
         if XGrabPointer(
-            DPY,
+            state.dpy,
             ROOT,
             False,
             MOUSEMASK as u32,
@@ -502,7 +502,7 @@ pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
         }
         let mut x = 0;
         let mut y = 0;
-        if getrootptr(&mut x, &mut y) == 0 {
+        if getrootptr(state, &mut x, &mut y) == 0 {
             return;
         }
         // nil init?
@@ -512,7 +512,7 @@ pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
         // emulating do-while
         loop {
             XMaskEvent(
-                DPY,
+                state.dpy,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
             );
@@ -566,7 +566,7 @@ pub(crate) fn movemouse(state: &State, _arg: *const Arg) {
                 break;
             }
         }
-        XUngrabPointer(DPY, CurrentTime);
+        XUngrabPointer(state.dpy, CurrentTime);
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != SELMON {
             sendmon(state, c, m);
@@ -591,7 +591,7 @@ pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
         let ocx = c.x;
         let ocy = c.y;
         if XGrabPointer(
-            DPY,
+            state.dpy,
             ROOT,
             False,
             MOUSEMASK as u32,
@@ -605,7 +605,7 @@ pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
             return;
         }
         XWarpPointer(
-            DPY,
+            state.dpy,
             XNONE as u64,
             c.win,
             0,
@@ -622,7 +622,7 @@ pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
         // do-while
         loop {
             XMaskEvent(
-                DPY,
+                state.dpy,
                 MOUSEMASK | ExposureMask | SubstructureRedirectMask,
                 &mut ev,
             );
@@ -666,7 +666,7 @@ pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
         }
 
         XWarpPointer(
-            DPY,
+            state.dpy,
             XNONE as u64,
             c.win,
             0,
@@ -676,8 +676,8 @@ pub(crate) fn resizemouse(state: &State, _arg: *const Arg) {
             c.w + c.bw - 1,
             c.h + c.bw - 1,
         );
-        XUngrabPointer(DPY, CurrentTime);
-        while XCheckMaskEvent(DPY, EnterWindowMask, &mut ev) != 0 {}
+        XUngrabPointer(state.dpy, CurrentTime);
+        while XCheckMaskEvent(state.dpy, EnterWindowMask, &mut ev) != 0 {}
         let m = recttomon(c.x, c.y, c.w, c.h);
         if m != SELMON {
             sendmon(state, c, m);
@@ -708,7 +708,7 @@ pub(crate) fn spawn(_state: &State, arg: *const Arg) {
 }
 
 /// Move the current window to the tag specified by `arg.ui`.
-pub(crate) fn toggletag(_state: &State, arg: *const Arg) {
+pub(crate) fn toggletag(state: &State, arg: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
@@ -716,8 +716,8 @@ pub(crate) fn toggletag(_state: &State, arg: *const Arg) {
         let newtags = (*(*SELMON).sel).tags ^ ((*arg).ui() & *TAGMASK);
         if newtags != 0 {
             (*(*SELMON).sel).tags = newtags;
-            focus(_state, null_mut());
-            arrange(_state, SELMON);
+            focus(state, null_mut());
+            arrange(state, SELMON);
         }
     }
 }
@@ -726,16 +726,16 @@ pub(crate) fn toggletag(_state: &State, arg: *const Arg) {
 ///
 /// adapted from: https://old.reddit.com/r/dwm/comments/avhkgb/fullscreen_mode/
 /// for fixing problems with steam games
-pub(crate) fn fullscreen(_state: &State, _: *const Arg) {
+pub(crate) fn fullscreen(state: &State, _: *const Arg) {
     unsafe {
         if (*SELMON).sel.is_null() {
             return;
         }
-        setfullscreen(_state, (*SELMON).sel, !(*(*SELMON).sel).isfullscreen)
+        setfullscreen(state, (*SELMON).sel, !(*(*SELMON).sel).isfullscreen)
     }
 }
 
-pub(crate) fn togglescratch(_state: &State, arg: *const Arg) {
+pub(crate) fn togglescratch(state: &State, arg: *const Arg) {
     unsafe {
         let mut c: *mut Client;
         let mut found = false;
@@ -753,15 +753,15 @@ pub(crate) fn togglescratch(_state: &State, arg: *const Arg) {
                 (*SELMON).tagset[(*SELMON).seltags as usize] ^ *SCRATCHTAG;
             if newtagset != 0 {
                 (*SELMON).tagset[(*SELMON).seltags as usize] = newtagset;
-                focus(_state, null_mut());
-                arrange(_state, SELMON);
+                focus(state, null_mut());
+                arrange(state, SELMON);
             }
             if is_visible(c) {
-                focus(_state, c);
-                restack(_state, SELMON);
+                focus(state, c);
+                restack(state, SELMON);
             }
         } else {
-            spawn(_state, arg);
+            spawn(state, arg);
         }
     }
 }
