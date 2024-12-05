@@ -212,13 +212,12 @@ pub fn cur_create(drw: *mut Drw, shape: c_int) -> Cur {
     }
 }
 
-pub fn cur_free(cursor: *mut Cur) {
-    if cursor.is_null() {
-        return;
-    }
-
-    unsafe {
-        xlib::XFreeCursor((*(*cursor).drw).dpy, (*cursor).cursor);
+impl Drop for Cur {
+    fn drop(&mut self) {
+        unsafe {
+            log::trace!("dropping cur: {}", self.cursor);
+            xlib::XFreeCursor((*self.drw).dpy, self.cursor);
+        }
     }
 }
 

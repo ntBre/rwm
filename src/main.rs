@@ -2007,12 +2007,12 @@ fn isuniquegeom(
     }
 }
 
-fn cleanup(state: &mut State) {
+fn cleanup(state: State) {
     log::trace!("entering cleanup");
 
     unsafe {
         let a = Arg::Ui(!0);
-        view(state, &a);
+        view(&state, &a);
         (*SELMON).lt[(*SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
@@ -2036,9 +2036,8 @@ fn cleanup(state: &mut State) {
             libc::free(SYSTRAY.cast());
         }
 
-        drw::cur_free(&mut state.cursors.move_);
-        drw::cur_free(&mut state.cursors.normal);
-        drw::cur_free(&mut state.cursors.resize);
+        // this needs to be dropped before DRW
+        drop(state);
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..CONFIG.colors.len() {
@@ -2900,10 +2899,10 @@ fn main() {
         }
     }
     checkotherwm();
-    let mut state = setup();
+    let state = setup();
     scan();
     run(&state);
-    cleanup(&mut state);
+    cleanup(state);
     unsafe {
         xlib::XCloseDisplay(DPY);
 
