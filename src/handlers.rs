@@ -1,7 +1,7 @@
 use std::{
     ffi::{c_long, c_uint},
     mem::MaybeUninit,
-    ptr::{addr_of, addr_of_mut, null_mut},
+    ptr::null_mut,
 };
 
 use x11::xlib::{
@@ -74,13 +74,13 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             } else if ev.x
                 < x + textw(
                     &mut state.drw,
-                    addr_of!((*state.selmon).ltsymbol) as *const _,
+                    &raw const (*state.selmon).ltsymbol as *const _,
                 )
             {
                 click = Clk::LtSymbol;
             } else if ev.x
                 > (*state.selmon).ww
-                    - textw(&mut state.drw, addr_of!(state.stext) as *const _)
+                    - textw(&mut state.drw, &raw const state.stext as *const _)
                     - getsystraywidth() as i32
             {
                 click = Clk::StatusText;
@@ -550,14 +550,13 @@ pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
             updatesystray(state);
         }
         log::trace!("maprequest: XGetWindowAttributes");
-        let res =
-            xlib::XGetWindowAttributes(state.dpy, ev.window, addr_of_mut!(WA));
+        let res = xlib::XGetWindowAttributes(state.dpy, ev.window, &raw mut WA);
         // XGetWindowAttributes returns a zero if the function fails
         if res == 0 || WA.override_redirect != 0 {
             return;
         }
         if wintoclient(state, ev.window).is_null() {
-            manage(state, ev.window, addr_of_mut!(WA));
+            manage(state, ev.window, &raw mut WA);
         }
     }
 }

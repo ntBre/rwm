@@ -5,7 +5,7 @@ use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
-use std::ptr::{addr_of, addr_of_mut, null_mut};
+use std::ptr::null_mut;
 use std::sync::LazyLock;
 
 use key_handlers::view;
@@ -365,7 +365,7 @@ fn setup(dpy: *mut Display) -> State {
             XA_WINDOW,
             32,
             PropModeReplace,
-            addr_of_mut!(WMCHECKWIN) as *mut c_uchar,
+            &raw mut WMCHECKWIN as *mut c_uchar,
             1,
         );
         xlib::XChangeProperty(
@@ -385,7 +385,7 @@ fn setup(dpy: *mut Display) -> State {
             XA_WINDOW,
             32,
             PropModeReplace,
-            addr_of_mut!(WMCHECKWIN) as *mut c_uchar,
+            &raw mut WMCHECKWIN as *mut c_uchar,
             1,
         );
         /* EWMH support per view */
@@ -1147,18 +1147,11 @@ fn updatestatus(state: &mut State) {
             state.dpy,
             ROOT,
             XA_WM_NAME,
-            // cast pointer to the array itself as a pointer to the first
-            // element, safe??
             state.stext.as_mut_ptr(),
-            // the lint leading to this instead of simply &stext is very scary,
-            // but hopefully it's fine
-            size_of_val(&*addr_of!(state.stext)) as u32,
+            size_of_val(&state.stext) as u32,
         ) == 0
         {
-            libc::strcpy(
-                addr_of_mut!(state.stext) as *mut _,
-                c"rwm-1.0".as_ptr(),
-            );
+            libc::strcpy(&raw mut state.stext as *mut _, c"rwm-1.0".as_ptr());
         }
         drawbar(state, state.selmon);
         updatesystray(state);
@@ -1270,7 +1263,7 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(&mut state.drw, addr_of!(state.stext) as *const _)
+        let sw = textw(&mut state.drw, &raw const state.stext as *const _)
             - LRPAD
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
@@ -1490,7 +1483,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(&mut state.drw, addr_of!(state.stext) as *const _)
+            tw = textw(&mut state.drw, &raw const state.stext as *const _)
                 - LRPAD / 2
                 + 2; // 2px right padding
             log::trace!("drawbar: text");
@@ -1501,7 +1494,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 tw as u32,
                 state.bh as u32,
                 (LRPAD / 2 - 2) as u32,
-                addr_of!(state.stext) as *const _,
+                &raw const state.stext as *const _,
                 0,
             );
         }
