@@ -377,7 +377,7 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
                     state.bh as c_uint,
                 );
                 updatebars(state);
-                let mut m = state.MONS;
+                let mut m = state.mons;
                 while !m.is_null() {
                     let mut c = (*m).clients;
                     while !c.is_null() {

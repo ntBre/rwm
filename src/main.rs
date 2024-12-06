@@ -281,7 +281,7 @@ fn setup(dpy: *mut Display) -> State {
             dpy,
             drw,
             selmon: null_mut(),
-            MONS: null_mut(),
+            mons: null_mut(),
         };
 
         updategeom(&mut state);
@@ -478,7 +478,7 @@ fn focus(state: &mut State, mut c: *mut Client) {
 fn drawbars(state: &mut State) {
     log::trace!("drawbars");
     unsafe {
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             drawbar(state, m);
             m = (*m).next;
@@ -618,7 +618,7 @@ fn arrange(state: &mut State, mut m: *mut Monitor) {
         if !m.is_null() {
             showhide(state, (*m).stack);
         } else {
-            m = state.MONS;
+            m = state.mons;
             while !m.is_null() {
                 showhide(state, (*m).stack);
                 m = (*m).next;
@@ -629,7 +629,7 @@ fn arrange(state: &mut State, mut m: *mut Monitor) {
             arrangemon(state, m);
             restack(state, m);
         } else {
-            m = state.MONS;
+            m = state.mons;
             while !m.is_null() {
                 arrangemon(state, m);
                 m = (*m).next;
@@ -1444,14 +1444,14 @@ fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
                 return null_mut();
             }
         }
-        cfor!(((n, t) = (1, state.MONS);
+        cfor!(((n, t) = (1, state.mons);
             !t.is_null() && !(*t).next.is_null();
             (n, t) = (n+1, (*t).next)) {});
-        cfor!(((i, t) = (1, state.MONS);
+        cfor!(((i, t) = (1, state.mons);
             !t.is_null() && !(*t).next.is_null() && i < CONFIG.systraypinning;
             (i, t) = (i+1, (*t).next)) {});
         if CONFIG.systraypinningfailfirst && n < CONFIG.systraypinning {
-            return state.MONS;
+            return state.mons;
         }
 
         t
@@ -1704,7 +1704,7 @@ fn updatebars(state: &mut State) {
     };
 
     unsafe {
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             if (*m).barwin != 0 {
                 continue;
@@ -1756,7 +1756,7 @@ fn updategeom(state: &mut State) -> i32 {
             );
 
             let mut n = 0;
-            let mut m = state.MONS;
+            let mut m = state.mons;
             while !m.is_null() {
                 m = (*m).next;
                 n += 1;
@@ -1794,19 +1794,19 @@ fn updategeom(state: &mut State) -> i32 {
                 log::trace!("updategeom: adding monitors");
             }
             for _ in n..nn {
-                let mut m = state.MONS;
+                let mut m = state.mons;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
                 }
                 if !m.is_null() {
                     (*m).next = createmon();
                 } else {
-                    state.MONS = createmon();
+                    state.mons = createmon();
                 }
             }
 
             let mut i = 0;
-            let mut m = state.MONS;
+            let mut m = state.mons;
             while i < nn && !m.is_null() {
                 if i >= n
                     || unique[i as usize].x_org != (*m).mx as i16
@@ -1840,7 +1840,7 @@ fn updategeom(state: &mut State) -> i32 {
                 log::trace!("updategeom: removing monitors");
             }
             for _ in nn..n {
-                let mut m = state.MONS;
+                let mut m = state.mons;
                 while !m.is_null() && !(*m).next.is_null() {
                     m = (*m).next;
                 }
@@ -1849,13 +1849,13 @@ fn updategeom(state: &mut State) -> i32 {
                     dirty = 1;
                     (*m).clients = (*c).next;
                     detachstack(c);
-                    (*c).mon = state.MONS;
+                    (*c).mon = state.mons;
                     attach(c);
                     attachstack(c);
                     c = (*m).clients;
                 }
                 if m == state.selmon {
-                    state.selmon = state.MONS;
+                    state.selmon = state.mons;
                 }
                 cleanupmon(m, state);
             }
@@ -1864,20 +1864,20 @@ fn updategeom(state: &mut State) -> i32 {
             log::trace!("updategeom: default monitor setup");
 
             // default monitor setup
-            if state.MONS.is_null() {
-                state.MONS = createmon();
+            if state.mons.is_null() {
+                state.mons = createmon();
             }
-            if (*state.MONS).mw != state.sw || (*state.MONS).mh != SH {
+            if (*state.mons).mw != state.sw || (*state.mons).mh != SH {
                 dirty = 1;
-                (*state.MONS).mw = state.sw;
-                (*state.MONS).ww = state.sw;
-                (*state.MONS).mh = SH;
-                (*state.MONS).wh = SH;
-                updatebarpos(state, state.MONS);
+                (*state.mons).mw = state.sw;
+                (*state.mons).ww = state.sw;
+                (*state.mons).mh = SH;
+                (*state.mons).wh = SH;
+                updatebarpos(state, state.mons);
             }
         }
         if dirty != 0 {
-            state.selmon = state.MONS;
+            state.selmon = state.mons;
             state.selmon = wintomon(state, ROOT);
         }
         dirty
@@ -1892,7 +1892,7 @@ fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
         if w == ROOT && getrootptr(state, &mut x, &mut y) != 0 {
             return recttomon(state, x, y, 1, 1);
         }
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             if w == (*m).barwin {
                 return m;
@@ -1910,7 +1910,7 @@ fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
 fn wintoclient(state: &mut State, w: u64) -> *mut Client {
     log::trace!("wintoclient");
     unsafe {
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -1936,7 +1936,7 @@ fn recttomon(
     unsafe {
         let mut r = state.selmon;
         let mut area = 0;
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             let a = intersect(x, y, w, h, m);
             if a > area {
@@ -2016,10 +2016,10 @@ fn getrootptr(state: &mut State, x: *mut c_int, y: *mut c_int) -> c_int {
 /// remove `mon` from the linked list of `Monitor`s in `state.MONS` and free it.
 fn cleanupmon(mon: *mut Monitor, state: &mut State) {
     unsafe {
-        if mon == state.MONS {
-            state.MONS = (*state.MONS).next;
+        if mon == state.mons {
+            state.mons = (*state.mons).next;
         } else {
-            let mut m = state.MONS;
+            let mut m = state.mons;
             while !m.is_null() && (*m).next != mon {
                 m = (*m).next;
             }
@@ -2123,7 +2123,7 @@ fn cleanup(mut state: State) {
         (*state.selmon).lt[(*state.selmon).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             while !(*m).stack.is_null() {
                 unmanage(&mut state, (*m).stack, 0);
@@ -2133,8 +2133,8 @@ fn cleanup(mut state: State) {
 
         xlib::XUngrabKey(state.dpy, AnyKey, AnyModifier, ROOT);
 
-        while !state.MONS.is_null() {
-            cleanupmon(state.MONS, &mut state);
+        while !state.mons.is_null() {
+            cleanupmon(state.mons, &mut state);
         }
 
         if CONFIG.showsystray {
@@ -2342,7 +2342,7 @@ fn termforwin(state: &mut State, w: *const Client) -> *mut Client {
         let mut c;
         let mut m;
 
-        cfor!((m = state.MONS; !m.is_null(); m = (*m).next) {
+        cfor!((m = state.mons; !m.is_null(); m = (*m).next) {
             cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
                 if (*c).isterminal && (*c).swallowing.is_null()
                 && (*c).pid != 0 && isdescprocess((*c).pid, w.pid) != 0 {
@@ -2360,7 +2360,7 @@ fn swallowingclient(state: &State, w: Window) -> *mut Client {
         let mut c;
         let mut m;
 
-        cfor!((m = state.MONS; !m.is_null(); m = (*m).next) {
+        cfor!((m = state.mons; !m.is_null(); m = (*m).next) {
             cfor!((c = (*m).clients; !c.is_null(); c = (*c).next) {
                 if !(*c).swallowing.is_null() && (*(*c).swallowing).win == w {
                     return c;
@@ -2379,7 +2379,7 @@ fn updateclientlist(state: &mut State) {
             ROOT,
             state.netatom[Net::ClientList as usize],
         );
-        let mut m = state.MONS;
+        let mut m = state.mons;
         while !m.is_null() {
             let mut c = (*m).clients;
             while !c.is_null() {
@@ -2855,7 +2855,7 @@ fn applyrules(state: &mut State, c: *mut Client) {
                 (*c).noswallow = r.noswallow;
                 (*c).isfloating = r.isfloating;
                 (*c).tags |= r.tags;
-                let mut m = state.MONS;
+                let mut m = state.mons;
                 while !m.is_null() && (*m).num != r.monitor {
                     m = (*m).next;
                 }

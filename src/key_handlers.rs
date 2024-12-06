@@ -368,12 +368,12 @@ fn dirtomon(state: &State, dir: i32) -> *mut Monitor {
         if dir > 0 {
             m = (*state.selmon).next;
             if m.is_null() {
-                m = state.MONS;
+                m = state.mons;
             }
-        } else if state.selmon == state.MONS {
-            cfor!((m = state.MONS; !(*m).next.is_null(); m = (*m).next) {});
+        } else if state.selmon == state.mons {
+            cfor!((m = state.mons; !(*m).next.is_null(); m = (*m).next) {});
         } else {
-            cfor!((m = state.MONS; (*m).next != state.selmon; m = (*m).next) {});
+            cfor!((m = state.mons; (*m).next != state.selmon; m = (*m).next) {});
         }
         m
     }
@@ -381,7 +381,7 @@ fn dirtomon(state: &State, dir: i32) -> *mut Monitor {
 
 pub(crate) fn focusmon(state: &mut State, arg: *const Arg) {
     unsafe {
-        if (*state.MONS).next.is_null() {
+        if (*state.mons).next.is_null() {
             return;
         }
         let m = dirtomon(state, (*arg).i());
@@ -415,7 +415,7 @@ fn sendmon(state: &mut State, c: *mut Client, m: *mut Monitor) {
 
 pub(crate) fn tagmon(state: &mut State, arg: *const Arg) {
     unsafe {
-        if (*state.selmon).sel.is_null() || (*state.MONS).next.is_null() {
+        if (*state.selmon).sel.is_null() || (*state.mons).next.is_null() {
             return;
         }
         sendmon(state, (*state.selmon).sel, dirtomon(state, (*arg).i()));
