@@ -1,16 +1,15 @@
 use std::ffi::{c_char, c_int, c_uint};
 
-use drw::Drw;
-use enums::{Clk, Net, XEmbed, WM};
-use x11::{
-    xft::XftColor,
-    xlib::{self, Atom, Display},
-};
+use enums::Clk;
+use x11::xft::XftColor;
 
 pub mod drw;
 pub mod enums;
 pub mod events;
 pub mod util;
+
+pub use state::*;
+mod state;
 
 pub type Window = u64;
 pub type Clr = XftColor;
@@ -194,40 +193,4 @@ pub struct Cursors {
     pub normal: Cursor,
     pub resize: Cursor,
     pub move_: Cursor,
-}
-
-pub struct State {
-    /// Bar height
-    pub bh: c_int,
-    /// X display screen geometry width
-    pub sw: c_int,
-    pub wmatom: [Atom; WM::Last as usize],
-    pub netatom: [Atom; Net::Last as usize],
-    pub xatom: [Atom; XEmbed::Last as usize],
-    pub dpy: *mut Display,
-    pub drw: Drw,
-    pub cursors: Cursors,
-    pub selmon: *mut Monitor,
-    pub mons: *mut Monitor,
-    pub stext: [c_char; 256],
-}
-
-impl Drop for State {
-    fn drop(&mut self) {
-        unsafe {
-            // drop cursors
-            xlib::XFreeCursor(self.drw.dpy, self.cursors.move_.cursor);
-            xlib::XFreeCursor(self.drw.dpy, self.cursors.normal.cursor);
-            xlib::XFreeCursor(self.drw.dpy, self.cursors.resize.cursor);
-
-            let fonts = std::mem::take(&mut self.drw.fonts);
-
-            // must drop the fonts before the display they depend on
-            drop(fonts);
-
-            drw::free(&mut self.drw);
-
-            xlib::XCloseDisplay(self.dpy);
-        }
-    }
 }
