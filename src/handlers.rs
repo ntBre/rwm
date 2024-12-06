@@ -38,7 +38,7 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    MONS, NORMAL_STATE, ROOT, SCHEME, SH, STEXT, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, ROOT, SCHEME, SH, STEXT, SYSTRAY, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
@@ -88,7 +88,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::WinTitle;
             }
         } else {
-            let c = wintoclient(ev.window);
+            let c = wintoclient(state, ev.window);
             if !c.is_null() {
                 crate::focus(state, c);
                 restack(state, state.selmon);
@@ -117,7 +117,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
 pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
     unsafe {
         let cme = &(*e).client_message;
-        let mut c = wintoclient(cme.window);
+        let mut c = wintoclient(state, cme.window);
 
         if CONFIG.showsystray
             && cme.window == (*SYSTRAY).win
@@ -285,7 +285,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
 pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).configure_request;
-        let c = wintoclient(ev.window);
+        let c = wintoclient(state, ev.window);
         if !c.is_null() {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
                 (*c).bw = ev.border_width;
@@ -377,7 +377,7 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
                     state.bh as c_uint,
                 );
                 updatebars(state);
-                let mut m = MONS;
+                let mut m = state.MONS;
                 while !m.is_null() {
                     let mut c = (*m).clients;
                     while !c.is_null() {
@@ -406,11 +406,11 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
 pub(crate) fn destroynotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).destroy_window;
-        let mut c = wintoclient(ev.window);
+        let mut c = wintoclient(state, ev.window);
         if !c.is_null() {
             unmanage(state, c, 1);
         } else {
-            c = swallowingclient(ev.window);
+            c = swallowingclient(state, ev.window);
             if !c.is_null() {
                 unmanage(state, (*c).swallowing, 1);
             } else {
@@ -434,7 +434,7 @@ pub(crate) fn enternotify(state: &mut State, e: *mut XEvent) {
         {
             return;
         }
-        let c = wintoclient(ev.window);
+        let c = wintoclient(state, ev.window);
         let m =
             if !c.is_null() { (*c).mon } else { wintomon(state, ev.window) };
         if m != state.selmon {
@@ -556,7 +556,7 @@ pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
         if res == 0 || WA.override_redirect != 0 {
             return;
         }
-        if wintoclient(ev.window).is_null() {
+        if wintoclient(state, ev.window).is_null() {
             manage(state, ev.window, addr_of_mut!(WA));
         }
     }
@@ -603,7 +603,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
         } else if ev.state == PropertyDelete {
             return; // ignore
         } else {
-            let c = wintoclient(ev.window);
+            let c = wintoclient(state, ev.window);
             if c.is_null() {
                 return;
             }
@@ -615,7 +615,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
                             state.dpy, c.win, &mut trans,
                         ) != 0)
                     {
-                        c.isfloating = !wintoclient(trans).is_null();
+                        c.isfloating = !wintoclient(state, trans).is_null();
                         if c.isfloating {
                             arrange(state, c.mon);
                         }
@@ -649,7 +649,7 @@ pub(crate) fn unmapnotify(state: &mut State, e: *mut XEvent) {
     log::trace!("unmapnotify");
     unsafe {
         let ev = &(*e).unmap;
-        let mut c = wintoclient(ev.window);
+        let mut c = wintoclient(state, ev.window);
         if !c.is_null() {
             if ev.send_event != 0 {
                 setclientstate(state, c, WITHDRAWN_STATE);

@@ -208,6 +208,7 @@ pub struct State {
     pub drw: Drw,
     pub cursors: Cursors,
     pub selmon: *mut Monitor,
+    pub MONS: *mut Monitor,
 }
 
 impl Drop for State {
