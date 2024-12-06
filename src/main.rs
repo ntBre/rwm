@@ -133,8 +133,6 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
-// static mut DRW: *mut Drw = std::ptr::null_mut();
-
 static mut MONS: *mut Monitor = null_mut();
 
 static mut SCHEME: *mut *mut Clr = null_mut();
