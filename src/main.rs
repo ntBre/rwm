@@ -280,7 +280,7 @@ fn setup(dpy: *mut Display) -> State {
             drw,
             selmon: null_mut(),
             mons: null_mut(),
-            STEXT: ['\0' as c_char; 256],
+            stext: ['\0' as c_char; 256],
         };
 
         updategeom(&mut state);
@@ -1149,14 +1149,14 @@ fn updatestatus(state: &mut State) {
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
-            state.STEXT.as_mut_ptr(),
+            state.stext.as_mut_ptr(),
             // the lint leading to this instead of simply &stext is very scary,
             // but hopefully it's fine
-            size_of_val(&*addr_of!(state.STEXT)) as u32,
+            size_of_val(&*addr_of!(state.stext)) as u32,
         ) == 0
         {
             libc::strcpy(
-                addr_of_mut!(state.STEXT) as *mut _,
+                addr_of_mut!(state.stext) as *mut _,
                 c"rwm-1.0".as_ptr(),
             );
         }
@@ -1270,7 +1270,7 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
+        let sw = textw(&mut state.drw, addr_of!(state.stext) as *const _)
             - LRPAD
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
@@ -1490,7 +1490,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
+            tw = textw(&mut state.drw, addr_of!(state.stext) as *const _)
                 - LRPAD / 2
                 + 2; // 2px right padding
             log::trace!("drawbar: text");
@@ -1501,7 +1501,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 tw as u32,
                 state.bh as u32,
                 (LRPAD / 2 - 2) as u32,
-                addr_of!(state.STEXT) as *const _,
+                addr_of!(state.stext) as *const _,
                 0,
             );
         }

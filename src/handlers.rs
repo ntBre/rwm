@@ -80,7 +80,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::LtSymbol;
             } else if ev.x
                 > (*state.selmon).ww
-                    - textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
+                    - textw(&mut state.drw, addr_of!(state.stext) as *const _)
                     - getsystraywidth() as i32
             {
                 click = Clk::StatusText;

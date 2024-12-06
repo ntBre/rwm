@@ -209,7 +209,7 @@ pub struct State {
     pub cursors: Cursors,
     pub selmon: *mut Monitor,
     pub mons: *mut Monitor,
-    pub STEXT: [c_char; 256],
+    pub stext: [c_char; 256],
 }
 
 impl Drop for State {
