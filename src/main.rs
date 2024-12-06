@@ -135,7 +135,6 @@ static mut XERRORXLIB: Option<
 
 // static mut DRW: *mut Drw = std::ptr::null_mut();
 
-static mut SELMON: *mut Monitor = std::ptr::null_mut();
 static mut MONS: *mut Monitor = null_mut();
 
 static mut SCHEME: *mut *mut Clr = null_mut();
@@ -285,6 +284,7 @@ fn setup(dpy: *mut Display) -> State {
             xatom: Default::default(),
             dpy,
             drw,
+            SELMON: null_mut(),
         };
 
         updategeom(&mut state);
@@ -437,17 +437,17 @@ fn focus(state: &mut State, mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     unsafe {
         if c.is_null() || !is_visible(c) {
-            c = (*SELMON).stack;
+            c = (*state.SELMON).stack;
             while !c.is_null() && !is_visible(c) {
                 c = (*c).snext;
             }
         }
-        if !(*SELMON).sel.is_null() && (*SELMON).sel != c {
-            unfocus(state, (*SELMON).sel, false);
+        if !(*state.SELMON).sel.is_null() && (*state.SELMON).sel != c {
+            unfocus(state, (*state.SELMON).sel, false);
         }
         if !c.is_null() {
-            if (*c).mon != SELMON {
-                SELMON = (*c).mon;
+            if (*c).mon != state.SELMON {
+                state.SELMON = (*c).mon;
             }
             if (*c).isurgent != 0 {
                 seturgent(state, c, false);
@@ -473,7 +473,7 @@ fn focus(state: &mut State, mut c: *mut Client) {
                 state.netatom[Net::ActiveWindow as usize],
             );
         }
-        (*SELMON).sel = c;
+        (*state.SELMON).sel = c;
         drawbars(state);
     }
 }
@@ -780,7 +780,10 @@ fn resizeclient(
 fn resizebarwin(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
-        if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
+        if CONFIG.showsystray
+            && m == systraytomon(state, m)
+            && !CONFIG.systrayonleft
+        {
             w -= getsystraywidth() as i32;
         }
         XMoveResizeWindow(
@@ -1158,7 +1161,7 @@ fn updatestatus(state: &mut State) {
         {
             libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
         }
-        drawbar(state, SELMON);
+        drawbar(state, state.SELMON);
         updatesystray(state);
     }
 }
@@ -1266,7 +1269,7 @@ fn updatesystray(state: &mut State) {
         let mut wa = default_window_attributes();
         let mut wc: XWindowChanges;
         let mut i: *mut Client;
-        let m: *mut Monitor = systraytomon(null_mut());
+        let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
         let sw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD
             + CONFIG.systrayspacing as i32;
@@ -1429,16 +1432,16 @@ fn wintosystrayicon(w: Window) -> *mut Client {
     }
 }
 
-fn systraytomon(m: *mut Monitor) -> *mut Monitor {
+fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
     unsafe {
         let mut t: *mut Monitor;
         let mut i;
         let mut n;
         if CONFIG.systraypinning == 0 {
             if m.is_null() {
-                return SELMON;
+                return state.SELMON;
             }
-            if m == SELMON {
+            if m == state.SELMON {
                 return m;
             } else {
                 return null_mut();
@@ -1472,7 +1475,10 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         let boxw = state.drw.fonts[0].h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
+        if CONFIG.showsystray
+            && m == systraytomon(state, m)
+            && !CONFIG.systrayonleft
+        {
             stw = getsystraywidth();
         }
 
@@ -1481,7 +1487,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         }
 
         // draw status first so it can be overdrawn by tags later
-        if m == SELMON {
+        if m == state.SELMON {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
             tw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD / 2
@@ -1543,9 +1549,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     boxs as i32,
                     boxw,
                     boxw,
-                    (m == SELMON
-                        && !(*SELMON).sel.is_null()
-                        && ((*(*SELMON).sel).tags & 1 << i) != 0)
+                    (m == state.SELMON
+                        && !(*state.SELMON).sel.is_null()
+                        && ((*(*state.SELMON).sel).tags & 1 << i) != 0)
                         as c_int,
                     (urg & 1 << i) as c_int,
                 );
@@ -1573,7 +1579,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     &mut state.drw,
-                    *SCHEME.offset(if m == SELMON {
+                    *SCHEME.offset(if m == state.SELMON {
                         Scheme::Sel as isize
                     } else {
                         Scheme::Norm as isize
@@ -1707,7 +1713,7 @@ fn updatebars(state: &mut State) {
                 continue;
             }
             let mut w = (*m).ww;
-            if CONFIG.showsystray && m == systraytomon(m) {
+            if CONFIG.showsystray && m == systraytomon(state, m) {
                 w -= getsystraywidth() as i32;
             }
             (*m).barwin = xlib::XCreateWindow(
@@ -1729,7 +1735,7 @@ fn updatebars(state: &mut State) {
                 (*m).barwin,
                 state.cursors.normal.cursor,
             );
-            if CONFIG.showsystray && m == systraytomon(m) {
+            if CONFIG.showsystray && m == systraytomon(state, m) {
                 xlib::XMapRaised(state.dpy, (*SYSTRAY).win);
             }
             xlib::XMapRaised(state.dpy, (*m).barwin);
@@ -1851,8 +1857,8 @@ fn updategeom(state: &mut State) -> i32 {
                     attachstack(c);
                     c = (*m).clients;
                 }
-                if m == SELMON {
-                    SELMON = MONS;
+                if m == state.SELMON {
+                    state.SELMON = MONS;
                 }
                 cleanupmon(state, m);
             }
@@ -1874,8 +1880,8 @@ fn updategeom(state: &mut State) -> i32 {
             }
         }
         if dirty != 0 {
-            SELMON = MONS;
-            SELMON = wintomon(state, ROOT);
+            state.SELMON = MONS;
+            state.SELMON = wintomon(state, ROOT);
         }
         dirty
     }
@@ -1887,7 +1893,7 @@ fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
         let mut x = 0;
         let mut y = 0;
         if w == ROOT && getrootptr(state, &mut x, &mut y) != 0 {
-            return recttomon(x, y, 1, 1);
+            return recttomon(state, x, y, 1, 1);
         }
         let mut m = MONS;
         while !m.is_null() {
@@ -1900,7 +1906,7 @@ fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
         if !c.is_null() {
             return (*c).mon;
         }
-        SELMON
+        state.SELMON
     }
 }
 
@@ -1922,10 +1928,16 @@ fn wintoclient(w: u64) -> *mut Client {
     std::ptr::null_mut()
 }
 
-fn recttomon(x: c_int, y: c_int, w: c_int, h: c_int) -> *mut Monitor {
+fn recttomon(
+    state: &State,
+    x: c_int,
+    y: c_int,
+    w: c_int,
+    h: c_int,
+) -> *mut Monitor {
     log::trace!("recttomon");
     unsafe {
-        let mut r = SELMON;
+        let mut r = state.SELMON;
         let mut area = 0;
         let mut m = MONS;
         while !m.is_null() {
@@ -2111,7 +2123,7 @@ fn cleanup(mut state: State) {
     unsafe {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
-        (*SELMON).lt[(*SELMON).sellt as usize] =
+        (*state.SELMON).lt[(*state.SELMON).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
         let mut m = MONS;
@@ -2543,14 +2555,14 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
                 (*c).tags = (*t).tags;
             } else {
                 // NOTE must keep in sync with else below
-                (*c).mon = SELMON;
+                (*c).mon = state.SELMON;
                 applyrules(state, c);
                 term = termforwin(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
-            (*c).mon = SELMON;
+            (*c).mon = state.SELMON;
             applyrules(state, c);
             term = termforwin(c);
         }
@@ -2571,7 +2583,8 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         // TODO I'm also pretty sure this is _not_ the right way to be handling
         // this. checking the name of the window and applying these rules seems
         // like something meant to be handled by RULES
-        (*SELMON).tagset[(*SELMON).seltags as usize] &= !*SCRATCHTAG;
+        (*state.SELMON).tagset[(*state.SELMON).seltags as usize] &=
+            !*SCRATCHTAG;
         if libc::strcmp((*c).name.as_ptr(), CONFIG.scratchpadname.as_ptr()) == 0
         {
             (*c).tags = *SCRATCHTAG;
@@ -2647,8 +2660,8 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
             (*c).h as u32,
         );
         setclientstate(state, c, NORMAL_STATE);
-        if (*c).mon == SELMON {
-            unfocus(state, (*SELMON).sel, false);
+        if (*c).mon == state.SELMON {
+            unfocus(state, (*state.SELMON).sel, false);
         }
         (*(*c).mon).sel = c;
         arrange(state, (*c).mon);
@@ -2666,7 +2679,7 @@ fn updatewmhints(state: &mut State, c: *mut Client) {
     unsafe {
         let wmh = xlib::XGetWMHints(state.dpy, (*c).win);
         if !wmh.is_null() {
-            if c == (*SELMON).sel && (*wmh).flags & URGENT != 0 {
+            if c == (*state.SELMON).sel && (*wmh).flags & URGENT != 0 {
                 (*wmh).flags &= !URGENT;
                 xlib::XSetWMHints(state.dpy, (*c).win, wmh);
             } else {

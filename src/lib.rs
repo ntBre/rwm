@@ -207,6 +207,7 @@ pub struct State {
     pub dpy: *mut Display,
     pub drw: Drw,
     pub cursors: Cursors,
+    pub SELMON: *mut Monitor,
 }
 
 impl Drop for State {
