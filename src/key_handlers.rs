@@ -26,13 +26,13 @@ use rwm::{Arg, Client, Monitor};
 
 pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
     unsafe {
-        (*(*state.SELMON).pertag).showbars
-            [(*(*state.SELMON).pertag).curtag as usize] =
-            !((*state.SELMON).showbar);
-        (*state.SELMON).showbar = (*(*state.SELMON).pertag).showbars
-            [(*(*state.SELMON).pertag).curtag as usize];
-        updatebarpos(state, state.SELMON);
-        resizebarwin(state, state.SELMON);
+        (*(*state.selmon).pertag).showbars
+            [(*(*state.selmon).pertag).curtag as usize] =
+            !((*state.selmon).showbar);
+        (*state.selmon).showbar = (*(*state.selmon).pertag).showbars
+            [(*(*state.selmon).pertag).curtag as usize];
+        updatebarpos(state, state.selmon);
+        resizebarwin(state, state.selmon);
         if CONFIG.showsystray {
             let mut wc = XWindowChanges {
                 x: 0,
@@ -43,17 +43,17 @@ pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
                 sibling: 0,
                 stack_mode: 0,
             };
-            if !(*state.SELMON).showbar {
+            if !(*state.selmon).showbar {
                 wc.y = -state.bh;
-            } else if (*state.SELMON).showbar {
+            } else if (*state.selmon).showbar {
                 wc.y = 0;
-                if !(*state.SELMON).topbar {
-                    wc.y = (*state.SELMON).mh - state.bh;
+                if !(*state.selmon).topbar {
+                    wc.y = (*state.selmon).mh - state.bh;
                 }
             }
             XConfigureWindow(state.dpy, (*SYSTRAY).win, CWY as u32, &mut wc);
         }
-        arrange(state, state.SELMON);
+        arrange(state, state.selmon);
     }
 }
 
@@ -62,18 +62,18 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
         let mut c: *mut Client = null_mut();
         let mut i: *mut Client;
 
-        if (*state.SELMON).sel.is_null()
-            || ((*(*state.SELMON).sel).isfullscreen && CONFIG.lock_fullscreen)
+        if (*state.selmon).sel.is_null()
+            || ((*(*state.selmon).sel).isfullscreen && CONFIG.lock_fullscreen)
         {
             return;
         }
         if (*arg).i() > 0 {
-            cfor!((c = (*(*state.SELMON).sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
+            cfor!((c = (*(*state.selmon).sel).next; !c.is_null() && !is_visible(c); c = (*c).next) {});
             if c.is_null() {
-                cfor!((c = (*state.SELMON).clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
+                cfor!((c = (*state.selmon).clients; !c.is_null() && !is_visible(c); c = (*c).next) {});
             }
         } else {
-            cfor!((i = (*state.SELMON).clients; i != (*state.SELMON).sel; i = (*i).next) {
+            cfor!((i = (*state.selmon).clients; i != (*state.selmon).sel; i = (*i).next) {
                 if is_visible(i) {
                     c = i;
                 }
@@ -88,7 +88,7 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
         }
         if !c.is_null() {
             focus(state, c);
-            restack(state, state.SELMON);
+            restack(state, state.selmon);
         }
     }
 }
@@ -96,12 +96,12 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) fn incnmaster(state: &mut State, arg: *const Arg) {
     unsafe {
-        (*(*state.SELMON).pertag).nmasters
-            [(*(*state.SELMON).pertag).curtag as usize] =
-            std::cmp::max((*state.SELMON).nmaster + (*arg).i(), 0);
-        (*state.SELMON).nmaster = (*(*state.SELMON).pertag).nmasters
-            [(*(*state.SELMON).pertag).curtag as usize];
-        arrange(state, state.SELMON);
+        (*(*state.selmon).pertag).nmasters
+            [(*(*state.selmon).pertag).curtag as usize] =
+            std::cmp::max((*state.selmon).nmaster + (*arg).i(), 0);
+        (*state.selmon).nmaster = (*(*state.selmon).pertag).nmasters
+            [(*(*state.selmon).pertag).curtag as usize];
+        arrange(state, state.selmon);
     }
 }
 
@@ -112,25 +112,25 @@ pub(crate) fn incnmaster(state: &mut State, arg: *const Arg) {
 pub(crate) fn setmfact(state: &mut State, arg: *const Arg) {
     unsafe {
         if arg.is_null()
-            || (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+            || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                 .arrange
                 .is_none()
         {
             return;
         }
         let f = if (*arg).f() < 1.0 {
-            (*arg).f() + (*state.SELMON).mfact
+            (*arg).f() + (*state.selmon).mfact
         } else {
             (*arg).f() - 1.0
         };
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        (*(*state.SELMON).pertag).mfacts
-            [(*(*state.SELMON).pertag).curtag as usize] = f;
-        (*state.SELMON).mfact = (*(*state.SELMON).pertag).mfacts
-            [(*(*state.SELMON).pertag).curtag as usize];
-        arrange(state, state.SELMON);
+        (*(*state.selmon).pertag).mfacts
+            [(*(*state.selmon).pertag).curtag as usize] = f;
+        (*state.selmon).mfact = (*(*state.selmon).pertag).mfacts
+            [(*(*state.selmon).pertag).curtag as usize];
+        arrange(state, state.selmon);
     }
 }
 
@@ -138,8 +138,8 @@ pub(crate) fn setmfact(state: &mut State, arg: *const Arg) {
 /// the top of the stack.
 pub(crate) fn zoom(state: &mut State, _arg: *const Arg) {
     unsafe {
-        let mut c = (*state.SELMON).sel;
-        if (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+        let mut c = (*state.selmon).sel;
+        if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
             .arrange
             .is_none()
             || c.is_null()
@@ -147,7 +147,7 @@ pub(crate) fn zoom(state: &mut State, _arg: *const Arg) {
         {
             return;
         }
-        if c == nexttiled((*state.SELMON).clients) {
+        if c == nexttiled((*state.selmon).clients) {
             c = nexttiled((*c).next);
             if c.is_null() {
                 return;
@@ -162,16 +162,16 @@ pub(crate) fn view(state: &mut State, arg: *const Arg) {
     log::trace!("view");
     unsafe {
         if (*arg).ui() & *TAGMASK
-            == (*state.SELMON).tagset[(*state.SELMON).seltags as usize]
+            == (*state.selmon).tagset[(*state.selmon).seltags as usize]
         {
             return;
         }
-        (*state.SELMON).seltags ^= 1; // toggle sel tagset
+        (*state.selmon).seltags ^= 1; // toggle sel tagset
 
         // Safety: we were gonna dereference it anyway
-        let pertag = &mut *(*state.SELMON).pertag;
+        let pertag = &mut *(*state.selmon).pertag;
         if ((*arg).ui() & *TAGMASK) != 0 {
-            (*state.SELMON).tagset[(*state.SELMON).seltags as usize] =
+            (*state.selmon).tagset[(*state.selmon).seltags as usize] =
                 (*arg).ui() & *TAGMASK;
             pertag.prevtag = pertag.curtag;
 
@@ -186,33 +186,33 @@ pub(crate) fn view(state: &mut State, arg: *const Arg) {
             std::mem::swap(&mut pertag.prevtag, &mut pertag.curtag);
         }
 
-        (*state.SELMON).nmaster = pertag.nmasters[pertag.curtag as usize];
-        (*state.SELMON).mfact = pertag.mfacts[pertag.curtag as usize];
-        (*state.SELMON).sellt = pertag.sellts[pertag.curtag as usize];
-        (*state.SELMON).lt[(*state.SELMON).sellt as usize] = pertag.ltidxs
-            [pertag.curtag as usize][(*state.SELMON).sellt as usize];
-        (*state.SELMON).lt[((*state.SELMON).sellt ^ 1) as usize] = pertag
+        (*state.selmon).nmaster = pertag.nmasters[pertag.curtag as usize];
+        (*state.selmon).mfact = pertag.mfacts[pertag.curtag as usize];
+        (*state.selmon).sellt = pertag.sellts[pertag.curtag as usize];
+        (*state.selmon).lt[(*state.selmon).sellt as usize] = pertag.ltidxs
+            [pertag.curtag as usize][(*state.selmon).sellt as usize];
+        (*state.selmon).lt[((*state.selmon).sellt ^ 1) as usize] = pertag
             .ltidxs[pertag.curtag as usize]
-            [((*state.SELMON).sellt ^ 1) as usize];
+            [((*state.selmon).sellt ^ 1) as usize];
 
-        if (*state.SELMON).showbar != pertag.showbars[pertag.curtag as usize] {
+        if (*state.selmon).showbar != pertag.showbars[pertag.curtag as usize] {
             togglebar(state, null_mut());
         }
 
         focus(state, null_mut());
-        arrange(state, state.SELMON);
+        arrange(state, state.selmon);
     }
 }
 
 pub(crate) fn killclient(state: &mut State, _arg: *const Arg) {
     unsafe {
-        if (*state.SELMON).sel.is_null() {
+        if (*state.selmon).sel.is_null() {
             return;
         }
 
         if sendevent(
             state,
-            (*(*state.SELMON).sel).win,
+            (*(*state.selmon).sel).win,
             state.wmatom[WM::Delete as usize],
             NoEventMask as i32,
             state.wmatom[WM::Delete as usize] as i64,
@@ -225,7 +225,7 @@ pub(crate) fn killclient(state: &mut State, _arg: *const Arg) {
             XGrabServer(state.dpy);
             XSetErrorHandler(Some(xerrordummy));
             XSetCloseDownMode(state.dpy, DestroyAll);
-            XKillClient(state.dpy, (*(*state.SELMON).sel).win);
+            XKillClient(state.dpy, (*(*state.selmon).sel).win);
             XSync(state.dpy, False);
             XSetErrorHandler(Some(xerror));
             XUngrabServer(state.dpy);
@@ -240,33 +240,33 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
             || (*arg).l().is_none()
             || !std::ptr::eq(
                 &CONFIG.layouts[(*arg).l().unwrap()],
-                (*state.SELMON).lt[(*state.SELMON).sellt as usize],
+                (*state.selmon).lt[(*state.selmon).sellt as usize],
             )
         {
-            (*(*state.SELMON).pertag).sellts
-                [(*(*state.SELMON).pertag).curtag as usize] ^= 1;
-            (*state.SELMON).sellt = (*(*state.SELMON).pertag).sellts
-                [(*(*state.SELMON).pertag).curtag as usize];
+            (*(*state.selmon).pertag).sellts
+                [(*(*state.selmon).pertag).curtag as usize] ^= 1;
+            (*state.selmon).sellt = (*(*state.selmon).pertag).sellts
+                [(*(*state.selmon).pertag).curtag as usize];
         }
         if !arg.is_null() && (*arg).l().is_some() {
-            (*(*state.SELMON).pertag).ltidxs
-                [(*(*state.SELMON).pertag).curtag as usize]
-                [(*state.SELMON).sellt as usize] =
+            (*(*state.selmon).pertag).ltidxs
+                [(*(*state.selmon).pertag).curtag as usize]
+                [(*state.selmon).sellt as usize] =
                 &CONFIG.layouts[(*arg).l().unwrap()];
-            (*state.SELMON).lt[(*state.SELMON).sellt as usize] =
-                (*(*state.SELMON).pertag).ltidxs
-                    [(*(*state.SELMON).pertag).curtag as usize]
-                    [(*state.SELMON).sellt as usize];
+            (*state.selmon).lt[(*state.selmon).sellt as usize] =
+                (*(*state.selmon).pertag).ltidxs
+                    [(*(*state.selmon).pertag).curtag as usize]
+                    [(*state.selmon).sellt as usize];
         }
         libc::strncpy(
-            (*state.SELMON).ltsymbol.as_mut_ptr(),
-            (*(*state.SELMON).lt[(*state.SELMON).sellt as usize]).symbol,
-            size_of_val(&(*state.SELMON).ltsymbol),
+            (*state.selmon).ltsymbol.as_mut_ptr(),
+            (*(*state.selmon).lt[(*state.selmon).sellt as usize]).symbol,
+            size_of_val(&(*state.selmon).ltsymbol),
         );
-        if !(*state.SELMON).sel.is_null() {
-            arrange(state, state.SELMON);
+        if !(*state.selmon).sel.is_null() {
+            arrange(state, state.selmon);
         } else {
-            drawbar(state, state.SELMON);
+            drawbar(state, state.selmon);
         }
     }
 }
@@ -274,20 +274,20 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
 pub(crate) fn togglefloating(state: &mut State, _arg: *const Arg) {
     log::trace!("togglefloating: {_arg:?}");
     unsafe {
-        if (*state.SELMON).sel.is_null() {
+        if (*state.selmon).sel.is_null() {
             return;
         }
-        if (*(*state.SELMON).sel).isfullscreen {
+        if (*(*state.selmon).sel).isfullscreen {
             // no support for fullscreen windows
             return;
         }
-        (*(*state.SELMON).sel).isfloating = !(*(*state.SELMON).sel).isfloating
-            || (*(*state.SELMON).sel).isfixed != 0;
-        if (*(*state.SELMON).sel).isfloating {
-            let sel = &mut *(*state.SELMON).sel;
+        (*(*state.selmon).sel).isfloating = !(*(*state.selmon).sel).isfloating
+            || (*(*state.selmon).sel).isfixed != 0;
+        if (*(*state.selmon).sel).isfloating {
+            let sel = &mut *(*state.selmon).sel;
             resize(state, sel, sel.x, sel.y, sel.w, sel.h, 0);
         }
-        arrange(state, state.SELMON);
+        arrange(state, state.selmon);
     }
 }
 
@@ -306,24 +306,24 @@ pub(crate) fn pushstack(state: &mut State, arg: *const Arg) {
     }
     unsafe {
         // begin stackpos
-        if (*state.SELMON).clients.is_null() {
+        if (*state.selmon).clients.is_null() {
             return;
         }
-        if (*state.SELMON).sel.is_null() {
+        if (*state.selmon).sel.is_null() {
             return;
         }
         let mut i;
         let mut c;
         cfor!((
-            (i, c) = (0, (*state.SELMON).clients);
-            c != (*state.SELMON).sel;
+            (i, c) = (0, (*state.selmon).clients);
+            c != (*state.selmon).sel;
             (i, c) = (i + is_visible(c) as c_int, (*c).next)) {});
         let mut n;
         cfor!((n = i; !c.is_null(); (n, c) = (n + is_visible(c) as c_int, (*c).next)) {});
         let mut stackpos = modulo(i + (*arg).i(), n);
         // end stackpos
 
-        let sel = (*state.SELMON).sel;
+        let sel = (*state.selmon).sel;
         match stackpos.cmp(&0) {
             std::cmp::Ordering::Less => return,
             std::cmp::Ordering::Equal => {
@@ -333,7 +333,7 @@ pub(crate) fn pushstack(state: &mut State, arg: *const Arg) {
             std::cmp::Ordering::Greater => {
                 let mut p;
                 cfor!((
-                (p, c) = (null_mut(), (*state.SELMON).clients);
+                (p, c) = (null_mut(), (*state.selmon).clients);
                 !c.is_null();
                 (p, c) = (c, (*c).next)) {
                     stackpos -= (is_visible(c) && c != sel) as c_int;
@@ -347,16 +347,16 @@ pub(crate) fn pushstack(state: &mut State, arg: *const Arg) {
                 (*c).next = sel;
             }
         }
-        arrange(state, state.SELMON);
+        arrange(state, state.selmon);
     }
 }
 
 pub(crate) fn tag(state: &mut State, arg: *const Arg) {
     unsafe {
-        if !(*state.SELMON).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {
-            (*(*state.SELMON).sel).tags = (*arg).ui() & *TAGMASK;
+        if !(*state.selmon).sel.is_null() && (*arg).ui() & *TAGMASK != 0 {
+            (*(*state.selmon).sel).tags = (*arg).ui() & *TAGMASK;
             focus(state, null_mut());
-            arrange(state, state.SELMON);
+            arrange(state, state.selmon);
         }
     }
 }
@@ -366,14 +366,14 @@ fn dirtomon(state: &State, dir: i32) -> *mut Monitor {
         let mut m;
 
         if dir > 0 {
-            m = (*state.SELMON).next;
+            m = (*state.selmon).next;
             if m.is_null() {
                 m = MONS;
             }
-        } else if state.SELMON == MONS {
+        } else if state.selmon == MONS {
             cfor!((m = MONS; !(*m).next.is_null(); m = (*m).next) {});
         } else {
-            cfor!((m = MONS; (*m).next != state.SELMON; m = (*m).next) {});
+            cfor!((m = MONS; (*m).next != state.selmon; m = (*m).next) {});
         }
         m
     }
@@ -385,11 +385,11 @@ pub(crate) fn focusmon(state: &mut State, arg: *const Arg) {
             return;
         }
         let m = dirtomon(state, (*arg).i());
-        if m == state.SELMON {
+        if m == state.selmon {
             return;
         }
-        unfocus(state, (*state.SELMON).sel, false);
-        state.SELMON = m;
+        unfocus(state, (*state.selmon).sel, false);
+        state.selmon = m;
         focus(state, null_mut());
     }
 }
@@ -415,63 +415,63 @@ fn sendmon(state: &mut State, c: *mut Client, m: *mut Monitor) {
 
 pub(crate) fn tagmon(state: &mut State, arg: *const Arg) {
     unsafe {
-        if (*state.SELMON).sel.is_null() || (*MONS).next.is_null() {
+        if (*state.selmon).sel.is_null() || (*MONS).next.is_null() {
             return;
         }
-        sendmon(state, (*state.SELMON).sel, dirtomon(state, (*arg).i()));
+        sendmon(state, (*state.selmon).sel, dirtomon(state, (*arg).i()));
     }
 }
 
 pub(crate) fn toggleview(state: &mut State, arg: *const Arg) {
     unsafe {
-        let newtagset = (*state.SELMON).tagset
-            [(*state.SELMON).seltags as usize]
+        let newtagset = (*state.selmon).tagset
+            [(*state.selmon).seltags as usize]
             ^ ((*arg).ui() & *TAGMASK);
 
         if newtagset != 0 {
-            (*state.SELMON).tagset[(*state.SELMON).seltags as usize] =
+            (*state.selmon).tagset[(*state.selmon).seltags as usize] =
                 newtagset;
 
             if newtagset == !0 {
-                (*(*state.SELMON).pertag).prevtag =
-                    (*(*state.SELMON).pertag).curtag;
-                (*(*state.SELMON).pertag).curtag = 0;
+                (*(*state.selmon).pertag).prevtag =
+                    (*(*state.selmon).pertag).curtag;
+                (*(*state.selmon).pertag).curtag = 0;
             }
 
             // test if the user did not select the same tag
-            if (newtagset & 1 << ((*(*state.SELMON).pertag).curtag - 1)) == 0 {
-                (*(*state.SELMON).pertag).prevtag =
-                    (*(*state.SELMON).pertag).curtag;
+            if (newtagset & 1 << ((*(*state.selmon).pertag).curtag - 1)) == 0 {
+                (*(*state.selmon).pertag).prevtag =
+                    (*(*state.selmon).pertag).curtag;
                 let mut i;
                 cfor!((i = 0; (newtagset & 1 << i) == 0; i += 1) {});
-                (*(*state.SELMON).pertag).curtag = i + 1;
+                (*(*state.selmon).pertag).curtag = i + 1;
             }
 
             // apply settings for this view
-            (*state.SELMON).nmaster = (*(*state.SELMON).pertag).nmasters
-                [(*(*state.SELMON).pertag).curtag as usize];
-            (*state.SELMON).mfact = (*(*state.SELMON).pertag).mfacts
-                [(*(*state.SELMON).pertag).curtag as usize];
-            (*state.SELMON).sellt = (*(*state.SELMON).pertag).sellts
-                [(*(*state.SELMON).pertag).curtag as usize];
-            (*state.SELMON).lt[(*state.SELMON).sellt as usize] =
-                (*(*state.SELMON).pertag).ltidxs
-                    [(*(*state.SELMON).pertag).curtag as usize]
-                    [(*state.SELMON).sellt as usize];
-            (*state.SELMON).lt[((*state.SELMON).sellt ^ 1) as usize] =
-                (*(*state.SELMON).pertag).ltidxs
-                    [(*(*state.SELMON).pertag).curtag as usize]
-                    [((*state.SELMON).sellt ^ 1) as usize];
+            (*state.selmon).nmaster = (*(*state.selmon).pertag).nmasters
+                [(*(*state.selmon).pertag).curtag as usize];
+            (*state.selmon).mfact = (*(*state.selmon).pertag).mfacts
+                [(*(*state.selmon).pertag).curtag as usize];
+            (*state.selmon).sellt = (*(*state.selmon).pertag).sellts
+                [(*(*state.selmon).pertag).curtag as usize];
+            (*state.selmon).lt[(*state.selmon).sellt as usize] =
+                (*(*state.selmon).pertag).ltidxs
+                    [(*(*state.selmon).pertag).curtag as usize]
+                    [(*state.selmon).sellt as usize];
+            (*state.selmon).lt[((*state.selmon).sellt ^ 1) as usize] =
+                (*(*state.selmon).pertag).ltidxs
+                    [(*(*state.selmon).pertag).curtag as usize]
+                    [((*state.selmon).sellt ^ 1) as usize];
 
-            if (*state.SELMON).showbar
-                != (*(*state.SELMON).pertag).showbars
-                    [(*(*state.SELMON).pertag).curtag as usize]
+            if (*state.selmon).showbar
+                != (*(*state.selmon).pertag).showbars
+                    [(*(*state.selmon).pertag).curtag as usize]
             {
                 togglebar(state, null_mut());
             }
 
             focus(state, null_mut());
-            arrange(state, state.SELMON);
+            arrange(state, state.selmon);
         }
     }
 }
@@ -491,7 +491,7 @@ const MOTION_NOTIFY: i32 = MotionNotify;
 pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
     log::trace!("movemouse");
     unsafe {
-        let c = (*state.SELMON).sel;
+        let c = (*state.selmon).sel;
         if c.is_null() {
             return;
         }
@@ -499,7 +499,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
         if c.isfullscreen {
             return; // no support for moving fullscreen windows with mouse
         }
-        restack(state, state.SELMON);
+        restack(state, state.selmon);
         let ocx = c.x;
         let ocy = c.y;
         if XGrabPointer(
@@ -543,27 +543,27 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                     lasttime = ev.motion.time;
                     let mut nx = ocx + (ev.motion.x - x);
                     let mut ny = ocy + (ev.motion.y - y);
-                    if ((*state.SELMON).wx - nx).abs() < CONFIG.snap as c_int {
-                        nx = (*state.SELMON).wx;
-                    } else if (((*state.SELMON).wx + (*state.SELMON).ww)
+                    if ((*state.selmon).wx - nx).abs() < CONFIG.snap as c_int {
+                        nx = (*state.selmon).wx;
+                    } else if (((*state.selmon).wx + (*state.selmon).ww)
                         - (nx + width(c)))
                     .abs()
                         < CONFIG.snap as c_int
                     {
-                        nx = (*state.SELMON).wx + (*state.SELMON).ww - width(c);
+                        nx = (*state.selmon).wx + (*state.selmon).ww - width(c);
                     }
-                    if ((*state.SELMON).wy - ny).abs() < CONFIG.snap as c_int {
-                        ny = (*state.SELMON).wy;
-                    } else if (((*state.SELMON).wy + (*state.SELMON).wh)
+                    if ((*state.selmon).wy - ny).abs() < CONFIG.snap as c_int {
+                        ny = (*state.selmon).wy;
+                    } else if (((*state.selmon).wy + (*state.selmon).wh)
                         - (ny + height(c)))
                     .abs()
                         < CONFIG.snap as c_int
                     {
                         ny =
-                            (*state.SELMON).wy + (*state.SELMON).wh - height(c);
+                            (*state.selmon).wy + (*state.selmon).wh - height(c);
                     }
                     if !c.isfloating
-                        && (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+                        && (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                             .arrange
                             .is_some()
                         && ((nx - c.x).abs() > CONFIG.snap as c_int
@@ -571,7 +571,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                     {
                         togglefloating(state, null_mut());
                     }
-                    if (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+                    if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                         .arrange
                         .is_none()
                         || c.isfloating
@@ -587,9 +587,9 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
         }
         XUngrabPointer(state.dpy, CurrentTime);
         let m = recttomon(state, c.x, c.y, c.w, c.h);
-        if m != state.SELMON {
+        if m != state.selmon {
             sendmon(state, c, m);
-            state.SELMON = m;
+            state.selmon = m;
             focus(state, null_mut());
         }
     }
@@ -598,7 +598,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
 pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
     log::trace!("resizemouse");
     unsafe {
-        let c = (*state.SELMON).sel;
+        let c = (*state.selmon).sel;
         if c.is_null() {
             return;
         }
@@ -606,7 +606,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
         if c.isfullscreen {
             return; // no support for resizing fullscreen window with mouse
         }
-        restack(state, state.SELMON);
+        restack(state, state.selmon);
         let ocx = c.x;
         let ocy = c.y;
         if XGrabPointer(
@@ -656,14 +656,14 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
                     lasttime = ev.motion.time;
                     let nw = max(ev.motion.x - ocx - 2 * c.bw + 1, 1);
                     let nh = max(ev.motion.y - ocy - 2 * c.bw + 1, 1);
-                    if (*c.mon).wx + nw >= (*state.SELMON).wx
+                    if (*c.mon).wx + nw >= (*state.selmon).wx
                         && (*c.mon).wx + nw
-                            <= (*state.SELMON).wx + (*state.SELMON).ww
-                        && (*c.mon).wy + nh >= (*state.SELMON).wy
+                            <= (*state.selmon).wx + (*state.selmon).ww
+                        && (*c.mon).wy + nh >= (*state.selmon).wy
                         && (*c.mon).wy + nh
-                            <= (*state.SELMON).wy + (*state.SELMON).wh
+                            <= (*state.selmon).wy + (*state.selmon).wh
                         && !c.isfloating
-                        && (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+                        && (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                             .arrange
                             .is_some()
                         && ((nw - c.w).abs() > CONFIG.snap as c_int
@@ -671,7 +671,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
                     {
                         togglefloating(state, null_mut());
                     }
-                    if (*(*state.SELMON).lt[(*state.SELMON).sellt as usize])
+                    if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                         .arrange
                         .is_none()
                         || c.isfloating
@@ -700,9 +700,9 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
         XUngrabPointer(state.dpy, CurrentTime);
         while XCheckMaskEvent(state.dpy, EnterWindowMask, &mut ev) != 0 {}
         let m = recttomon(state, c.x, c.y, c.w, c.h);
-        if m != state.SELMON {
+        if m != state.selmon {
             sendmon(state, c, m);
-            state.SELMON = m;
+            state.selmon = m;
             focus(state, null_mut());
         }
     }
@@ -712,12 +712,12 @@ pub(crate) fn spawn(state: &mut State, arg: *const Arg) {
     unsafe {
         let mut argv = (*arg).v();
         if argv == *CONFIG.dmenucmd {
-            log::trace!("spawn: dmenucmd on monitor {}", (*state.SELMON).num);
+            log::trace!("spawn: dmenucmd on monitor {}", (*state.selmon).num);
             argv.push("-m".into());
-            argv.push((*state.SELMON).num.to_string());
+            argv.push((*state.selmon).num.to_string());
         }
 
-        (*state.SELMON).tagset[(*state.SELMON).seltags as usize] &=
+        (*state.selmon).tagset[(*state.selmon).seltags as usize] &=
             !*SCRATCHTAG;
 
         let mut cmd = Command::new(argv[0].clone());
@@ -732,14 +732,14 @@ pub(crate) fn spawn(state: &mut State, arg: *const Arg) {
 /// Move the current window to the tag specified by `arg.ui`.
 pub(crate) fn toggletag(state: &mut State, arg: *const Arg) {
     unsafe {
-        if (*state.SELMON).sel.is_null() {
+        if (*state.selmon).sel.is_null() {
             return;
         }
-        let newtags = (*(*state.SELMON).sel).tags ^ ((*arg).ui() & *TAGMASK);
+        let newtags = (*(*state.selmon).sel).tags ^ ((*arg).ui() & *TAGMASK);
         if newtags != 0 {
-            (*(*state.SELMON).sel).tags = newtags;
+            (*(*state.selmon).sel).tags = newtags;
             focus(state, null_mut());
-            arrange(state, state.SELMON);
+            arrange(state, state.selmon);
         }
     }
 }
@@ -750,13 +750,13 @@ pub(crate) fn toggletag(state: &mut State, arg: *const Arg) {
 /// for fixing problems with steam games
 pub(crate) fn fullscreen(state: &mut State, _: *const Arg) {
     unsafe {
-        if (*state.SELMON).sel.is_null() {
+        if (*state.selmon).sel.is_null() {
             return;
         }
         setfullscreen(
             state,
-            (*state.SELMON).sel,
-            !(*(*state.SELMON).sel).isfullscreen,
+            (*state.selmon).sel,
+            !(*(*state.selmon).sel).isfullscreen,
         )
     }
 }
@@ -766,7 +766,7 @@ pub(crate) fn togglescratch(state: &mut State, arg: *const Arg) {
         let mut c: *mut Client;
         let mut found = false;
         cfor!((
-        c = (*state.SELMON).clients;
+        c = (*state.selmon).clients;
         !c.is_null();
         c = (*c).next) {
             found = ((*c).tags & *SCRATCHTAG) != 0;
@@ -775,18 +775,18 @@ pub(crate) fn togglescratch(state: &mut State, arg: *const Arg) {
             }
         });
         if found {
-            let newtagset = (*state.SELMON).tagset
-                [(*state.SELMON).seltags as usize]
+            let newtagset = (*state.selmon).tagset
+                [(*state.selmon).seltags as usize]
                 ^ *SCRATCHTAG;
             if newtagset != 0 {
-                (*state.SELMON).tagset[(*state.SELMON).seltags as usize] =
+                (*state.selmon).tagset[(*state.selmon).seltags as usize] =
                     newtagset;
                 focus(state, null_mut());
-                arrange(state, state.SELMON);
+                arrange(state, state.selmon);
             }
             if is_visible(c) {
                 focus(state, c);
-                restack(state, state.SELMON);
+                restack(state, state.selmon);
             }
         } else {
             spawn(state, arg);

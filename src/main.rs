@@ -284,7 +284,7 @@ fn setup(dpy: *mut Display) -> State {
             xatom: Default::default(),
             dpy,
             drw,
-            SELMON: null_mut(),
+            selmon: null_mut(),
         };
 
         updategeom(&mut state);
@@ -437,17 +437,17 @@ fn focus(state: &mut State, mut c: *mut Client) {
     log::trace!("focus: c = {c:?}");
     unsafe {
         if c.is_null() || !is_visible(c) {
-            c = (*state.SELMON).stack;
+            c = (*state.selmon).stack;
             while !c.is_null() && !is_visible(c) {
                 c = (*c).snext;
             }
         }
-        if !(*state.SELMON).sel.is_null() && (*state.SELMON).sel != c {
-            unfocus(state, (*state.SELMON).sel, false);
+        if !(*state.selmon).sel.is_null() && (*state.selmon).sel != c {
+            unfocus(state, (*state.selmon).sel, false);
         }
         if !c.is_null() {
-            if (*c).mon != state.SELMON {
-                state.SELMON = (*c).mon;
+            if (*c).mon != state.selmon {
+                state.selmon = (*c).mon;
             }
             if (*c).isurgent != 0 {
                 seturgent(state, c, false);
@@ -473,7 +473,7 @@ fn focus(state: &mut State, mut c: *mut Client) {
                 state.netatom[Net::ActiveWindow as usize],
             );
         }
-        (*state.SELMON).sel = c;
+        (*state.selmon).sel = c;
         drawbars(state);
     }
 }
@@ -1161,7 +1161,7 @@ fn updatestatus(state: &mut State) {
         {
             libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
         }
-        drawbar(state, state.SELMON);
+        drawbar(state, state.selmon);
         updatesystray(state);
     }
 }
@@ -1439,9 +1439,9 @@ fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
         let mut n;
         if CONFIG.systraypinning == 0 {
             if m.is_null() {
-                return state.SELMON;
+                return state.selmon;
             }
-            if m == state.SELMON {
+            if m == state.selmon {
                 return m;
             } else {
                 return null_mut();
@@ -1487,7 +1487,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         }
 
         // draw status first so it can be overdrawn by tags later
-        if m == state.SELMON {
+        if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
             tw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD / 2
@@ -1549,9 +1549,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     boxs as i32,
                     boxw,
                     boxw,
-                    (m == state.SELMON
-                        && !(*state.SELMON).sel.is_null()
-                        && ((*(*state.SELMON).sel).tags & 1 << i) != 0)
+                    (m == state.selmon
+                        && !(*state.selmon).sel.is_null()
+                        && ((*(*state.selmon).sel).tags & 1 << i) != 0)
                         as c_int,
                     (urg & 1 << i) as c_int,
                 );
@@ -1579,7 +1579,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     &mut state.drw,
-                    *SCHEME.offset(if m == state.SELMON {
+                    *SCHEME.offset(if m == state.selmon {
                         Scheme::Sel as isize
                     } else {
                         Scheme::Norm as isize
@@ -1857,8 +1857,8 @@ fn updategeom(state: &mut State) -> i32 {
                     attachstack(c);
                     c = (*m).clients;
                 }
-                if m == state.SELMON {
-                    state.SELMON = MONS;
+                if m == state.selmon {
+                    state.selmon = MONS;
                 }
                 cleanupmon(state, m);
             }
@@ -1880,8 +1880,8 @@ fn updategeom(state: &mut State) -> i32 {
             }
         }
         if dirty != 0 {
-            state.SELMON = MONS;
-            state.SELMON = wintomon(state, ROOT);
+            state.selmon = MONS;
+            state.selmon = wintomon(state, ROOT);
         }
         dirty
     }
@@ -1906,7 +1906,7 @@ fn wintomon(state: &mut State, w: Window) -> *mut Monitor {
         if !c.is_null() {
             return (*c).mon;
         }
-        state.SELMON
+        state.selmon
     }
 }
 
@@ -1937,7 +1937,7 @@ fn recttomon(
 ) -> *mut Monitor {
     log::trace!("recttomon");
     unsafe {
-        let mut r = state.SELMON;
+        let mut r = state.selmon;
         let mut area = 0;
         let mut m = MONS;
         while !m.is_null() {
@@ -2123,7 +2123,7 @@ fn cleanup(mut state: State) {
     unsafe {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
-        (*state.SELMON).lt[(*state.SELMON).sellt as usize] =
+        (*state.selmon).lt[(*state.selmon).sellt as usize] =
             &Layout { symbol: c"".as_ptr(), arrange: None };
 
         let mut m = MONS;
@@ -2555,14 +2555,14 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
                 (*c).tags = (*t).tags;
             } else {
                 // NOTE must keep in sync with else below
-                (*c).mon = state.SELMON;
+                (*c).mon = state.selmon;
                 applyrules(state, c);
                 term = termforwin(c);
             }
         } else {
             // copied else case from above because the condition is supposed
             // to be xgettransientforhint && (t = wintoclient)
-            (*c).mon = state.SELMON;
+            (*c).mon = state.selmon;
             applyrules(state, c);
             term = termforwin(c);
         }
@@ -2583,7 +2583,7 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         // TODO I'm also pretty sure this is _not_ the right way to be handling
         // this. checking the name of the window and applying these rules seems
         // like something meant to be handled by RULES
-        (*state.SELMON).tagset[(*state.SELMON).seltags as usize] &=
+        (*state.selmon).tagset[(*state.selmon).seltags as usize] &=
             !*SCRATCHTAG;
         if libc::strcmp((*c).name.as_ptr(), CONFIG.scratchpadname.as_ptr()) == 0
         {
@@ -2660,8 +2660,8 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
             (*c).h as u32,
         );
         setclientstate(state, c, NORMAL_STATE);
-        if (*c).mon == state.SELMON {
-            unfocus(state, (*state.SELMON).sel, false);
+        if (*c).mon == state.selmon {
+            unfocus(state, (*state.selmon).sel, false);
         }
         (*(*c).mon).sel = c;
         arrange(state, (*c).mon);
@@ -2679,7 +2679,7 @@ fn updatewmhints(state: &mut State, c: *mut Client) {
     unsafe {
         let wmh = xlib::XGetWMHints(state.dpy, (*c).win);
         if !wmh.is_null() {
-            if c == (*state.SELMON).sel && (*wmh).flags & URGENT != 0 {
+            if c == (*state.selmon).sel && (*wmh).flags & URGENT != 0 {
                 (*wmh).flags &= !URGENT;
                 xlib::XSetWMHints(state.dpy, (*c).win, wmh);
             } else {
