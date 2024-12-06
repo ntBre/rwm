@@ -1525,7 +1525,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                         && !(*state.selmon).sel.is_null()
                         && ((*(*state.selmon).sel).tags & 1 << i) != 0)
                         as c_int,
-                    (urg & 1 << i) as c_int,
+                    (urg & 1 << i) != 0,
                 );
             }
             x += w as i32;
@@ -1577,7 +1577,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                         boxw,
                         boxw,
                         (*(*m).sel).isfixed,
-                        0,
+                        false,
                     );
                 }
             } else {
@@ -1592,7 +1592,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     w as u32,
                     state.bh as u32,
                     1,
-                    1,
+                    true,
                 );
             }
         }

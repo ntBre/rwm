@@ -164,7 +164,7 @@ pub fn rect(
     w: c_uint,
     h: c_uint,
     filled: c_int,
-    invert: c_int,
+    invert: bool,
 ) {
     if drw.scheme.is_empty() {
         return;
@@ -174,7 +174,7 @@ pub fn rect(
             drw.dpy,
             drw.gc,
             drw.scheme
-                [if invert != 0 { Col::Bg as usize } else { Col::Fg as usize }]
+                [if invert { Col::Bg as usize } else { Col::Fg as usize }]
             .pixel,
         );
         if filled != 0 {
