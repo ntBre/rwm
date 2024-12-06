@@ -146,12 +146,15 @@ pub unsafe fn create(
     }
 }
 
-/// # Safety
-pub unsafe fn free(drw: *mut Drw) {
+// TODO I've tried a couple of times to get this into a Drop implementation, but
+// it keeps seg faulting in State::drop. I think it has something to do with
+// State.dpy dropping before this drops. Calling this inside of State::drop and
+// before closing the display is the only sequence I've gotten to work so far.
+pub fn free(drw: &mut Drw) {
     unsafe {
-        xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
-        xlib::XFreeGC((*drw).dpy, (*drw).gc);
-        fontset_free((*drw).fonts);
+        xlib::XFreePixmap(drw.dpy, drw.drawable);
+        xlib::XFreeGC(drw.dpy, drw.gc);
+        fontset_free(drw.fonts);
     }
 }
 
