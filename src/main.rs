@@ -145,8 +145,6 @@ static mut SYSTRAY: *mut Systray = null_mut();
 
 const BROKEN: &CStr = c"broken";
 
-static mut STEXT: [c_char; 256] = ['\0' as c_char; 256];
-
 /// X display screen geometry height
 static mut SH: c_int = 0;
 
@@ -282,6 +280,7 @@ fn setup(dpy: *mut Display) -> State {
             drw,
             selmon: null_mut(),
             mons: null_mut(),
+            STEXT: ['\0' as c_char; 256],
         };
 
         updategeom(&mut state);
@@ -1145,18 +1144,21 @@ fn updatestatus(state: &mut State) {
     log::trace!("updatestatus");
     unsafe {
         if gettextprop(
-            state,
+            state.dpy,
             ROOT,
             XA_WM_NAME,
             // cast pointer to the array itself as a pointer to the first
             // element, safe??
-            addr_of_mut!(STEXT) as *mut _,
+            state.STEXT.as_mut_ptr(),
             // the lint leading to this instead of simply &stext is very scary,
             // but hopefully it's fine
-            size_of_val(&*addr_of!(STEXT)) as u32,
+            size_of_val(&*addr_of!(state.STEXT)) as u32,
         ) == 0
         {
-            libc::strcpy(addr_of_mut!(STEXT) as *mut _, c"rwm-1.0".as_ptr());
+            libc::strcpy(
+                addr_of_mut!(state.STEXT) as *mut _,
+                c"rwm-1.0".as_ptr(),
+            );
         }
         drawbar(state, state.selmon);
         updatesystray(state);
@@ -1268,7 +1270,8 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD
+        let sw = textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
+            - LRPAD
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
@@ -1487,7 +1490,8 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
-            tw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD / 2
+            tw = textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
+                - LRPAD / 2
                 + 2; // 2px right padding
             log::trace!("drawbar: text");
             drw::text(
@@ -1497,7 +1501,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 tw as u32,
                 state.bh as u32,
                 (LRPAD / 2 - 2) as u32,
-                addr_of!(STEXT) as *const _,
+                addr_of!(state.STEXT) as *const _,
                 0,
             );
         }
@@ -1632,7 +1636,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
 }
 
 fn gettextprop(
-    state: &mut State,
+    dpy: *mut Display,
     w: Window,
     atom: Atom,
     text: *mut i8,
@@ -1650,7 +1654,7 @@ fn gettextprop(
             format: 0,
             nitems: 0,
         };
-        let c = xlib::XGetTextProperty(state.dpy, w, &mut name, atom);
+        let c = xlib::XGetTextProperty(dpy, w, &mut name, atom);
         if c == 0 || name.nitems == 0 {
             return 0;
         }
@@ -1660,7 +1664,7 @@ fn gettextprop(
         if name.encoding == XA_STRING {
             libc::strncpy(text, name.value as *mut _, size as usize - 1);
         } else if xlib::XmbTextPropertyToTextList(
-            state.dpy,
+            dpy,
             &name,
             &mut list,
             &mut n as *mut _,
@@ -2937,7 +2941,7 @@ fn updatetitle(state: &mut State, c: *mut Client) {
     log::trace!("updatetitle");
     unsafe {
         if gettextprop(
-            state,
+            state.dpy,
             (*c).win,
             state.netatom[Net::WMName as usize],
             &mut (*c).name as *mut _,
@@ -2945,7 +2949,7 @@ fn updatetitle(state: &mut State, c: *mut Client) {
         ) == 0
         {
             gettextprop(
-                state,
+                state.dpy,
                 (*c).win,
                 XA_WM_NAME,
                 &mut (*c).name as *mut _,

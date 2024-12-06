@@ -38,7 +38,7 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    NORMAL_STATE, ROOT, SCHEME, SH, STEXT, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, ROOT, SCHEME, SH, SYSTRAY, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
@@ -80,7 +80,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::LtSymbol;
             } else if ev.x
                 > (*state.selmon).ww
-                    - textw(&mut state.drw, addr_of!(STEXT) as *const _)
+                    - textw(&mut state.drw, addr_of!(state.STEXT) as *const _)
                     - getsystraywidth() as i32
             {
                 click = Clk::StatusText;
