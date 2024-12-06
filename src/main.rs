@@ -133,8 +133,6 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut SCHEME: *mut *mut Clr = null_mut();
-
 fn get_scheme_color(scheme: *mut *mut Clr, i: usize, j: usize) -> Clr {
     unsafe { *(*scheme.add(i)).add(j) }
 }
@@ -281,6 +279,7 @@ fn setup(dpy: *mut Display) -> State {
             selmon: null_mut(),
             mons: null_mut(),
             stext: ['\0' as c_char; 256],
+            scheme: null_mut(),
         };
 
         updategeom(&mut state);
@@ -342,10 +341,11 @@ fn setup(dpy: *mut Display) -> State {
             XInternAtom(state.dpy, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init appearance */
-        SCHEME =
+        state.scheme =
             util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..CONFIG.colors.len() {
-            *SCHEME.add(i) = drw::scm_create(&state.drw, &CONFIG.colors[i], 3);
+            *state.scheme.add(i) =
+                drw::scm_create(&state.drw, &CONFIG.colors[i], 3);
         }
 
         // init system tray
@@ -451,7 +451,7 @@ fn focus(state: &mut State, mut c: *mut Client) {
             detachstack(c);
             attachstack(c);
             grabbuttons(state, c, true);
-            let color = (*(*SCHEME.offset(Scheme::Sel as isize))
+            let color = (*(*state.scheme.offset(Scheme::Sel as isize))
                 .offset(Col::Border as isize))
             .pixel;
             xlib::XSetWindowBorder(state.dpy, (*c).win, color);
@@ -1120,7 +1120,7 @@ fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
     grabbuttons(state, c, false);
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
-        let color = (*(*SCHEME.offset(Scheme::Norm as isize))
+        let color = (*(*state.scheme.offset(Scheme::Norm as isize))
             .offset(Col::Border as isize))
         .pixel;
         xlib::XSetWindowBorder(state.dpy, (*c).win, color);
@@ -1287,7 +1287,7 @@ fn updatesystray(state: &mut State) {
                 0,
                 0,
                 get_scheme_color(
-                    SCHEME,
+                    state.scheme,
                     Scheme::Sel as usize,
                     Col::Bg as usize,
                 )
@@ -1296,7 +1296,7 @@ fn updatesystray(state: &mut State) {
             wa.event_mask = ButtonPressMask | ExposureMask;
             wa.override_redirect = True;
             wa.background_pixel = get_scheme_color(
-                SCHEME,
+                state.scheme,
                 Scheme::Norm as usize,
                 Col::Bg as usize,
             )
@@ -1354,7 +1354,7 @@ fn updatesystray(state: &mut State) {
         !i.is_null();
         i = (*i).next) {
             // make sure the background color stays the same
-            wa.background_pixel = get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize).pixel;
+            wa.background_pixel = get_scheme_color(state.scheme, Scheme::Norm as usize, Col::Bg as usize).pixel;
             XChangeWindowAttributes(state.dpy, (*i).win, CWBackPixel, &mut wa);
             XMapRaised(state.dpy, (*i).win);
             w += CONFIG.systrayspacing;
@@ -1396,8 +1396,12 @@ fn updatesystray(state: &mut State) {
         XSetForeground(
             state.dpy,
             state.drw.gc,
-            get_scheme_color(SCHEME, Scheme::Norm as usize, Col::Bg as usize)
-                .pixel,
+            get_scheme_color(
+                state.scheme,
+                Scheme::Norm as usize,
+                Col::Bg as usize,
+            )
+            .pixel,
         );
         XFillRectangle(
             state.dpy,
@@ -1482,7 +1486,10 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == state.selmon {
             // status is only drawn on selected monitor
-            drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
+            drw::setscheme(
+                &mut state.drw,
+                *state.scheme.add(Scheme::Norm as usize),
+            );
             tw = textw(&mut state.drw, &raw const state.stext as *const _)
                 - LRPAD / 2
                 + 2; // 2px right padding
@@ -1516,7 +1523,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             let w = textw(&mut state.drw, text.as_ptr());
             drw::setscheme(
                 &mut state.drw,
-                *SCHEME.add(
+                *state.scheme.add(
                     if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
                         Scheme::Sel as usize
                     } else {
@@ -1554,7 +1561,10 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         }
 
         let w = textw(&mut state.drw, (*m).ltsymbol.as_ptr());
-        drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
+        drw::setscheme(
+            &mut state.drw,
+            *state.scheme.add(Scheme::Norm as usize),
+        );
         log::trace!("drawbar: text 3");
         x = drw::text(
             &mut state.drw,
@@ -1573,7 +1583,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     &mut state.drw,
-                    *SCHEME.offset(if m == state.selmon {
+                    *state.scheme.offset(if m == state.selmon {
                         Scheme::Sel as isize
                     } else {
                         Scheme::Norm as isize
@@ -1604,7 +1614,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             } else {
                 drw::setscheme(
                     &mut state.drw,
-                    *SCHEME.add(Scheme::Norm as usize),
+                    *state.scheme.add(Scheme::Norm as usize),
                 );
                 drw::rect(
                     &mut state.drw,
@@ -2142,10 +2152,10 @@ fn cleanup(mut state: State) {
 
         // free each element in scheme (*mut *mut Clr), then free scheme itself
         for i in 0..CONFIG.colors.len() {
-            let tmp: *mut Clr = *SCHEME.add(i);
+            let tmp: *mut Clr = *state.scheme.add(i);
             libc::free(tmp.cast());
         }
-        libc::free(SCHEME.cast());
+        libc::free(state.scheme.cast());
 
         xlib::XDestroyWindow(state.dpy, WMCHECKWIN);
         xlib::XSync(state.dpy, False);
@@ -2604,8 +2614,8 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
             "manage: XSetWindowBorder with state.dpy = {:?} and w = {w:?}",
             &raw const state.dpy
         );
-        log::trace!("scheme: {:?}", &raw const SCHEME);
-        let scheme_norm: *mut Clr = *SCHEME.offset(Scheme::Norm as isize);
+        log::trace!("scheme: {:?}", &raw const state.scheme);
+        let scheme_norm: *mut Clr = *state.scheme.offset(Scheme::Norm as isize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
         let border: Clr = *scheme_norm.offset(Col::Border as isize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");

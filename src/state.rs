@@ -2,10 +2,10 @@ use std::ffi::{c_char, c_int};
 
 use x11::xlib::{self, Atom, Display};
 
-use super::{
+use crate::{
     drw::{self, Drw},
     enums::{Net, XEmbed, WM},
-    Cursors, Monitor,
+    Clr, Cursors, Monitor,
 };
 
 pub struct State {
@@ -22,6 +22,7 @@ pub struct State {
     pub selmon: *mut Monitor,
     pub mons: *mut Monitor,
     pub stext: [c_char; 256],
+    pub scheme: *mut *mut Clr,
 }
 
 impl Drop for State {
