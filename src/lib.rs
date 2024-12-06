@@ -100,6 +100,7 @@ pub struct Layout {
     pub arrange: Option<fn(&mut State, *mut Monitor)>,
 }
 
+#[derive(Clone, Debug)]
 pub struct Pertag {
     /// Current tag
     pub curtag: c_uint,
@@ -118,7 +119,7 @@ pub struct Pertag {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Monitor {
     pub ltsymbol: [c_char; 16usize],
     pub mfact: f32,
@@ -144,7 +145,7 @@ pub struct Monitor {
     pub next: *mut Monitor,
     pub barwin: Window,
     pub lt: [*const Layout; 2usize],
-    pub pertag: *mut Pertag,
+    pub pertag: Pertag,
 }
 
 #[repr(C)]

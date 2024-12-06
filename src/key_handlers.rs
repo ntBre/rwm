@@ -26,11 +26,11 @@ use rwm::{Arg, Client, Monitor};
 
 pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
     unsafe {
-        (*(*state.selmon).pertag).showbars
-            [(*(*state.selmon).pertag).curtag as usize] =
+        (*state.selmon).pertag.showbars
+            [(*state.selmon).pertag.curtag as usize] =
             !((*state.selmon).showbar);
-        (*state.selmon).showbar = (*(*state.selmon).pertag).showbars
-            [(*(*state.selmon).pertag).curtag as usize];
+        (*state.selmon).showbar = (*state.selmon).pertag.showbars
+            [(*state.selmon).pertag.curtag as usize];
         updatebarpos(state, state.selmon);
         resizebarwin(state, state.selmon);
         if CONFIG.showsystray {
@@ -96,11 +96,11 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) fn incnmaster(state: &mut State, arg: *const Arg) {
     unsafe {
-        (*(*state.selmon).pertag).nmasters
-            [(*(*state.selmon).pertag).curtag as usize] =
+        (*state.selmon).pertag.nmasters
+            [(*state.selmon).pertag.curtag as usize] =
             std::cmp::max((*state.selmon).nmaster + (*arg).i(), 0);
-        (*state.selmon).nmaster = (*(*state.selmon).pertag).nmasters
-            [(*(*state.selmon).pertag).curtag as usize];
+        (*state.selmon).nmaster = (*state.selmon).pertag.nmasters
+            [(*state.selmon).pertag.curtag as usize];
         arrange(state, state.selmon);
     }
 }
@@ -126,10 +126,10 @@ pub(crate) fn setmfact(state: &mut State, arg: *const Arg) {
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        (*(*state.selmon).pertag).mfacts
-            [(*(*state.selmon).pertag).curtag as usize] = f;
-        (*state.selmon).mfact = (*(*state.selmon).pertag).mfacts
-            [(*(*state.selmon).pertag).curtag as usize];
+        (*state.selmon).pertag.mfacts[(*state.selmon).pertag.curtag as usize] =
+            f;
+        (*state.selmon).mfact = (*state.selmon).pertag.mfacts
+            [(*state.selmon).pertag.curtag as usize];
         arrange(state, state.selmon);
     }
 }
@@ -169,7 +169,7 @@ pub(crate) fn view(state: &mut State, arg: *const Arg) {
         (*state.selmon).seltags ^= 1; // toggle sel tagset
 
         // Safety: we were gonna dereference it anyway
-        let pertag = &mut *(*state.selmon).pertag;
+        let pertag = &mut (*state.selmon).pertag;
         if ((*arg).ui() & *TAGMASK) != 0 {
             (*state.selmon).tagset[(*state.selmon).seltags as usize] =
                 (*arg).ui() & *TAGMASK;
@@ -243,19 +243,19 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
                 (*state.selmon).lt[(*state.selmon).sellt as usize],
             )
         {
-            (*(*state.selmon).pertag).sellts
-                [(*(*state.selmon).pertag).curtag as usize] ^= 1;
-            (*state.selmon).sellt = (*(*state.selmon).pertag).sellts
-                [(*(*state.selmon).pertag).curtag as usize];
+            (*state.selmon).pertag.sellts
+                [(*state.selmon).pertag.curtag as usize] ^= 1;
+            (*state.selmon).sellt = (*state.selmon).pertag.sellts
+                [(*state.selmon).pertag.curtag as usize];
         }
         if !arg.is_null() && (*arg).l().is_some() {
-            (*(*state.selmon).pertag).ltidxs
-                [(*(*state.selmon).pertag).curtag as usize]
+            (*state.selmon).pertag.ltidxs
+                [(*state.selmon).pertag.curtag as usize]
                 [(*state.selmon).sellt as usize] =
                 &CONFIG.layouts[(*arg).l().unwrap()];
             (*state.selmon).lt[(*state.selmon).sellt as usize] =
-                (*(*state.selmon).pertag).ltidxs
-                    [(*(*state.selmon).pertag).curtag as usize]
+                (*state.selmon).pertag.ltidxs
+                    [(*state.selmon).pertag.curtag as usize]
                     [(*state.selmon).sellt as usize];
         }
         libc::strncpy(
@@ -433,39 +433,37 @@ pub(crate) fn toggleview(state: &mut State, arg: *const Arg) {
                 newtagset;
 
             if newtagset == !0 {
-                (*(*state.selmon).pertag).prevtag =
-                    (*(*state.selmon).pertag).curtag;
-                (*(*state.selmon).pertag).curtag = 0;
+                (*state.selmon).pertag.prevtag = (*state.selmon).pertag.curtag;
+                (*state.selmon).pertag.curtag = 0;
             }
 
             // test if the user did not select the same tag
-            if (newtagset & 1 << ((*(*state.selmon).pertag).curtag - 1)) == 0 {
-                (*(*state.selmon).pertag).prevtag =
-                    (*(*state.selmon).pertag).curtag;
+            if (newtagset & 1 << ((*state.selmon).pertag.curtag - 1)) == 0 {
+                (*state.selmon).pertag.prevtag = (*state.selmon).pertag.curtag;
                 let mut i;
                 cfor!((i = 0; (newtagset & 1 << i) == 0; i += 1) {});
-                (*(*state.selmon).pertag).curtag = i + 1;
+                (*state.selmon).pertag.curtag = i + 1;
             }
 
             // apply settings for this view
-            (*state.selmon).nmaster = (*(*state.selmon).pertag).nmasters
-                [(*(*state.selmon).pertag).curtag as usize];
-            (*state.selmon).mfact = (*(*state.selmon).pertag).mfacts
-                [(*(*state.selmon).pertag).curtag as usize];
-            (*state.selmon).sellt = (*(*state.selmon).pertag).sellts
-                [(*(*state.selmon).pertag).curtag as usize];
+            (*state.selmon).nmaster = (*state.selmon).pertag.nmasters
+                [(*state.selmon).pertag.curtag as usize];
+            (*state.selmon).mfact = (*state.selmon).pertag.mfacts
+                [(*state.selmon).pertag.curtag as usize];
+            (*state.selmon).sellt = (*state.selmon).pertag.sellts
+                [(*state.selmon).pertag.curtag as usize];
             (*state.selmon).lt[(*state.selmon).sellt as usize] =
-                (*(*state.selmon).pertag).ltidxs
-                    [(*(*state.selmon).pertag).curtag as usize]
+                (*state.selmon).pertag.ltidxs
+                    [(*state.selmon).pertag.curtag as usize]
                     [(*state.selmon).sellt as usize];
             (*state.selmon).lt[((*state.selmon).sellt ^ 1) as usize] =
-                (*(*state.selmon).pertag).ltidxs
-                    [(*(*state.selmon).pertag).curtag as usize]
+                (*state.selmon).pertag.ltidxs
+                    [(*state.selmon).pertag.curtag as usize]
                     [((*state.selmon).sellt ^ 1) as usize];
 
             if (*state.selmon).showbar
-                != (*(*state.selmon).pertag).showbars
-                    [(*(*state.selmon).pertag).curtag as usize]
+                != (*state.selmon).pertag.showbars
+                    [(*state.selmon).pertag.curtag as usize]
             {
                 togglebar(state, null_mut());
             }

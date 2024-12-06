@@ -42,7 +42,7 @@ fn main() {
         // test that a mouse click on the initial (tiling) layout icon
         // switches to floating mode
         let mut button = Event::button(
-            (unsafe { *state.selmon }).barwin,
+            unsafe { (*state.selmon).barwin },
             Button1,
             CONFIG
                 .tags

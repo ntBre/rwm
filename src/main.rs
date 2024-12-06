@@ -178,10 +178,7 @@ fn createmon() -> *mut Monitor {
             size_of_val(&(*m).ltsymbol),
         );
 
-        // NOTE: using this instead of ecalloc because it feels weird to
-        // allocate a Vec that way, even though it worked in a separate test
-        // program. remember to free with Box::from_raw instead of libc::free
-        let pertag = Pertag {
+        (*m).pertag = Pertag {
             curtag: 1,
             prevtag: 1,
             nmasters: vec![(*m).nmaster; CONFIG.tags.len() + 1],
@@ -190,7 +187,6 @@ fn createmon() -> *mut Monitor {
             ltidxs: vec![(*m).lt; CONFIG.tags.len() + 1],
             showbars: vec![(*m).showbar; CONFIG.tags.len() + 1],
         };
-        (*m).pertag = Box::into_raw(Box::new(pertag));
     }
 
     m
