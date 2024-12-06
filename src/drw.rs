@@ -157,9 +157,8 @@ pub fn free(drw: &mut Drw) {
     }
 }
 
-/// # Safety
-pub unsafe fn rect(
-    drw: *mut Drw,
+pub fn rect(
+    drw: &mut Drw,
     x: c_int,
     y: c_int,
     w: c_uint,
@@ -167,35 +166,24 @@ pub unsafe fn rect(
     filled: c_int,
     invert: c_int,
 ) {
+    if drw.scheme.is_empty() {
+        return;
+    }
     unsafe {
-        if drw.is_null() || (*drw).scheme.is_empty() {
-            // TODO can this be &mut Drw?
-            return;
-        }
         xlib::XSetForeground(
-            (*drw).dpy,
-            (*drw).gc,
-            if invert != 0 {
-                (*drw).scheme[Col::Bg as usize].pixel
-            } else {
-                (*drw).scheme[Col::Fg as usize].pixel
-            },
+            drw.dpy,
+            drw.gc,
+            drw.scheme
+                [if invert != 0 { Col::Bg as usize } else { Col::Fg as usize }]
+            .pixel,
         );
         if filled != 0 {
-            xlib::XFillRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
-                x,
-                y,
-                w,
-                h,
-            );
+            xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
         } else {
             xlib::XDrawRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
+                drw.dpy,
+                drw.drawable,
+                drw.gc,
                 x,
                 y,
                 w - 1,
