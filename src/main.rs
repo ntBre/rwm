@@ -5,6 +5,7 @@ use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
+use std::ops::Index;
 use std::ptr::null_mut;
 use std::sync::LazyLock;
 
@@ -38,8 +39,7 @@ use x11::xlib::{
 use xcb::Connection;
 
 use rwm::{
-    drw, util, Arg, Client, Clr, Layout, Monitor, Pertag, State, Systray,
-    Window,
+    drw, util, Arg, Client, Layout, Monitor, Pertag, State, Systray, Window,
 };
 
 use config::CONFIG;
@@ -132,10 +132,6 @@ extern "C" fn xerrordummy(
 static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
-
-fn get_scheme_color(scheme: *mut *mut Clr, i: usize, j: usize) -> Clr {
-    unsafe { *(*scheme.add(i)).add(j) }
-}
 
 static mut SCREEN: c_int = 0;
 
@@ -279,7 +275,7 @@ fn setup(dpy: *mut Display) -> State {
             selmon: null_mut(),
             mons: null_mut(),
             stext: ['\0' as c_char; 256],
-            scheme: null_mut(),
+            scheme: Vec::new(),
         };
 
         updategeom(&mut state);
@@ -341,11 +337,12 @@ fn setup(dpy: *mut Display) -> State {
             XInternAtom(state.dpy, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init appearance */
-        state.scheme =
-            util::ecalloc(CONFIG.colors.len(), size_of::<*mut Clr>()).cast();
         for i in 0..CONFIG.colors.len() {
-            *state.scheme.add(i) =
-                drw::scm_create(&state.drw, &CONFIG.colors[i], 3);
+            state.scheme.push(drw::scm_create(
+                &state.drw,
+                &CONFIG.colors[i],
+                3,
+            ));
         }
 
         // init system tray
@@ -451,9 +448,8 @@ fn focus(state: &mut State, mut c: *mut Client) {
             detachstack(c);
             attachstack(c);
             grabbuttons(state, c, true);
-            let color = (*(*state.scheme.offset(Scheme::Sel as isize))
-                .offset(Col::Border as isize))
-            .pixel;
+            let color =
+                state.scheme[Scheme::Sel as usize][Col::Border as usize].pixel;
             xlib::XSetWindowBorder(state.dpy, (*c).win, color);
             setfocus(state, c);
         } else {
@@ -1120,9 +1116,8 @@ fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
     grabbuttons(state, c, false);
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
-        let color = (*(*state.scheme.offset(Scheme::Norm as isize))
-            .offset(Col::Border as isize))
-        .pixel;
+        let color =
+            state.scheme[Scheme::Norm as usize][Col::Border as usize].pixel;
         xlib::XSetWindowBorder(state.dpy, (*c).win, color);
         if setfocus {
             xlib::XSetInputFocus(
@@ -1286,21 +1281,12 @@ fn updatesystray(state: &mut State) {
                 state.bh as u32,
                 0,
                 0,
-                get_scheme_color(
-                    state.scheme,
-                    Scheme::Sel as usize,
-                    Col::Bg as usize,
-                )
-                .pixel,
+                state.scheme[Scheme::Sel as usize][Col::Bg as usize].pixel,
             );
             wa.event_mask = ButtonPressMask | ExposureMask;
             wa.override_redirect = True;
-            wa.background_pixel = get_scheme_color(
-                state.scheme,
-                Scheme::Norm as usize,
-                Col::Bg as usize,
-            )
-            .pixel;
+            wa.background_pixel =
+                state.scheme[Scheme::Norm as usize][Col::Bg as usize].pixel;
             XSelectInput(state.dpy, (*SYSTRAY).win, SubstructureNotifyMask);
             XChangeProperty(
                 state.dpy,
@@ -1354,7 +1340,7 @@ fn updatesystray(state: &mut State) {
         !i.is_null();
         i = (*i).next) {
             // make sure the background color stays the same
-            wa.background_pixel = get_scheme_color(state.scheme, Scheme::Norm as usize, Col::Bg as usize).pixel;
+            wa.background_pixel = state.scheme[Scheme::Norm as usize][ Col::Bg as usize].pixel;
             XChangeWindowAttributes(state.dpy, (*i).win, CWBackPixel, &mut wa);
             XMapRaised(state.dpy, (*i).win);
             w += CONFIG.systrayspacing;
@@ -1396,12 +1382,7 @@ fn updatesystray(state: &mut State) {
         XSetForeground(
             state.dpy,
             state.drw.gc,
-            get_scheme_color(
-                state.scheme,
-                Scheme::Norm as usize,
-                Col::Bg as usize,
-            )
-            .pixel,
+            state.scheme[Scheme::Norm as usize][Col::Bg as usize].pixel,
         );
         XFillRectangle(
             state.dpy,
@@ -1488,7 +1469,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             // status is only drawn on selected monitor
             drw::setscheme(
                 &mut state.drw,
-                *state.scheme.add(Scheme::Norm as usize),
+                state.scheme[Scheme::Norm as usize].clone(),
             );
             tw = textw(&mut state.drw, &raw const state.stext as *const _)
                 - LRPAD / 2
@@ -1523,13 +1504,14 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             let w = textw(&mut state.drw, text.as_ptr());
             drw::setscheme(
                 &mut state.drw,
-                *state.scheme.add(
-                    if ((*m).tagset[(*m).seltags as usize] & 1 << i) != 0 {
-                        Scheme::Sel as usize
-                    } else {
-                        Scheme::Norm as usize
-                    },
-                ),
+                state.scheme[if ((*m).tagset[(*m).seltags as usize] & 1 << i)
+                    != 0
+                {
+                    Scheme::Sel as usize
+                } else {
+                    Scheme::Norm as usize
+                }]
+                .clone(),
             );
             log::trace!("drawbar: text 2");
             drw::text(
@@ -1563,7 +1545,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         let w = textw(&mut state.drw, (*m).ltsymbol.as_ptr());
         drw::setscheme(
             &mut state.drw,
-            *state.scheme.add(Scheme::Norm as usize),
+            state.scheme[Scheme::Norm as usize].clone(),
         );
         log::trace!("drawbar: text 3");
         x = drw::text(
@@ -1583,11 +1565,12 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             if !(*m).sel.is_null() {
                 drw::setscheme(
                     &mut state.drw,
-                    *state.scheme.offset(if m == state.selmon {
-                        Scheme::Sel as isize
+                    state.scheme[if m == state.selmon {
+                        Scheme::Sel as usize
                     } else {
-                        Scheme::Norm as isize
-                    }),
+                        Scheme::Norm as usize
+                    }]
+                    .clone(),
                 );
                 log::trace!("drawbar: text 4");
                 drw::text(
@@ -1614,7 +1597,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             } else {
                 drw::setscheme(
                     &mut state.drw,
-                    *state.scheme.add(Scheme::Norm as usize),
+                    state.scheme[Scheme::Norm as usize].clone(),
                 );
                 drw::rect(
                     &mut state.drw,
@@ -2150,13 +2133,6 @@ fn cleanup(mut state: State) {
             libc::free(SYSTRAY.cast());
         }
 
-        // free each element in scheme (*mut *mut Clr), then free scheme itself
-        for i in 0..CONFIG.colors.len() {
-            let tmp: *mut Clr = *state.scheme.add(i);
-            libc::free(tmp.cast());
-        }
-        libc::free(state.scheme.cast());
-
         xlib::XDestroyWindow(state.dpy, WMCHECKWIN);
         xlib::XSync(state.dpy, False);
         xlib::XSetInputFocus(
@@ -2615,9 +2591,9 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
             &raw const state.dpy
         );
         log::trace!("scheme: {:?}", &raw const state.scheme);
-        let scheme_norm: *mut Clr = *state.scheme.offset(Scheme::Norm as isize);
+        let scheme_norm = state.scheme.index(Scheme::Norm as usize);
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
-        let border: Clr = *scheme_norm.offset(Col::Border as isize);
+        let border = scheme_norm.index(Col::Border as usize);
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
         let pixel = border.pixel;
         log::trace!("pixel = {pixel:?}");

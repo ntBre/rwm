@@ -26,13 +26,13 @@ use crate::{
     config::CONFIG,
     configure, drawbar, drawbars,
     enums::{Clk, Net},
-    focus, get_scheme_color, getsystraywidth, grabkeys, height, is_visible,
-    manage, recttomon, removesystrayicon, resizebarwin, resizeclient, restack,
-    sendevent, setclientstate, setfocus, setfullscreen, seturgent,
-    swallowingclient, textw, unfocus, unmanage, updatebars, updategeom,
-    updatesizehints, updatestatus, updatesystray, updatesystrayicongeom,
-    updatesystrayiconstate, updatetitle, updatewindowtype, updatewmhints,
-    width, wintoclient, wintomon, wintosystrayicon,
+    focus, getsystraywidth, grabkeys, height, is_visible, manage, recttomon,
+    removesystrayicon, resizebarwin, resizeclient, restack, sendevent,
+    setclientstate, setfocus, setfullscreen, seturgent, swallowingclient,
+    textw, unfocus, unmanage, updatebars, updategeom, updatesizehints,
+    updatestatus, updatesystray, updatesystrayicongeom, updatesystrayiconstate,
+    updatetitle, updatewindowtype, updatewmhints, width, wintoclient, wintomon,
+    wintosystrayicon,
     xembed::{
         SYSTEM_TRAY_REQUEST_DOCK, XEMBED_EMBEDDED_NOTIFY,
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
@@ -176,12 +176,9 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
             // use parent's background color
             let mut swa = XSetWindowAttributes {
                 background_pixmap: 0,
-                background_pixel: get_scheme_color(
-                    state.scheme,
-                    Scheme::Norm as usize,
-                    Col::Bg as usize,
-                )
-                .pixel,
+                background_pixel: state.scheme[Scheme::Norm as usize]
+                    [Col::Bg as usize]
+                    .pixel,
                 border_pixmap: 0,
                 border_pixel: 0,
                 bit_gravity: 0,

@@ -22,7 +22,7 @@ pub struct State {
     pub selmon: *mut Monitor,
     pub mons: *mut Monitor,
     pub stext: [c_char; 256],
-    pub scheme: *mut *mut Clr,
+    pub scheme: Vec<Vec<Clr>>,
 }
 
 impl Drop for State {

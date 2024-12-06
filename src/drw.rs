@@ -16,8 +16,8 @@ use x11::xlib::{
 };
 
 use crate::enums::Col;
+use crate::util::between;
 use crate::util::die;
-use crate::util::{between, ecalloc};
 use crate::Clr;
 use crate::Cursor as Cur;
 use crate::Window;
@@ -52,7 +52,7 @@ pub struct Drw {
     pub root: Window,
     pub drawable: Drawable,
     pub gc: GC,
-    pub scheme: *mut Clr,
+    pub scheme: Vec<Clr>,
     pub fonts: Vec<Fnt>,
 }
 
@@ -137,7 +137,7 @@ pub unsafe fn create(
                 xlib::XDefaultDepth(dpy, screen) as u32,
             ),
             gc: xlib::XCreateGC(dpy, root, 0, null_mut()),
-            scheme: null_mut(),
+            scheme: Vec::new(),
             fonts: Vec::new(),
         };
         xlib::XSetLineAttributes(dpy, drw.gc, 1, LineSolid, CapButt, JoinMiter);
@@ -168,16 +168,17 @@ pub unsafe fn rect(
     invert: c_int,
 ) {
     unsafe {
-        if drw.is_null() || (*drw).scheme.is_null() {
+        if drw.is_null() || (*drw).scheme.is_empty() {
+            // TODO can this be &mut Drw?
             return;
         }
         xlib::XSetForeground(
             (*drw).dpy,
             (*drw).gc,
             if invert != 0 {
-                (*(*drw).scheme.offset(Col::Bg as isize)).pixel
+                (*drw).scheme[Col::Bg as usize].pixel
             } else {
-                (*(*drw).scheme.offset(Col::Fg as isize)).pixel
+                (*drw).scheme[Col::Fg as usize].pixel
             },
         );
         if filled != 0 {
@@ -209,7 +210,7 @@ pub unsafe fn cur_create(drw: &Drw, shape: c_int) -> Cur {
     unsafe { Cur { cursor: xlib::XCreateFontCursor(drw.dpy, shape as c_uint) } }
 }
 
-pub fn setscheme(drw: &mut Drw, scm: *mut Clr) {
+pub fn setscheme(drw: &mut Drw, scm: Vec<Clr>) {
     drw.scheme = scm;
 }
 
@@ -324,17 +325,16 @@ pub fn scm_create(
     drw: *const Drw,
     clrnames: &[CString],
     clrcount: usize,
-) -> *mut Clr {
+) -> Vec<Clr> {
+    let mut ret = Vec::new();
     if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
-        return null_mut();
+        return ret;
     }
-    let ret: *mut Clr = ecalloc(clrcount, size_of::<xft::XftColor>()).cast();
-    if ret.is_null() {
-        return null_mut();
-    }
-    for (i, clr) in clrnames.iter().enumerate() {
+    for clr in clrnames {
+        let mut dest = MaybeUninit::uninit();
+        clr_create(drw, dest.as_mut_ptr(), clr.as_ptr());
         unsafe {
-            clr_create(drw, ret.add(i), clr.as_ptr());
+            ret.push(dest.assume_init());
         }
     }
     ret
@@ -409,7 +409,7 @@ pub unsafe fn text(
             NoMatches { codepoint: [0; NOMATCHES_LEN], idx: 0 };
         static mut ELLIPSIS_WIDTH: c_uint = 0;
 
-        if (render != 0 && (drw.scheme.is_null() || w == 0))
+        if (render != 0 && (drw.scheme.is_empty() || w == 0))
             || text.is_null()
             || drw.fonts.is_empty()
         {
@@ -423,10 +423,9 @@ pub unsafe fn text(
             xlib::XSetForeground(
                 drw.dpy,
                 drw.gc,
-                (*drw
-                    .scheme
-                    .add(if invert != 0 { Col::Fg } else { Col::Bg } as usize))
-                .pixel,
+                drw.scheme
+                    [if invert != 0 { Col::Fg } else { Col::Bg } as usize]
+                    .pixel,
             );
             log::trace!("text: XFillRectangle");
             xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
@@ -528,11 +527,8 @@ pub unsafe fn text(
                     log::trace!("text: XftDrawStringUtf8");
                     xft::XftDrawStringUtf8(
                         d,
-                        drw.scheme.add(if invert != 0 {
-                            Col::Bg
-                        } else {
-                            Col::Fg
-                        } as usize),
+                        &drw.scheme[if invert != 0 { Col::Bg } else { Col::Fg }
+                            as usize],
                         drw.fonts[usedfont].xfont,
                         x,
                         ty,
