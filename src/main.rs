@@ -263,10 +263,12 @@ fn setup(dpy: *mut Display) -> State {
         ROOT = xlib::XRootWindow(dpy, SCREEN);
         let sw = xlib::XDisplayWidth(dpy, SCREEN);
         let mut drw = drw::create(dpy, SCREEN, ROOT, sw as u32, SH as u32);
-        if fontset_create(&mut drw, &CONFIG.fonts).is_null() {
+        if fontset_create(&mut drw, &CONFIG.fonts).is_err()
+            || drw.fonts.is_empty()
+        {
             panic!("no fonts could be loaded");
         }
-        LRPAD = (*drw.fonts).h as i32;
+        LRPAD = drw.fonts[0].h as i32;
 
         /* init cursors */
         let cursors = rwm::Cursors {
@@ -275,7 +277,7 @@ fn setup(dpy: *mut Display) -> State {
             move_: drw::cur_create(&drw, XC_FLEUR as i32),
         };
         let mut state = State {
-            bh: (*drw.fonts).h as i32 + 2,
+            bh: drw.fonts[0].h as i32 + 2,
             sw,
             cursors,
             wmatom: Default::default(),
@@ -1466,8 +1468,8 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut tw = 0;
         let mut stw = 0;
-        let boxs = (*state.drw.fonts).h / 9;
-        let boxw = (*state.drw.fonts).h / 6 + 2;
+        let boxs = state.drw.fonts[0].h / 9;
+        let boxw = state.drw.fonts[0].h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
         if CONFIG.showsystray && m == systraytomon(m) && !CONFIG.systrayonleft {
@@ -1484,6 +1486,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
             tw = textw(&mut state.drw, addr_of!(STEXT) as *const _) - LRPAD / 2
                 + 2; // 2px right padding
+            log::trace!("drawbar: text");
             drw::text(
                 &mut state.drw,
                 (*m).ww - tw - stw as i32,
@@ -1521,6 +1524,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     },
                 ),
             );
+            log::trace!("drawbar: text 2");
             drw::text(
                 &mut state.drw,
                 x,
@@ -1551,6 +1555,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
 
         let w = textw(&mut state.drw, (*m).ltsymbol.as_ptr());
         drw::setscheme(&mut state.drw, *SCHEME.add(Scheme::Norm as usize));
+        log::trace!("drawbar: text 3");
         x = drw::text(
             &mut state.drw,
             x,
@@ -1561,6 +1566,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             (*m).ltsymbol.as_ptr(),
             0,
         ) as i32;
+        log::trace!("finished drawbar text 3");
 
         let w = (*m).ww - tw - stw as i32 - x;
         if w > state.bh {
@@ -1573,6 +1579,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                         Scheme::Norm as isize
                     }),
                 );
+                log::trace!("drawbar: text 4");
                 drw::text(
                     &mut state.drw,
                     x,

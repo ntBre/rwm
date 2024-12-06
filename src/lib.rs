@@ -217,6 +217,11 @@ impl Drop for State {
             xlib::XFreeCursor(self.drw.dpy, self.cursors.normal.cursor);
             xlib::XFreeCursor(self.drw.dpy, self.cursors.resize.cursor);
 
+            let fonts = std::mem::take(&mut self.drw.fonts);
+
+            // must drop the fonts before the display they depend on
+            drop(fonts);
+
             drw::free(&mut self.drw);
 
             xlib::XCloseDisplay(self.dpy);

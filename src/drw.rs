@@ -34,17 +34,16 @@ const UTFMAX: [c_long; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
 const FC_TRUE: i32 = 1;
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Fnt {
     pub dpy: *mut Display,
     pub h: c_uint,
     pub xfont: *mut XftFont,
     pub pattern: *mut FcPattern,
-    pub next: *mut Fnt,
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Drw {
     pub w: c_uint,
     pub h: c_uint,
@@ -54,7 +53,7 @@ pub struct Drw {
     pub drawable: Drawable,
     pub gc: GC,
     pub scheme: *mut Clr,
-    pub fonts: *mut Fnt,
+    pub fonts: Vec<Fnt>,
 }
 
 fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
@@ -139,7 +138,7 @@ pub unsafe fn create(
             ),
             gc: xlib::XCreateGC(dpy, root, 0, null_mut()),
             scheme: null_mut(),
-            fonts: null_mut(),
+            fonts: Vec::new(),
         };
         xlib::XSetLineAttributes(dpy, drw.gc, 1, LineSolid, CapButt, JoinMiter);
         drw
@@ -151,10 +150,10 @@ pub unsafe fn create(
 // State.dpy dropping before this drops. Calling this inside of State::drop and
 // before closing the display is the only sequence I've gotten to work so far.
 pub fn free(drw: &mut Drw) {
+    log::trace!("Drw::free");
     unsafe {
         xlib::XFreePixmap(drw.dpy, drw.drawable);
         xlib::XFreeGC(drw.dpy, drw.gc);
-        fontset_free(drw.fonts);
     }
 }
 
@@ -214,44 +213,28 @@ pub fn setscheme(drw: &mut Drw, scm: *mut Clr) {
     drw.scheme = scm;
 }
 
-/// # Safety
-pub unsafe fn fontset_create(drw: &mut Drw, fonts: &[CString]) -> *mut Fnt {
+#[allow(clippy::result_unit_err)]
+pub fn fontset_create(drw: &mut Drw, fonts: &[CString]) -> Result<(), ()> {
     log::trace!("fontset_create");
-    unsafe {
-        let mut ret: *mut Fnt = null_mut();
 
-        // since fonts is a & not a *, it can't be null, but it could be empty
-        if fonts.is_empty() {
-            return null_mut();
+    if fonts.is_empty() {
+        return Err(());
+    }
+
+    for font in fonts.iter().rev() {
+        if let Ok(cur) = xfont_create(drw, font.as_ptr(), null_mut()) {
+            drw.fonts.push(cur);
         }
+    }
 
-        for font in fonts.iter().rev() {
-            let cur = xfont_create(drw, font.as_ptr(), null_mut());
-            if !cur.is_null() {
-                (*cur).next = ret;
-                ret = cur;
-            }
-        }
-        drw.fonts = ret;
-        ret
-    }
-}
-
-fn fontset_free(font: *mut Fnt) {
-    if font.is_null() {
-        return;
-    }
-    unsafe {
-        fontset_free((*font).next);
-        xfont_free(font);
-    }
+    Ok(())
 }
 
 fn xfont_create(
-    drw: *mut Drw,
+    drw: &Drw,
     fontname: *const i8,
     fontpattern: *mut FcPattern,
-) -> *mut Fnt {
+) -> Result<Fnt, ()> {
     log::trace!("xfont_create");
     unsafe {
         let xfont: *mut XftFont;
@@ -263,13 +246,13 @@ fn xfont_create(
              * behaviour whereas the former just results in missing-character
              * rectangles being drawn, at least with some fonts. */
             log::trace!("xfont_create: XftFontOpenName");
-            xfont = xft::XftFontOpenName((*drw).dpy, (*drw).screen, fontname);
+            xfont = xft::XftFontOpenName(drw.dpy, drw.screen, fontname);
             if xfont.is_null() {
                 eprintln!(
                     "error, cannot load font from name: '{:?}'",
                     CStr::from_ptr(fontname)
                 );
-                return null_mut();
+                return Err(());
             }
             log::trace!("xfont_create: FcNameParse");
             pattern = FcNameParse(fontname as *mut FcChar8);
@@ -279,48 +262,40 @@ fn xfont_create(
                     CStr::from_ptr(fontname)
                 );
                 log::trace!("xfont_create: null pattern, XftFontClose");
-                xft::XftFontClose((*drw).dpy, xfont);
-                return null_mut();
+                xft::XftFontClose(drw.dpy, xfont);
+                return Err(());
             }
         } else if !fontpattern.is_null() {
             log::trace!("xfont_create: XftFontOpenPattern");
-            xfont = xft::XftFontOpenPattern((*drw).dpy, fontpattern.cast());
+            xfont = xft::XftFontOpenPattern(drw.dpy, fontpattern.cast());
             if xfont.is_null() {
                 eprintln!("error, cannot load font from pattern");
-                return null_mut();
+                return Err(());
             }
         } else {
             die("no font specified");
         }
 
-        // could just Box::into_raw after constructing a Fnt here, I think. the
-        // only field not initialized is the next ptr
-        let font: *mut Fnt = ecalloc(1, size_of::<Fnt>()).cast();
-        (*font).xfont = xfont;
-        (*font).pattern = pattern;
-        assert!(!xfont.is_null());
-        (*font).h = (*xfont).ascent as u32 + (*xfont).descent as u32;
-        (*font).dpy = (*drw).dpy;
+        log::trace!("returning font");
 
-        log::trace!("returning font: {font:?}");
-        font
+        Ok(Fnt {
+            dpy: drw.dpy,
+            h: (*xfont).ascent as u32 + (*xfont).descent as u32,
+            xfont,
+            pattern,
+        })
     }
 }
 
-fn xfont_free(font: *mut Fnt) {
-    log::trace!("xfont_free");
-    if font.is_null() {
-        return;
-    }
-    unsafe {
-        if !(*font).pattern.is_null() {
-            log::trace!("xfont_free: FcPatternDestroy");
-            FcPatternDestroy((*font).pattern.cast());
+impl Drop for Fnt {
+    fn drop(&mut self) {
+        if !self.pattern.is_null() {
+            log::trace!("xfont_free: FcPatternDestroy: {:?}", self.pattern);
+            unsafe { FcPatternDestroy(self.pattern.cast()) };
         }
-        log::trace!("xfont_free: XftFontClose");
-        xft::XftFontClose((*font).dpy, (*font).xfont);
-        log::trace!("xfont_free: free {font:?}");
-        libc::free(font.cast());
+        log::trace!("xfont_free: XftFontClose: {:?}", self.xfont);
+        unsafe { xft::XftFontClose(self.dpy, self.xfont) };
+        log::trace!("finished Drop for Fnt");
     }
 }
 
@@ -367,7 +342,8 @@ pub fn scm_create(
 
 /// # Safety
 pub unsafe fn fontset_getwidth(drw: &mut Drw, text: *const c_char) -> c_uint {
-    if drw.fonts.is_null() || text.is_null() {
+    log::trace!("fontset_getwidth");
+    if drw.fonts.is_empty() || text.is_null() {
         return 0;
     }
     self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
@@ -402,9 +378,9 @@ pub unsafe fn text(
 
         let mut d: *mut xft::XftDraw = null_mut();
 
-        let mut usedfont: *mut Fnt;
-        let mut curfont: *mut Fnt;
-        let mut nextfont: *mut Fnt;
+        // indices into drw.fonts
+        let mut usedfont: usize;
+        let mut nextfont: Option<usize>;
 
         let mut utf8strlen: c_int;
         let mut utf8charlen: c_int;
@@ -435,12 +411,11 @@ pub unsafe fn text(
 
         if (render != 0 && (drw.scheme.is_null() || w == 0))
             || text.is_null()
-            || drw.fonts.is_null()
+            || drw.fonts.is_empty()
         {
             return 0;
         }
 
-        let drw = &mut *drw;
         if render == 0 {
             w = if invert != 0 { invert } else { !invert } as u32;
         } else {
@@ -466,17 +441,17 @@ pub unsafe fn text(
             w -= lpad;
         }
 
-        usedfont = drw.fonts;
         if ELLIPSIS_WIDTH == 0 && render != 0 {
             ELLIPSIS_WIDTH = fontset_getwidth(drw, c"...".as_ptr());
         }
+        usedfont = 0;
         log::trace!("text: entering loop");
         'no_match: loop {
             ew = 0;
             ellipsis_len = 0;
             utf8strlen = 0;
             utf8str = text;
-            nextfont = null_mut();
+            nextfont = None;
 
             // I believe this loop is just walking along the characters in text
             // and computing their width. text += utf8charlen at the end just
@@ -491,12 +466,11 @@ pub unsafe fn text(
             while *text != b'\0' as i8 {
                 utf8charlen =
                     utf8decode(text, &mut utf8codepoint, UTF_SIZ) as c_int;
-                curfont = drw.fonts;
-                while !curfont.is_null() {
+                for (font_idx, curfont) in drw.fonts.iter().enumerate() {
                     charexists = (charexists != 0
                         || xft::XftCharExists(
                             drw.dpy,
-                            (*curfont).xfont,
+                            curfont.xfont,
                             utf8codepoint as u32,
                         ) != 0) as c_int;
                     if charexists != 0 {
@@ -523,19 +497,21 @@ pub unsafe fn text(
                             } else {
                                 utf8strlen = ellipsis_len as c_int;
                             }
-                        } else if curfont == usedfont {
+                        } else if font_idx == usedfont {
                             utf8strlen += utf8charlen;
                             text = text.add(utf8charlen as usize);
                             ew += tmpw;
                         } else {
-                            nextfont = curfont;
+                            nextfont = Some(font_idx);
                         }
                         break;
                     }
-                    curfont = (*curfont).next;
                 }
 
-                if overflow != 0 || charexists == 0 || !nextfont.is_null() {
+                if overflow != 0
+                    || charexists == 0
+                    || nextfont.is_some_and(|n| n < drw.fonts.len())
+                {
                     break;
                 } else {
                     charexists = 0;
@@ -547,8 +523,8 @@ pub unsafe fn text(
             if utf8strlen != 0 {
                 if render != 0 {
                     ty = y
-                        + (h as i32 - (*usedfont).h as i32) / 2
-                        + (*(*usedfont).xfont).ascent;
+                        + (h as i32 - drw.fonts[usedfont].h as i32) / 2
+                        + (*drw.fonts[usedfont].xfont).ascent;
                     log::trace!("text: XftDrawStringUtf8");
                     xft::XftDrawStringUtf8(
                         d,
@@ -557,7 +533,7 @@ pub unsafe fn text(
                         } else {
                             Col::Fg
                         } as usize),
-                        (*usedfont).xfont,
+                        drw.fonts[usedfont].xfont,
                         x,
                         ty,
                         utf8str as *const c_uchar,
@@ -569,6 +545,7 @@ pub unsafe fn text(
                 w -= ew;
             }
             if render != 0 && overflow != 0 {
+                log::trace!("recursing for render != && overflow != 0");
                 self::text(
                     drw,
                     ellipsis_x,
@@ -583,9 +560,9 @@ pub unsafe fn text(
 
             if *text == b'\0' as i8 || overflow != 0 {
                 break;
-            } else if !nextfont.is_null() {
+            } else if nextfont.is_some_and(|n| n < drw.fonts.len()) {
                 charexists = 0;
-                usedfont = nextfont;
+                usedfont = nextfont.unwrap();
             } else {
                 // regardless of whether or not a fallback font is found, the
                 // character must be drawn
@@ -596,7 +573,7 @@ pub unsafe fn text(
                     // match
                     if utf8codepoint == NOMATCHES.codepoint[i] {
                         // goto no_match
-                        usedfont = drw.fonts;
+                        usedfont = 0;
                         continue 'no_match;
                     }
                 }
@@ -606,13 +583,13 @@ pub unsafe fn text(
                 log::trace!("text: FcCharSetAddChar: {utf8codepoint}");
                 FcCharSetAddChar(fccharset, utf8codepoint as u32);
 
-                if (*drw.fonts).pattern.is_null() {
+                if drw.fonts[0].pattern.is_null() {
                     // refer to the comment in xfont_create for more information
                     die("the first font in the cache must be loaded from a font string");
                 }
 
                 log::trace!("text: FcPatternDuplicate");
-                fcpattern = FcPatternDuplicate((*drw.fonts).pattern);
+                fcpattern = FcPatternDuplicate(drw.fonts[0].pattern);
                 log::trace!("text: FcPatternAddCharSet");
                 fcfg::FcPatternAddCharSet(
                     fcpattern,
@@ -648,28 +625,26 @@ pub unsafe fn text(
 
                 if !match_.is_null() {
                     log::trace!("text: xfont_create");
-                    usedfont = xfont_create(drw, null_mut(), match_);
-                    log::trace!("text: XftCharExists");
-                    if !usedfont.is_null()
-                        && xft::XftCharExists(
-                            drw.dpy,
-                            (*usedfont).xfont,
-                            utf8codepoint as u32,
-                        ) != 0
-                    {
-                        curfont = drw.fonts;
-                        while !(*curfont).next.is_null() {
-                            curfont = (*curfont).next;
+                    match xfont_create(drw, null_mut(), match_) {
+                        Ok(usedfont)
+                            if xft::XftCharExists(
+                                drw.dpy,
+                                usedfont.xfont,
+                                utf8codepoint as u32,
+                            ) != 0 =>
+                        {
+                            drw.fonts.push(usedfont);
                         }
-                        (*curfont).next = usedfont;
-                    } else {
-                        xfont_free(usedfont);
-                        NOMATCHES.idx += 1;
-                        NOMATCHES.codepoint[NOMATCHES.idx % NOMATCHES_LEN] =
-                            utf8codepoint;
-                        // no_match label
-                        usedfont = drw.fonts;
+
+                        _ => {
+                            NOMATCHES.idx += 1;
+                            NOMATCHES.codepoint
+                                [NOMATCHES.idx % NOMATCHES_LEN] = utf8codepoint;
+                            // no_match label
+                            usedfont = 0;
+                        }
                     }
+                    log::trace!("text: XftCharExists");
                 }
             }
         }
@@ -678,12 +653,13 @@ pub unsafe fn text(
             xft::XftDrawDestroy(d);
         }
 
+        log::trace!("returning from text");
         x + if render != 0 { w } else { 0 } as i32
     }
 }
 
 fn font_getexts(
-    font: *mut Fnt,
+    font: *const Fnt,
     text: *const i8,
     len: u32,
     w: *mut c_uint,
