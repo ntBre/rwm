@@ -176,8 +176,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
             // use parent's background color
             let mut swa = XSetWindowAttributes {
                 background_pixmap: 0,
-                background_pixel: state.scheme[Scheme::Norm as usize]
-                    [Col::Bg as usize]
+                background_pixel: state.scheme[Scheme::Norm][Col::Bg as usize]
                     .pixel,
                 border_pixmap: 0,
                 border_pixel: 0,

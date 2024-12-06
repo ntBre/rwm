@@ -1,12 +1,41 @@
-use std::ffi::{c_char, c_int};
+use std::{
+    ffi::{c_char, c_int},
+    ops::Index,
+};
 
 use x11::xlib::{self, Atom, Display};
 
 use crate::{
     drw::{self, Drw},
-    enums::{Net, XEmbed, WM},
+    enums::{Col, Net, Scheme, XEmbed, WM},
     Clr, Cursors, Monitor,
 };
+
+/// A color scheme.
+#[derive(Default)]
+pub struct ClrScheme(Vec<Vec<Clr>>);
+
+impl Index<(Scheme, Col)> for ClrScheme {
+    type Output = Clr;
+
+    fn index(&self, index: (Scheme, Col)) -> &Self::Output {
+        &self.0[index.0 as usize][index.1 as usize]
+    }
+}
+
+impl Index<Scheme> for ClrScheme {
+    type Output = Vec<Clr>;
+
+    fn index(&self, index: Scheme) -> &Self::Output {
+        &self.0[index as usize]
+    }
+}
+
+impl ClrScheme {
+    pub fn push(&mut self, clr: Vec<Clr>) {
+        self.0.push(clr);
+    }
+}
 
 pub struct State {
     /// Bar height
@@ -22,7 +51,7 @@ pub struct State {
     pub selmon: *mut Monitor,
     pub mons: *mut Monitor,
     pub stext: [c_char; 256],
-    pub scheme: Vec<Vec<Clr>>,
+    pub scheme: ClrScheme,
 }
 
 impl Drop for State {

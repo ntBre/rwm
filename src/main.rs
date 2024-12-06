@@ -5,7 +5,6 @@ use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
-use std::ops::Index;
 use std::ptr::null_mut;
 use std::sync::LazyLock;
 
@@ -275,7 +274,7 @@ fn setup(dpy: *mut Display) -> State {
             selmon: null_mut(),
             mons: null_mut(),
             stext: ['\0' as c_char; 256],
-            scheme: Vec::new(),
+            scheme: Default::default(),
         };
 
         updategeom(&mut state);
@@ -448,8 +447,7 @@ fn focus(state: &mut State, mut c: *mut Client) {
             detachstack(c);
             attachstack(c);
             grabbuttons(state, c, true);
-            let color =
-                state.scheme[Scheme::Sel as usize][Col::Border as usize].pixel;
+            let color = state.scheme[(Scheme::Sel, Col::Border)].pixel;
             xlib::XSetWindowBorder(state.dpy, (*c).win, color);
             setfocus(state, c);
         } else {
@@ -1116,8 +1114,7 @@ fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
     grabbuttons(state, c, false);
     unsafe {
         // scheme[SchemeNorm][ColBorder].pixel
-        let color =
-            state.scheme[Scheme::Norm as usize][Col::Border as usize].pixel;
+        let color = state.scheme[(Scheme::Norm, Col::Border)].pixel;
         xlib::XSetWindowBorder(state.dpy, (*c).win, color);
         if setfocus {
             xlib::XSetInputFocus(
@@ -1281,12 +1278,11 @@ fn updatesystray(state: &mut State) {
                 state.bh as u32,
                 0,
                 0,
-                state.scheme[Scheme::Sel as usize][Col::Bg as usize].pixel,
+                state.scheme[(Scheme::Sel, Col::Bg)].pixel,
             );
             wa.event_mask = ButtonPressMask | ExposureMask;
             wa.override_redirect = True;
-            wa.background_pixel =
-                state.scheme[Scheme::Norm as usize][Col::Bg as usize].pixel;
+            wa.background_pixel = state.scheme[(Scheme::Norm, Col::Bg)].pixel;
             XSelectInput(state.dpy, (*SYSTRAY).win, SubstructureNotifyMask);
             XChangeProperty(
                 state.dpy,
@@ -1340,7 +1336,7 @@ fn updatesystray(state: &mut State) {
         !i.is_null();
         i = (*i).next) {
             // make sure the background color stays the same
-            wa.background_pixel = state.scheme[Scheme::Norm as usize][ Col::Bg as usize].pixel;
+            wa.background_pixel = state.scheme[(Scheme::Norm , Col::Bg )].pixel;
             XChangeWindowAttributes(state.dpy, (*i).win, CWBackPixel, &mut wa);
             XMapRaised(state.dpy, (*i).win);
             w += CONFIG.systrayspacing;
@@ -1382,7 +1378,7 @@ fn updatesystray(state: &mut State) {
         XSetForeground(
             state.dpy,
             state.drw.gc,
-            state.scheme[Scheme::Norm as usize][Col::Bg as usize].pixel,
+            state.scheme[(Scheme::Norm, Col::Bg)].pixel,
         );
         XFillRectangle(
             state.dpy,
@@ -1467,10 +1463,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         // draw status first so it can be overdrawn by tags later
         if m == state.selmon {
             // status is only drawn on selected monitor
-            drw::setscheme(
-                &mut state.drw,
-                state.scheme[Scheme::Norm as usize].clone(),
-            );
+            drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
             tw = textw(&mut state.drw, &raw const state.stext as *const _)
                 - LRPAD / 2
                 + 2; // 2px right padding
@@ -1507,9 +1500,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 state.scheme[if ((*m).tagset[(*m).seltags as usize] & 1 << i)
                     != 0
                 {
-                    Scheme::Sel as usize
+                    Scheme::Sel
                 } else {
-                    Scheme::Norm as usize
+                    Scheme::Norm
                 }]
                 .clone(),
             );
@@ -1543,10 +1536,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         }
 
         let w = textw(&mut state.drw, (*m).ltsymbol.as_ptr());
-        drw::setscheme(
-            &mut state.drw,
-            state.scheme[Scheme::Norm as usize].clone(),
-        );
+        drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
         log::trace!("drawbar: text 3");
         x = drw::text(
             &mut state.drw,
@@ -1566,9 +1556,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 drw::setscheme(
                     &mut state.drw,
                     state.scheme[if m == state.selmon {
-                        Scheme::Sel as usize
+                        Scheme::Sel
                     } else {
-                        Scheme::Norm as usize
+                        Scheme::Norm
                     }]
                     .clone(),
                 );
@@ -1597,7 +1587,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             } else {
                 drw::setscheme(
                     &mut state.drw,
-                    state.scheme[Scheme::Norm as usize].clone(),
+                    state.scheme[Scheme::Norm].clone(),
                 );
                 drw::rect(
                     &mut state.drw,
@@ -2591,9 +2581,9 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
             &raw const state.dpy
         );
         log::trace!("scheme: {:?}", &raw const state.scheme);
-        let scheme_norm = state.scheme.index(Scheme::Norm as usize);
+        let scheme_norm = &state.scheme[Scheme::Norm];
         log::trace!("scheme[SchemeNorm]: {scheme_norm:?}");
-        let border = scheme_norm.index(Col::Border as usize);
+        let border = scheme_norm[Col::Border as usize];
         log::trace!("scheme[SchemeNorm][ColBorder]: {border:?}");
         let pixel = border.pixel;
         log::trace!("pixel = {pixel:?}");
