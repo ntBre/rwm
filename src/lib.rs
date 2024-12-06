@@ -4,7 +4,7 @@ use drw::Drw;
 use enums::{Clk, Net, XEmbed, WM};
 use x11::{
     xft::XftColor,
-    xlib::{Atom, Display},
+    xlib::{self, Atom, Display},
 };
 
 pub mod drw;
@@ -74,7 +74,6 @@ unsafe impl Sync for Button {}
 
 pub struct Cursor {
     pub cursor: x11::xlib::Cursor,
-    drw: *mut Drw,
 }
 
 #[repr(C)]
@@ -206,6 +205,21 @@ pub struct State {
     pub netatom: [Atom; Net::Last as usize],
     pub xatom: [Atom; XEmbed::Last as usize],
     pub dpy: *mut Display,
-    pub drw: *mut Drw,
+    pub drw: Drw,
     pub cursors: Cursors,
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        unsafe {
+            // drop cursors
+            xlib::XFreeCursor(self.drw.dpy, self.cursors.move_.cursor);
+            xlib::XFreeCursor(self.drw.dpy, self.cursors.normal.cursor);
+            xlib::XFreeCursor(self.drw.dpy, self.cursors.resize.cursor);
+
+            drw::free(&mut self.drw);
+
+            xlib::XCloseDisplay(self.dpy);
+        }
+    }
 }

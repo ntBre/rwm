@@ -47,7 +47,7 @@ fn main() {
             CONFIG
                 .tags
                 .iter()
-                .map(|tag| textw(state.drw, tag.as_ptr()))
+                .map(|tag| textw(&mut state.drw, tag.as_ptr()))
                 .sum::<i32>()
                 + 5,
             state.dpy,

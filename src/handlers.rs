@@ -59,7 +59,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(state.drw, CONFIG.tags[i].as_ptr());
+                x += textw(&mut state.drw, CONFIG.tags[i].as_ptr());
                 // condition
                 if ev.x < x {
                     break;
@@ -73,12 +73,15 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::TagBar;
                 arg = Arg::Ui(1 << i);
             } else if ev.x
-                < x + textw(state.drw, addr_of!((*SELMON).ltsymbol) as *const _)
+                < x + textw(
+                    &mut state.drw,
+                    addr_of!((*SELMON).ltsymbol) as *const _,
+                )
             {
                 click = Clk::LtSymbol;
             } else if ev.x
                 > (*SELMON).ww
-                    - textw(state.drw, addr_of!(STEXT) as *const _)
+                    - textw(&mut state.drw, addr_of!(STEXT) as *const _)
                     - getsystraywidth() as i32
             {
                 click = Clk::StatusText;
@@ -367,7 +370,11 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
             state.sw = ev.width;
             SH = ev.height;
             if updategeom(state) != 0 || dirty {
-                drw::resize(state.drw, state.sw as c_uint, state.bh as c_uint);
+                drw::resize(
+                    &mut state.drw,
+                    state.sw as c_uint,
+                    state.bh as c_uint,
+                );
                 updatebars(state);
                 let mut m = MONS;
                 while !m.is_null() {
