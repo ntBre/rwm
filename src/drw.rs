@@ -382,6 +382,7 @@ pub unsafe fn text(
             // to check if we're at the null byte at the end of the string, NOT
             // if text is a null pointer
             for utf8codepoint in text.chars() {
+                dbg!(&utf8codepoint);
                 utf8charlen = utf8codepoint.len_utf8() as i32;
                 for (font_idx, curfont) in drw.fonts.iter().enumerate() {
                     charexists = charexists
@@ -449,8 +450,8 @@ pub unsafe fn text(
                         drw.fonts[usedfont].xfont,
                         x,
                         ty,
-                        utf8str as *const c_uchar,
-                        utf8strlen,
+                        dbg!(utf8str) as *const c_uchar,
+                        dbg!(utf8strlen),
                     );
                     log::trace!("text: XftDrawStringUtf8 finished");
                 }
