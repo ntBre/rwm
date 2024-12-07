@@ -1,7 +1,4 @@
-use std::{
-    ffi::{c_char, c_int},
-    ops::Index,
-};
+use std::{ffi::c_int, ops::Index};
 
 use x11::xlib::{self, Atom, Display};
 
@@ -50,7 +47,7 @@ pub struct State {
     pub cursors: Cursors,
     pub selmon: *mut Monitor,
     pub mons: *mut Monitor,
-    pub stext: [c_char; 256],
+    pub stext: String,
     pub scheme: ClrScheme,
 }
 
