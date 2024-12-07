@@ -78,12 +78,9 @@ fn utf8validate(u: &mut c_long, i: usize) -> usize {
     i
 }
 
-fn utf8decode(c: *const i8, u: &mut c_long, clen: usize) -> usize {
+fn utf8decode(c: *const i8, u: &mut c_long) -> usize {
     unsafe {
         *u = UTF_INVALID as c_long;
-        if clen == 0 {
-            return 0;
-        }
         let mut len = 0;
         let mut udecoded = utf8decodebyte(*c, &mut len);
         if !between(len, 1, UTF_SIZ) {
@@ -92,7 +89,7 @@ fn utf8decode(c: *const i8, u: &mut c_long, clen: usize) -> usize {
         let mut i = 1;
         let mut j = 1;
         let mut type_ = 0;
-        while i < clen && j < len {
+        while i < UTF_SIZ && j < len {
             udecoded = (udecoded << 6) | utf8decodebyte(*c.add(i), &mut type_);
             if type_ != 0 {
                 return j;
@@ -446,8 +443,7 @@ pub unsafe fn text(
             // to check if we're at the null byte at the end of the string, NOT
             // if text is a null pointer
             while *text != b'\0' as i8 {
-                utf8charlen =
-                    utf8decode(text, &mut utf8codepoint, UTF_SIZ) as c_int;
+                utf8charlen = utf8decode(text, &mut utf8codepoint) as c_int;
                 for (font_idx, curfont) in drw.fonts.iter().enumerate() {
                     charexists = charexists
                         || xft::XftCharExists(
@@ -698,7 +694,7 @@ mod tests {
 
         for (inp, want_u, ret) in tests {
             let mut u = 0;
-            let got = super::utf8decode(inp.as_ptr(), &mut u, super::UTF_SIZ);
+            let got = super::utf8decode(inp.as_ptr(), &mut u);
             assert_eq!(got, ret);
             assert_eq!(u, want_u);
         }
