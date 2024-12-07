@@ -38,7 +38,7 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    NORMAL_STATE, ROOT, SH, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, ROOT, SYSTRAY, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
@@ -360,9 +360,9 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
         let ev = &mut (*e).configure;
         /* TODO: updategeom handling sucks, needs to be simplified */
         if ev.window == ROOT {
-            let dirty = state.sw != ev.width || SH != ev.height;
+            let dirty = state.sw != ev.width || state.sh != ev.height;
             state.sw = ev.width;
-            SH = ev.height;
+            state.sh = ev.height;
             if updategeom(state) != 0 || dirty {
                 drw::resize(
                     &mut state.drw,

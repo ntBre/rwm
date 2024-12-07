@@ -137,9 +137,6 @@ static mut SYSTRAY: *mut Systray = null_mut();
 
 const BROKEN: &CStr = c"broken";
 
-/// X display screen geometry height
-static mut SH: c_int = 0;
-
 static mut ROOT: Window = 0;
 
 static mut WMCHECKWIN: Window = 0;
@@ -236,10 +233,10 @@ fn setup(dpy: *mut Display) -> State {
         while libc::waitpid(-1, null_mut(), libc::WNOHANG) > 0 {}
 
         SCREEN = xlib::XDefaultScreen(dpy);
-        SH = xlib::XDisplayHeight(dpy, SCREEN);
+        let sh = xlib::XDisplayHeight(dpy, SCREEN);
         ROOT = xlib::XRootWindow(dpy, SCREEN);
         let sw = xlib::XDisplayWidth(dpy, SCREEN);
-        let mut drw = drw::create(dpy, SCREEN, ROOT, sw as u32, SH as u32);
+        let mut drw = drw::create(dpy, SCREEN, ROOT, sw as u32, sh as u32);
         if fontset_create(&mut drw, &CONFIG.fonts).is_err()
             || drw.fonts.is_empty()
         {
@@ -256,6 +253,7 @@ fn setup(dpy: *mut Display) -> State {
         let mut state = State {
             bh: drw.fonts[0].h as i32 + 2,
             sw,
+            sh,
             cursors,
             wmatom: Default::default(),
             netatom: Default::default(),
@@ -822,8 +820,8 @@ fn applysizehints(
             if *x > state.sw {
                 *x = state.sw - width(c);
             }
-            if *y > SH {
-                *y = SH - height(c);
+            if *y > state.sh {
+                *y = state.sh - height(c);
             }
             if *x + *w + 2 * (*c).bw < 0 {
                 *x = 0;
@@ -1837,12 +1835,12 @@ fn updategeom(state: &mut State) -> i32 {
             if state.mons.is_null() {
                 state.mons = createmon();
             }
-            if (*state.mons).mw != state.sw || (*state.mons).mh != SH {
+            if (*state.mons).mw != state.sw || (*state.mons).mh != state.sh {
                 dirty = 1;
                 (*state.mons).mw = state.sw;
                 (*state.mons).ww = state.sw;
-                (*state.mons).mh = SH;
-                (*state.mons).wh = SH;
+                (*state.mons).mh = state.sh;
+                (*state.mons).wh = state.sh;
                 updatebarpos(state, state.mons);
             }
         }

@@ -39,6 +39,8 @@ pub struct State {
     pub bh: c_int,
     /// X display screen geometry width
     pub sw: c_int,
+    /// X display screen geometry height
+    pub sh: c_int,
     pub wmatom: [Atom; WM::Last as usize],
     pub netatom: [Atom; Net::Last as usize],
     pub xatom: [Atom; XEmbed::Last as usize],
