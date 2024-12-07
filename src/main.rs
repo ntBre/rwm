@@ -1,5 +1,6 @@
 //! tiling window manager based on dwm
 
+use std::char::REPLACEMENT_CHARACTER;
 use std::cmp::max;
 use std::ffi::{c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
@@ -1621,8 +1622,26 @@ fn gettextprop(
             && n > 0
             && !(*list).is_null()
         {
-            let l = CStr::from_ptr(*list);
-            *text = l.to_string_lossy().to_string();
+            // TODO handle this properly. *list is a "string" in some encoding I
+            // don't understand. the main test case I noticed an issue with was
+            // a browser tab with a ·, which was initially taking the value -73
+            // as an i8, which is the correct character 183 as a u8. This
+            // solution works for characters like that that fit in a u8 but
+            // doesn't work for larger characters like ў (cyrillic short u).
+            // actually `list` doesn't even contain the right characters for the
+            // short u. it just starts at the space after it, as demonstrated by
+            // using libc::printf to try to print it
+            *text = String::new();
+            let mut c = *list;
+            while *c != 0 {
+                text.push(char::from_u32(*c as u8 as u32).unwrap_or_else(
+                    || {
+                        log::error!("failed to decode {}", *c);
+                        REPLACEMENT_CHARACTER
+                    },
+                ));
+                c = c.offset(1);
+            }
             xlib::XFreeStringList(list);
         }
         xlib::XFree(name.value as *mut _);
