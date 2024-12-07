@@ -1,6 +1,5 @@
 //! tiling window manager based on dwm
 
-use std::char::REPLACEMENT_CHARACTER;
 use std::cmp::max;
 use std::ffi::{c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
@@ -1630,16 +1629,16 @@ fn gettextprop(
             // doesn't work for larger characters like ў (cyrillic short u).
             // actually `list` doesn't even contain the right characters for the
             // short u. it just starts at the space after it, as demonstrated by
-            // using libc::printf to try to print it
+            // using libc::printf to try to print it.
+            //
+            // Looks like my encoding is different. Getting 238 in Rust vs 287
+            // in C. Using XGetAtomName shows 238 is UTF8_STRING, while 287 is
+            // _NET_WM_WINDOW_TYPE_POPUP_MENU (??). In dwm in the VM, 287 is
+            // also UTF8_STRING
             *text = String::new();
             let mut c = *list;
             while *c != 0 {
-                text.push(char::from_u32(*c as u8 as u32).unwrap_or_else(
-                    || {
-                        log::error!("failed to decode {}", *c);
-                        REPLACEMENT_CHARACTER
-                    },
-                ));
+                text.push(char::from(*c as u8));
                 c = c.offset(1);
             }
             xlib::XFreeStringList(list);
