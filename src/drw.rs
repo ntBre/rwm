@@ -288,15 +288,15 @@ impl Drop for Fnt {
     }
 }
 
-fn clr_create(drw: *const Drw, dest: *mut Clr, clrname: *const c_char) {
-    if drw.is_null() || dest.is_null() || clrname.is_null() {
+fn clr_create(drw: &Drw, dest: *mut Clr, clrname: *const c_char) {
+    if dest.is_null() || clrname.is_null() {
         return;
     }
     unsafe {
         if xft::XftColorAllocName(
-            (*drw).dpy,
-            xlib::XDefaultVisual((*drw).dpy, (*drw).screen),
-            xlib::XDefaultColormap((*drw).dpy, (*drw).screen),
+            drw.dpy,
+            xlib::XDefaultVisual(drw.dpy, drw.screen),
+            xlib::XDefaultColormap(drw.dpy, drw.screen),
             clrname,
             dest,
         ) == 0
@@ -310,12 +310,12 @@ fn clr_create(drw: *const Drw, dest: *mut Clr, clrname: *const c_char) {
 }
 
 pub fn scm_create(
-    drw: *const Drw,
+    drw: &Drw,
     clrnames: &[CString],
     clrcount: usize,
 ) -> Vec<Clr> {
     let mut ret = Vec::new();
-    if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
+    if clrnames.is_empty() || clrcount < 2 {
         return ret;
     }
     for clr in clrnames {
