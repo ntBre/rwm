@@ -90,6 +90,22 @@ const NORMAL_STATE: usize = 1;
 /// application wants to start as an icon
 const ICONIC_STATE: usize = 3;
 
+/// Unfortunately this can't be packed into the State struct since it needs to
+/// be accessed here in `xerror`, where I don't get a chance to pass State.
+///
+/// What's going on here is that `checkotherwm` calls `XSetErrorHandler` to set
+/// the handler temporarily to `xerrorstart`. `XSetErrorHandler` returns the
+/// previous handler fn, which we store here. At the end of `checkotherwm`, we
+/// then set the error handler to `xerror`, which, via `XERRORLIB`, is just a
+/// wrapper around the original X error handler with a little logging and an
+/// early return to allow certain kinds of errors.
+///
+/// Obviously it would be nice to handle this with a closure in `checkotherwm`,
+/// but `XSetErrorHandler` requires an `unsafe extern "C" fn`, not any old Fn.
+static mut XERRORXLIB: Option<
+    unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
+> = None;
+
 extern "C" fn xerror(mdpy: *mut Display, ee: *mut XErrorEvent) -> c_int {
     unsafe {
         let e = *ee;
@@ -121,12 +137,6 @@ extern "C" fn xerrordummy(
 ) -> c_int {
     0
 }
-
-/// I hate to start using globals already, but I'm not sure how else to do it.
-/// maybe we can pack this stuff into a struct eventually
-static mut XERRORXLIB: Option<
-    unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
-> = None;
 
 const BROKEN: &CStr = c"broken";
 
