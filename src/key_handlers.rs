@@ -52,7 +52,7 @@ pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
             }
             XConfigureWindow(
                 state.dpy,
-                (*state.systray).win,
+                state.systray().win,
                 CWY as u32,
                 &mut wc,
             );

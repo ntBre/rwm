@@ -61,7 +61,7 @@ pub struct State {
     pub root: Window,
     /// sum of left and right padding for text
     pub lrpad: c_int,
-    pub systray: *mut Systray,
+    pub systray: Option<Systray>,
     /// Supporting window for NetWMCheck
     pub wmcheckwin: Window,
     pub running: bool,
@@ -69,6 +69,16 @@ pub struct State {
 
     #[cfg(target_os = "linux")]
     pub xcon: *mut Connection,
+}
+
+impl State {
+    pub fn systray(&self) -> &Systray {
+        self.systray.as_ref().unwrap()
+    }
+
+    pub fn systray_mut(&mut self) -> &mut Systray {
+        self.systray.as_mut().unwrap()
+    }
 }
 
 impl Drop for State {

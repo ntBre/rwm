@@ -121,7 +121,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
         let mut c = wintoclient(state, cme.window);
 
         if CONFIG.showsystray
-            && cme.window == (*state.systray).win
+            && cme.window == state.systray().win
             && cme.message_type == state.netatom[Net::SystemTrayOP as usize]
         {
             // add systray icons
@@ -134,8 +134,9 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 return;
             }
             (*c).mon = state.selmon;
-            (*c).next = (*state.systray).icons;
-            (*state.systray).icons = c;
+            (*c).next = state.systray().icons;
+            let place = &mut state.systray_mut().icons;
+            *place = c;
             let mut wa = MaybeUninit::uninit();
             if XGetWindowAttributes(state.dpy, (*c).win, wa.as_mut_ptr()) == 0 {
                 // use sane defaults
@@ -173,7 +174,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 c.win,
                 StructureNotifyMask | PropertyChangeMask | ResizeRedirectMask,
             );
-            XReparentWindow(state.dpy, c.win, (*state.systray).win, 0, 0);
+            XReparentWindow(state.dpy, c.win, state.systray().win, 0, 0);
             // use parent's background color
             let mut swa = XSetWindowAttributes {
                 background_pixmap: 0,
@@ -206,7 +207,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_EMBEDDED_NOTIFY as i64,
                 0,
-                (*state.systray).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
 
@@ -220,7 +221,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_FOCUS_IN as i64,
                 0,
-                (*state.systray).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
@@ -231,7 +232,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*state.systray).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
@@ -242,7 +243,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_MODALITY_ON as i64,
                 0,
-                (*state.systray).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             XSync(state.dpy, False);
@@ -540,7 +541,7 @@ pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*state.systray).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             resizebarwin(state, state.selmon);
