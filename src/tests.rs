@@ -18,19 +18,19 @@ fn main() {
 
     // goto for killing xephyr no matter what
     let ok = 'defer: {
-        #[cfg(target_os = "linux")]
-        unsafe {
-            let xcon = match Connection::connect(Some(":1.0")) {
-                Ok((xcon, _)) => xcon,
-                Err(e) => {
-                    eprintln!("rwm: cannot get xcb connection: {e:?}");
-                    break 'defer false;
-                }
-            };
-            XCON = Box::into_raw(Box::new(xcon));
-        }
         checkotherwm(dpy);
         let mut state = setup(dpy);
+
+        #[cfg(target_os = "linux")]
+        let xcon = match Connection::connect(Some(":1.0")) {
+            Ok((xcon, _)) => xcon,
+            Err(e) => {
+                eprintln!("rwm: cannot get xcb connection: {e:?}");
+                break 'defer false;
+            }
+        };
+        state.xcon = Box::into_raw(Box::new(xcon));
+
         scan(&mut state);
 
         // instead of calling `run`, manually send some XEvents

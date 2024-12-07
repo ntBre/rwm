@@ -38,7 +38,7 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    NORMAL_STATE, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
@@ -82,7 +82,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             } else if ev.x
                 > (*state.selmon).ww
                     - textw(&mut state.drw, &state.stext, state.lrpad)
-                    - getsystraywidth() as i32
+                    - getsystraywidth(state) as i32
             {
                 click = Clk::StatusText;
             } else {
@@ -101,7 +101,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             if click as u32 == button.click
                 && button.func.is_some()
                 && button.button == ev.button
-                && cleanmask(button.mask) == cleanmask(ev.state)
+                && cleanmask(state, button.mask) == cleanmask(state, ev.state)
             {
                 let f = button.func.unwrap();
                 let a = if click == Clk::TagBar && button.arg.i() == 0 {
@@ -121,7 +121,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
         let mut c = wintoclient(state, cme.window);
 
         if CONFIG.showsystray
-            && cme.window == (*SYSTRAY).win
+            && cme.window == (*state.systray).win
             && cme.message_type == state.netatom[Net::SystemTrayOP as usize]
         {
             // add systray icons
@@ -134,8 +134,8 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 return;
             }
             (*c).mon = state.selmon;
-            (*c).next = (*SYSTRAY).icons;
-            (*SYSTRAY).icons = c;
+            (*c).next = (*state.systray).icons;
+            (*state.systray).icons = c;
             let mut wa = MaybeUninit::uninit();
             if XGetWindowAttributes(state.dpy, (*c).win, wa.as_mut_ptr()) == 0 {
                 // use sane defaults
@@ -173,7 +173,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 c.win,
                 StructureNotifyMask | PropertyChangeMask | ResizeRedirectMask,
             );
-            XReparentWindow(state.dpy, c.win, (*SYSTRAY).win, 0, 0);
+            XReparentWindow(state.dpy, c.win, (*state.systray).win, 0, 0);
             // use parent's background color
             let mut swa = XSetWindowAttributes {
                 background_pixmap: 0,
@@ -206,7 +206,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_EMBEDDED_NOTIFY as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                (*state.systray).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
 
@@ -220,7 +220,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_FOCUS_IN as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                (*state.systray).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
@@ -231,7 +231,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                (*state.systray).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
@@ -242,7 +242,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_MODALITY_ON as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                (*state.systray).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             XSync(state.dpy, False);
@@ -411,9 +411,9 @@ pub(crate) fn destroynotify(state: &mut State, e: *mut XEvent) {
             if !c.is_null() {
                 unmanage(state, (*c).swallowing, 1);
             } else {
-                c = wintosystrayicon(ev.window);
+                c = wintosystrayicon(state, ev.window);
                 if !c.is_null() {
-                    removesystrayicon(c);
+                    removesystrayicon(state, c);
                     resizebarwin(state, state.selmon);
                     updatesystray(state);
                 }
@@ -478,7 +478,7 @@ pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
             xlib::XKeycodeToKeysym(state.dpy, ev.keycode as KeyCode, 0);
         for key in &CONFIG.keys {
             if keysym == key.keysym
-                && cleanmask(key.mod_) == cleanmask(ev.state)
+                && cleanmask(state, key.mod_) == cleanmask(state, ev.state)
                 && key.func.is_some()
             {
                 key.func.unwrap()(state, &(key.arg));
@@ -530,7 +530,7 @@ pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
     // in its previous state.
     unsafe {
         let ev = &(*e).map_request;
-        let i = wintosystrayicon(ev.window);
+        let i = wintosystrayicon(state, ev.window);
         if !i.is_null() {
             sendevent(
                 state,
@@ -540,7 +540,7 @@ pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                (*state.systray).win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             resizebarwin(state, state.selmon);
@@ -582,7 +582,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
         let mut trans: Window = 0;
         let ev = &mut (*e).property;
 
-        let c = wintosystrayicon(ev.window);
+        let c = wintosystrayicon(state, ev.window);
         if !c.is_null() {
             if ev.atom == XA_WM_NORMAL_HINTS {
                 updatesizehints(state, c);
@@ -653,7 +653,7 @@ pub(crate) fn unmapnotify(state: &mut State, e: *mut XEvent) {
                 unmanage(state, c, 0);
             }
         } else {
-            c = wintosystrayicon(ev.window);
+            c = wintosystrayicon(state, ev.window);
             if !c.is_null() {
                 // KLUDGE (systray author) sometimes icons occasionally unmap
                 // their windows but do _not_ destroy them. we map those windows
@@ -669,7 +669,7 @@ pub(crate) fn resizerequest(state: &mut State, e: *mut XEvent) {
     log::trace!("resizerequest");
     unsafe {
         let ev = &(*e).resize_request;
-        let i = wintosystrayicon(ev.window);
+        let i = wintosystrayicon(state, ev.window);
         if !i.is_null() {
             updatesystrayicongeom(state, i, ev.width, ev.height);
             resizebarwin(state, state.selmon);

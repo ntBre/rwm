@@ -1,11 +1,17 @@
-use std::{ffi::c_int, ops::Index};
+use std::{
+    ffi::{c_int, c_uint},
+    ops::Index,
+};
 
 use x11::xlib::{self, Atom, Display};
+
+#[cfg(target_os = "linux")]
+use xcb::Connection;
 
 use crate::{
     drw::{self, Drw},
     enums::{Col, Net, Scheme, XEmbed, WM},
-    Clr, Cursors, Monitor, Window,
+    Clr, Cursors, Monitor, Systray, Window,
 };
 
 /// A color scheme.
@@ -55,6 +61,14 @@ pub struct State {
     pub root: Window,
     /// sum of left and right padding for text
     pub lrpad: c_int,
+    pub systray: *mut Systray,
+    /// Supporting window for NetWMCheck
+    pub wmcheckwin: Window,
+    pub running: bool,
+    pub numlockmask: c_uint,
+
+    #[cfg(target_os = "linux")]
+    pub xcon: *mut Connection,
 }
 
 impl Drop for State {

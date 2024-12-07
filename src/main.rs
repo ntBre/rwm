@@ -90,9 +90,6 @@ const NORMAL_STATE: usize = 1;
 /// application wants to start as an icon
 const ICONIC_STATE: usize = 3;
 
-#[cfg(target_os = "linux")]
-static mut XCON: *mut Connection = null_mut();
-
 extern "C" fn xerror(mdpy: *mut Display, ee: *mut XErrorEvent) -> c_int {
     unsafe {
         let e = *ee;
@@ -131,15 +128,7 @@ static mut XERRORXLIB: Option<
     unsafe extern "C" fn(*mut Display, *mut XErrorEvent) -> i32,
 > = None;
 
-static mut SYSTRAY: *mut Systray = null_mut();
-
 const BROKEN: &CStr = c"broken";
-
-static mut WMCHECKWIN: Window = 0;
-
-static mut RUNNING: bool = true;
-
-static mut NUMLOCKMASK: c_uint = 0;
 
 type Atom = c_ulong;
 
@@ -259,6 +248,13 @@ fn setup(dpy: *mut Display) -> State {
             scheme: Default::default(),
             screen,
             root,
+            wmcheckwin: xlib::XCreateSimpleWindow(
+                dpy, root, 0, 0, 1, 1, 0, 0, 0,
+            ),
+            numlockmask: 0,
+            running: true,
+            systray: null_mut(),
+            xcon: null_mut(),
         };
 
         updategeom(&mut state);
@@ -335,22 +331,19 @@ fn setup(dpy: *mut Display) -> State {
         updatebars(&mut state);
         updatestatus(&mut state);
 
-        /* supporting window for NetWMCheck */
-        WMCHECKWIN =
-            xlib::XCreateSimpleWindow(state.dpy, root, 0, 0, 1, 1, 0, 0, 0);
         xlib::XChangeProperty(
             state.dpy,
-            WMCHECKWIN,
+            state.wmcheckwin,
             state.netatom[Net::WMCheck as usize],
             XA_WINDOW,
             32,
             PropModeReplace,
-            &raw mut WMCHECKWIN as *mut c_uchar,
+            &raw mut state.wmcheckwin as *mut c_uchar,
             1,
         );
         xlib::XChangeProperty(
             state.dpy,
-            WMCHECKWIN,
+            state.wmcheckwin,
             state.netatom[Net::WMName as usize],
             utf8string,
             8,
@@ -365,7 +358,7 @@ fn setup(dpy: *mut Display) -> State {
             XA_WINDOW,
             32,
             PropModeReplace,
-            &raw mut WMCHECKWIN as *mut c_uchar,
+            &raw mut state.wmcheckwin as *mut c_uchar,
             1,
         );
         /* EWMH support per view */
@@ -552,7 +545,8 @@ fn grabbuttons(state: &mut State, c: *mut Client, focused: bool) {
     log::trace!("grabbuttons");
     unsafe {
         updatenumlockmask(state);
-        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+        let modifiers =
+            [0, LockMask, state.numlockmask, state.numlockmask | LockMask];
         xlib::XUngrabButton(state.dpy, AnyButton as u32, AnyModifier, (*c).win);
         if !focused {
             xlib::XGrabButton(
@@ -754,7 +748,7 @@ fn resizebarwin(state: &mut State, m: *mut Monitor) {
             && m == systraytomon(state, m)
             && !CONFIG.systrayonleft
         {
-            w -= getsystraywidth() as i32;
+            w -= getsystraywidth(state) as i32;
         }
         XMoveResizeWindow(
             state.dpy,
@@ -1011,7 +1005,8 @@ fn grabkeys(state: &mut State) {
     log::trace!("grabkeys");
     unsafe {
         updatenumlockmask(state);
-        let modifiers = [0, LockMask, NUMLOCKMASK, NUMLOCKMASK | LockMask];
+        let modifiers =
+            [0, LockMask, state.numlockmask, state.numlockmask | LockMask];
         let (mut start, mut end, mut skip): (i32, i32, i32) = (0, 0, 0);
         xlib::XUngrabKey(state.dpy, AnyKey, AnyModifier, state.root);
         xlib::XDisplayKeycodes(state.dpy, &mut start, &mut end);
@@ -1051,7 +1046,7 @@ fn grabkeys(state: &mut State) {
 fn updatenumlockmask(state: &mut State) {
     log::trace!("updatenumlockmask");
     unsafe {
-        NUMLOCKMASK = 0;
+        state.numlockmask = 0;
         let modmap = xlib::XGetModifierMapping(state.dpy);
         for i in 0..8 {
             for j in 0..(*modmap).max_keypermod {
@@ -1060,7 +1055,7 @@ fn updatenumlockmask(state: &mut State) {
                     .offset((i * (*modmap).max_keypermod + j) as isize)
                     == xlib::XKeysymToKeycode(state.dpy, XK_Num_Lock as u64)
                 {
-                    NUMLOCKMASK = 1 << i;
+                    state.numlockmask = 1 << i;
                 }
             }
         }
@@ -1193,7 +1188,7 @@ fn updatesystrayiconstate(
             CurrentTime as i64,
             code as i64,
             0,
-            (*SYSTRAY).win as i64,
+            (*state.systray).win as i64,
             XEMBED_EMBEDDED_VERSION as i64,
         );
     }
@@ -1236,10 +1231,10 @@ fn updatesystray(state: &mut State) {
         if CONFIG.systrayonleft {
             x -= sw + state.lrpad / 2;
         }
-        if SYSTRAY.is_null() {
+        if state.systray.is_null() {
             // init systray
-            SYSTRAY = ecalloc(1, size_of::<Systray>()).cast();
-            (*SYSTRAY).win = XCreateSimpleWindow(
+            state.systray = ecalloc(1, size_of::<Systray>()).cast();
+            (*state.systray).win = XCreateSimpleWindow(
                 state.dpy,
                 state.root,
                 x,
@@ -1253,10 +1248,14 @@ fn updatesystray(state: &mut State) {
             wa.event_mask = ButtonPressMask | ExposureMask;
             wa.override_redirect = True;
             wa.background_pixel = state.scheme[(Scheme::Norm, Col::Bg)].pixel;
-            XSelectInput(state.dpy, (*SYSTRAY).win, SubstructureNotifyMask);
+            XSelectInput(
+                state.dpy,
+                (*state.systray).win,
+                SubstructureNotifyMask,
+            );
             XChangeProperty(
                 state.dpy,
-                (*SYSTRAY).win,
+                (*state.systray).win,
                 state.netatom[Net::SystemTrayOrientation as usize],
                 XA_CARDINAL,
                 32,
@@ -1267,21 +1266,21 @@ fn updatesystray(state: &mut State) {
             );
             XChangeWindowAttributes(
                 state.dpy,
-                (*SYSTRAY).win,
+                (*state.systray).win,
                 CWEventMask | CWOverrideRedirect | CWBackPixel,
                 &mut wa,
             );
-            XMapRaised(state.dpy, (*SYSTRAY).win);
+            XMapRaised(state.dpy, (*state.systray).win);
             XSetSelectionOwner(
                 state.dpy,
                 state.netatom[Net::SystemTray as usize],
-                (*SYSTRAY).win,
+                (*state.systray).win,
                 CurrentTime,
             );
             if XGetSelectionOwner(
                 state.dpy,
                 state.netatom[Net::SystemTray as usize],
-            ) == (*SYSTRAY).win
+            ) == (*state.systray).win
             {
                 sendevent(
                     state,
@@ -1290,19 +1289,19 @@ fn updatesystray(state: &mut State) {
                     StructureNotifyMask as i32,
                     CurrentTime as i64,
                     state.netatom[Net::SystemTray as usize] as i64,
-                    (*SYSTRAY).win as i64,
+                    (*state.systray).win as i64,
                     0_i64,
                     0_i64,
                 );
                 XSync(state.dpy, False);
             } else {
                 log::error!("unable to obtain system tray");
-                libc::free(SYSTRAY.cast());
-                SYSTRAY = null_mut();
+                libc::free(state.systray.cast());
+                state.systray = null_mut();
                 return;
             }
         } // end if !SYSTRAY
-        cfor!(((w, i) = (0, (*SYSTRAY).icons);
+        cfor!(((w, i) = (0, (*state.systray).icons);
         !i.is_null();
         i = (*i).next) {
             // make sure the background color stays the same
@@ -1321,7 +1320,7 @@ fn updatesystray(state: &mut State) {
         x -= w as i32;
         XMoveResizeWindow(
             state.dpy,
-            (*SYSTRAY).win,
+            (*state.systray).win,
             x,
             (*m).by,
             w,
@@ -1338,12 +1337,12 @@ fn updatesystray(state: &mut State) {
         };
         XConfigureWindow(
             state.dpy,
-            (*SYSTRAY).win,
+            (*state.systray).win,
             (CWX | CWY | CWWidth | CWHeight | CWSibling | CWStackMode) as u32,
             &mut wc,
         );
-        XMapWindow(state.dpy, (*SYSTRAY).win);
-        XMapSubwindows(state.dpy, (*SYSTRAY).win);
+        XMapWindow(state.dpy, (*state.systray).win);
+        XMapSubwindows(state.dpy, (*state.systray).win);
         // redraw background
         XSetForeground(
             state.dpy,
@@ -1352,7 +1351,7 @@ fn updatesystray(state: &mut State) {
         );
         XFillRectangle(
             state.dpy,
-            (*SYSTRAY).win,
+            (*state.systray).win,
             state.drw.gc,
             0,
             0,
@@ -1363,13 +1362,13 @@ fn updatesystray(state: &mut State) {
     } // end unsafe
 }
 
-fn wintosystrayicon(w: Window) -> *mut Client {
+fn wintosystrayicon(state: &State, w: Window) -> *mut Client {
     unsafe {
         let mut i = null_mut();
         if !CONFIG.showsystray || w == 0 {
             return i;
         }
-        cfor!((i = (*SYSTRAY).icons; !i.is_null() && (*i).win != w;
+        cfor!((i = (*state.systray).icons; !i.is_null() && (*i).win != w;
             i = (*i).next) {});
 
         i
@@ -1423,7 +1422,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             && m == systraytomon(state, m)
             && !CONFIG.systrayonleft
         {
-            stw = getsystraywidth();
+            stw = getsystraywidth(state);
         }
 
         if !(*m).showbar {
@@ -1672,7 +1671,7 @@ fn updatebars(state: &mut State) {
             }
             let mut w = (*m).ww;
             if CONFIG.showsystray && m == systraytomon(state, m) {
-                w -= getsystraywidth() as i32;
+                w -= getsystraywidth(state) as i32;
             }
             (*m).barwin = xlib::XCreateWindow(
                 state.dpy,
@@ -1694,7 +1693,7 @@ fn updatebars(state: &mut State) {
                 state.cursors.normal.cursor,
             );
             if CONFIG.showsystray && m == systraytomon(state, m) {
-                xlib::XMapRaised(state.dpy, (*SYSTRAY).win);
+                xlib::XMapRaised(state.dpy, (*state.systray).win);
             }
             xlib::XMapRaised(state.dpy, (*m).barwin);
             xlib::XSetClassHint(state.dpy, (*m).barwin, &mut ch);
@@ -1910,14 +1909,14 @@ fn recttomon(
     }
 }
 
-fn removesystrayicon(i: *mut Client) {
+fn removesystrayicon(state: &State, i: *mut Client) {
     unsafe {
         if !CONFIG.showsystray || i.is_null() {
             return;
         }
         let mut ii: *mut *mut Client;
         cfor!((
-            ii = &mut (*SYSTRAY).icons as *mut _;
+            ii = &mut (*state.systray).icons as *mut _;
             !ii.is_null() && *ii != i;
             ii = &mut (*(*ii)).next) {});
         if !ii.is_null() {
@@ -1949,17 +1948,15 @@ fn height(x: *mut Client) -> i32 {
 }
 
 #[inline]
-fn cleanmask(mask: u32) -> u32 {
-    unsafe {
-        mask & !(NUMLOCKMASK | LockMask)
-            & (ShiftMask
-                | ControlMask
-                | Mod1Mask
-                | Mod2Mask
-                | Mod3Mask
-                | Mod4Mask
-                | Mod5Mask)
-    }
+fn cleanmask(state: &State, mask: u32) -> u32 {
+    mask & !(state.numlockmask | LockMask)
+        & (ShiftMask
+            | ControlMask
+            | Mod1Mask
+            | Mod2Mask
+            | Mod3Mask
+            | Mod4Mask
+            | Mod5Mask)
 }
 
 fn getrootptr(state: &mut State, x: *mut c_int, y: *mut c_int) -> c_int {
@@ -2099,12 +2096,12 @@ fn cleanup(mut state: State) {
         }
 
         if CONFIG.showsystray {
-            XUnmapWindow(state.dpy, (*SYSTRAY).win);
-            XDestroyWindow(state.dpy, (*SYSTRAY).win);
-            libc::free(SYSTRAY.cast());
+            XUnmapWindow(state.dpy, (*state.systray).win);
+            XDestroyWindow(state.dpy, (*state.systray).win);
+            libc::free(state.systray.cast());
         }
 
-        xlib::XDestroyWindow(state.dpy, WMCHECKWIN);
+        xlib::XDestroyWindow(state.dpy, state.wmcheckwin);
         xlib::XSync(state.dpy, False);
         xlib::XSetInputFocus(
             state.dpy,
@@ -2118,10 +2115,10 @@ fn cleanup(mut state: State) {
             state.netatom[Net::ActiveWindow as usize],
         );
 
-        drop(state);
-
         #[cfg(target_os = "linux")]
-        drop(Box::from_raw(XCON));
+        drop(Box::from_raw(state.xcon));
+
+        drop(state);
     }
 
     log::trace!("finished cleanup");
@@ -2191,7 +2188,7 @@ fn unmanage(state: &mut State, c: *mut Client, destroyed: c_int) {
 
 /// I'm just using the OpenBSD version of the code in the patch rather than the
 /// Linux version that uses XCB
-fn winpid(_state: &mut State, w: Window) -> pid_t {
+fn winpid(state: &mut State, w: Window) -> pid_t {
     let mut result = 0;
 
     #[cfg(target_os = "linux")]
@@ -2202,8 +2199,8 @@ fn winpid(_state: &mut State, w: Window) -> pid_t {
             client: w as u32,
             mask: xcb::res::ClientIdMask::LOCAL_CLIENT_PID,
         };
-        assert!(!XCON.is_null(), "xcon is null");
-        let xcon = &*XCON;
+        assert!(!state.xcon.is_null(), "xcon is null");
+        let xcon = &*state.xcon;
         let cookie =
             xcon.send_request(&xcb::res::QueryClientIds { specs: &[spec] });
         let Ok(r) = xcon.wait_for_reply(cookie) else {
@@ -2230,9 +2227,9 @@ fn winpid(_state: &mut State, w: Window) -> pid_t {
         let mut bytes: c_ulong = 0;
         let mut prop: *mut c_uchar = null_mut();
         if XGetWindowProperty(
-            _state.dpy,
+            state.dpy,
             w,
-            XInternAtom(_state.dpy, c"_NET_WM_PID".as_ptr(), 0),
+            XInternAtom(state.dpy, c"_NET_WM_PID".as_ptr(), 0),
             0,
             1,
             False,
@@ -2401,7 +2398,8 @@ fn run(state: &mut State) {
     unsafe {
         xlib::XSync(state.dpy, False);
         let mut ev: MaybeUninit<xlib::XEvent> = MaybeUninit::uninit();
-        while RUNNING && xlib::XNextEvent(state.dpy, ev.as_mut_ptr()) == 0 {
+        while state.running && xlib::XNextEvent(state.dpy, ev.as_mut_ptr()) == 0
+        {
             let mut ev: xlib::XEvent = ev.assume_init();
             if let Some(handler) = HANDLER.get(ev.type_ as usize) {
                 handler(state, &mut ev);
@@ -2756,13 +2754,15 @@ fn getatomprop(state: &mut State, c: *mut Client, prop: Atom) -> Atom {
     atom
 }
 
-fn getsystraywidth() -> c_uint {
+// TODO this should really just be a method on Systray and called like
+// state.systray.width()
+fn getsystraywidth(state: &State) -> c_uint {
     unsafe {
         let mut w = 0;
         let mut i;
         if CONFIG.showsystray {
             cfor!((
-            i = (*SYSTRAY).icons;
+            i = (*state.systray).icons;
             !i.is_null();
             (w, i) = (w + (*i).w + config::CONFIG.systrayspacing as i32, (*i).next))
             {});
@@ -2960,16 +2960,18 @@ fn main() {
     if dpy.is_null() {
         die("rwm: cannot open display");
     }
+
+    checkotherwm(dpy);
+    let mut state = setup(dpy);
+
     #[cfg(target_os = "linux")]
     {
         let Ok((xcon, _)) = Connection::connect(None) else {
             die("rwm: cannot get xcb connection");
         };
-        unsafe { XCON = Box::into_raw(Box::new(xcon)) };
+        state.xcon = Box::into_raw(Box::new(xcon));
     }
 
-    checkotherwm(dpy);
-    let mut state = setup(dpy);
     scan(&mut state);
     run(&mut state);
     cleanup(state);

@@ -18,8 +18,7 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
-    width, xerror, xerrordummy, HANDLER, MOUSEMASK, SCRATCHTAG, SYSTRAY,
-    TAGMASK, XNONE,
+    width, xerror, xerrordummy, HANDLER, MOUSEMASK, SCRATCHTAG, TAGMASK, XNONE,
 };
 use rwm::State;
 use rwm::{Arg, Client, Monitor};
@@ -51,7 +50,12 @@ pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
                     wc.y = (*state.selmon).mh - state.bh;
                 }
             }
-            XConfigureWindow(state.dpy, (*SYSTRAY).win, CWY as u32, &mut wc);
+            XConfigureWindow(
+                state.dpy,
+                (*state.systray).win,
+                CWY as u32,
+                &mut wc,
+            );
         }
         arrange(state, state.selmon);
     }
@@ -473,10 +477,8 @@ pub(crate) fn toggleview(state: &mut State, arg: *const Arg) {
     }
 }
 
-pub(crate) fn quit(_state: &mut State, _arg: *const Arg) {
-    unsafe {
-        crate::RUNNING = false;
-    }
+pub(crate) fn quit(state: &mut State, _arg: *const Arg) {
+    state.running = false;
 }
 
 // these are shared between movemouse and resizemouse
