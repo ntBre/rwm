@@ -56,33 +56,29 @@ pub struct Drw {
     pub fonts: Vec<Fnt>,
 }
 
-fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
-    unsafe {
-        *i = 0;
-        while *i < UTF_SIZ + 1 {
-            if c as c_uchar & UTFMASK[*i] == UTFBYTE[*i] {
-                return (c as c_uchar & !UTFMASK[*i]) as c_long;
-            }
-            *i += 1;
+fn utf8decodebyte(c: c_char, i: &mut usize) -> c_long {
+    *i = 0;
+    while *i < UTF_SIZ + 1 {
+        if c as c_uchar & UTFMASK[*i] == UTFBYTE[*i] {
+            return (c as c_uchar & !UTFMASK[*i]) as c_long;
         }
-        0
+        *i += 1;
     }
+    0
 }
 
-fn utf8validate(u: *mut c_long, i: usize) -> usize {
-    unsafe {
-        if !between(*u, UTFMIN[i], UTFMAX[i]) || between(*u, 0xD800, 0xDFFF) {
-            *u = UTF_INVALID as c_long;
-        }
-        let mut i = 1;
-        while *u > UTFMAX[i] {
-            i += 1;
-        }
-        i
+fn utf8validate(u: &mut c_long, i: usize) -> usize {
+    if !between(*u, UTFMIN[i], UTFMAX[i]) || between(*u, 0xD800, 0xDFFF) {
+        *u = UTF_INVALID as c_long;
     }
+    let mut i = 1;
+    while *u > UTFMAX[i] {
+        i += 1;
+    }
+    i
 }
 
-fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
+fn utf8decode(c: *const i8, u: &mut c_long, clen: usize) -> usize {
     unsafe {
         *u = UTF_INVALID as c_long;
         if clen == 0 {
@@ -193,8 +189,7 @@ pub fn rect(
     }
 }
 
-/// # Safety
-pub unsafe fn cur_create(drw: &Drw, shape: c_int) -> Cur {
+pub fn cur_create(drw: &Drw, shape: c_int) -> Cur {
     unsafe { Cur { cursor: xlib::XCreateFontCursor(drw.dpy, shape as c_uint) } }
 }
 
@@ -641,7 +636,7 @@ pub unsafe fn text(
     }
 }
 
-fn font_getexts(font: *const Fnt, text: *const i8, len: u32, w: *mut c_uint) {
+fn font_getexts(font: *const Fnt, text: *const i8, len: u32, w: &mut c_uint) {
     unsafe {
         if font.is_null() || text.is_null() {
             return;
@@ -655,9 +650,7 @@ fn font_getexts(font: *const Fnt, text: *const i8, len: u32, w: *mut c_uint) {
             ext.as_mut_ptr(),
         );
         let ext = ext.assume_init();
-        if !w.is_null() {
-            *w = ext.xOff as u32;
-        }
+        *w = ext.xOff as u32;
     }
 }
 
@@ -675,22 +668,19 @@ pub unsafe fn map(
     }
 }
 
-pub unsafe fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+pub fn resize(drw: &mut Drw, w: c_uint, h: c_uint) {
     unsafe {
-        if drw.is_null() {
-            return;
+        drw.w = w;
+        drw.h = h;
+        if drw.drawable != 0 {
+            xlib::XFreePixmap(drw.dpy, drw.drawable);
         }
-        (*drw).w = w;
-        (*drw).h = h;
-        if (*drw).drawable != 0 {
-            xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
-        }
-        (*drw).drawable = xlib::XCreatePixmap(
-            (*drw).dpy,
-            (*drw).root,
+        drw.drawable = xlib::XCreatePixmap(
+            drw.dpy,
+            drw.root,
             w,
             h,
-            xlib::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
+            xlib::XDefaultDepth(drw.dpy, drw.screen) as c_uint,
         );
     }
 }
