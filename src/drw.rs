@@ -379,7 +379,7 @@ pub unsafe fn text(
 
         let mut result: xft::FcResult = xft::FcResult::NoMatch;
 
-        let mut charexists: c_int = 0;
+        let mut charexists = false;
         let mut overflow: c_int = 0;
 
         // keep track of a couple codepoints for which we have no match
@@ -449,13 +449,13 @@ pub unsafe fn text(
                 utf8charlen =
                     utf8decode(text, &mut utf8codepoint, UTF_SIZ) as c_int;
                 for (font_idx, curfont) in drw.fonts.iter().enumerate() {
-                    charexists = (charexists != 0
+                    charexists = charexists
                         || xft::XftCharExists(
                             drw.dpy,
                             curfont.xfont,
                             utf8codepoint as u32,
-                        ) != 0) as c_int;
-                    if charexists != 0 {
+                        ) != 0;
+                    if charexists {
                         font_getexts(
                             curfont,
                             text,
@@ -490,12 +490,12 @@ pub unsafe fn text(
                 }
 
                 if overflow != 0
-                    || charexists == 0
+                    || !charexists
                     || nextfont.is_some_and(|n| n < drw.fonts.len())
                 {
                     break;
                 } else {
-                    charexists = 0;
+                    charexists = false;
                 }
             } // end while(*text)
 
@@ -539,12 +539,12 @@ pub unsafe fn text(
             if *text == b'\0' as i8 || overflow != 0 {
                 break;
             } else if nextfont.is_some_and(|n| n < drw.fonts.len()) {
-                charexists = 0;
+                charexists = false;
                 usedfont = nextfont.unwrap();
             } else {
                 // regardless of whether or not a fallback font is found, the
                 // character must be drawn
-                charexists = 1;
+                charexists = true;
 
                 for i in 0..NOMATCHES_LEN {
                     // avoid calling XftFontMatch if we know we won't find a
