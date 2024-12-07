@@ -38,7 +38,7 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    NORMAL_STATE, ROOT, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, SYSTRAY, WITHDRAWN_STATE,
 };
 
 pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
@@ -359,7 +359,7 @@ pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).configure;
         /* TODO: updategeom handling sucks, needs to be simplified */
-        if ev.window == ROOT {
+        if ev.window == state.root {
             let dirty = state.sw != ev.width || state.sh != ev.height;
             state.sw = ev.width;
             state.sh = ev.height;
@@ -423,7 +423,7 @@ pub(crate) fn enternotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).crossing;
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
-            && ev.window != ROOT
+            && ev.window != state.root
         {
             return;
         }
@@ -559,7 +559,7 @@ pub(crate) fn motionnotify(state: &mut State, e: *mut XEvent) {
     static mut MON: *mut Monitor = null_mut();
     unsafe {
         let ev = &(*e).motion;
-        if ev.window != ROOT {
+        if ev.window != state.root {
             return;
         }
         let m = recttomon(state, ev.x_root, ev.y_root, 1, 1);
@@ -590,7 +590,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
             updatesystray(state);
         }
 
-        if ev.window == ROOT && ev.atom == XA_WM_NAME {
+        if ev.window == state.root && ev.atom == XA_WM_NAME {
             updatestatus(state);
         } else if ev.state == PropertyDelete {
             return; // ignore

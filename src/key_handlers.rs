@@ -18,7 +18,7 @@ use crate::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
-    width, xerror, xerrordummy, HANDLER, MOUSEMASK, ROOT, SCRATCHTAG, SYSTRAY,
+    width, xerror, xerrordummy, HANDLER, MOUSEMASK, SCRATCHTAG, SYSTRAY,
     TAGMASK, XNONE,
 };
 use rwm::State;
@@ -501,7 +501,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
         let ocy = c.y;
         if XGrabPointer(
             state.dpy,
-            ROOT,
+            state.root,
             False,
             MOUSEMASK as u32,
             GrabModeAsync,
@@ -608,7 +608,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
         let ocy = c.y;
         if XGrabPointer(
             state.dpy,
-            ROOT,
+            state.root,
             False,
             MOUSEMASK as u32,
             GrabModeAsync,

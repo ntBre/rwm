@@ -5,7 +5,7 @@ use x11::xlib::{self, Atom, Display};
 use crate::{
     drw::{self, Drw},
     enums::{Col, Net, Scheme, XEmbed, WM},
-    Clr, Cursors, Monitor,
+    Clr, Cursors, Monitor, Window,
 };
 
 /// A color scheme.
@@ -51,6 +51,8 @@ pub struct State {
     pub mons: *mut Monitor,
     pub stext: String,
     pub scheme: ClrScheme,
+    pub screen: c_int,
+    pub root: Window,
 }
 
 impl Drop for State {
