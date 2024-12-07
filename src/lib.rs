@@ -76,11 +76,11 @@ pub struct Cursor {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub class: *const c_char,
     pub instance: *const c_char,
-    pub title: *const c_char,
+    pub title: String,
     pub tags: c_uint,
     pub isfloating: bool,
     pub isterminal: bool,
@@ -94,9 +94,9 @@ pub struct Systray {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Layout {
-    pub symbol: *const c_char,
+    pub symbol: String,
     pub arrange: Option<fn(&mut State, *mut Monitor)>,
 }
 
@@ -121,7 +121,7 @@ pub struct Pertag {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct Monitor {
-    pub ltsymbol: [c_char; 16usize],
+    pub ltsymbol: String,
     pub mfact: f32,
     pub nmaster: c_int,
     pub num: c_int,
@@ -149,9 +149,9 @@ pub struct Monitor {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Client {
-    pub name: [c_char; 256usize],
+    pub name: String,
     pub mina: f32,
     pub maxa: f32,
     pub x: c_int,

@@ -14,8 +14,3 @@ pub fn ecalloc(nmemb: size_t, size: size_t) -> *mut c_void {
     }
     ret
 }
-
-#[inline]
-pub(crate) fn between<T: PartialOrd>(x: T, a: T, b: T) -> bool {
-    a <= x && x <= b
-}

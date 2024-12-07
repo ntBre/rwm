@@ -16,12 +16,7 @@ pub(crate) fn monocle(state: &mut State, m: *mut Monitor) {
         });
         if n > 0 {
             // override layout symbol
-            libc::snprintf(
-                (*m).ltsymbol.as_mut_ptr(),
-                size_of_val(&(*m).ltsymbol),
-                c"[%d]".as_ptr(),
-                n,
-            );
+            (*m).ltsymbol = format!("[{n}]");
         }
         cfor!((c = nexttiled((*m).clients); !c.is_null(); c = nexttiled((*c).next)) {
             resize(state, c, (*m).wx, (*m).wy, (*m).ww - 2 * (*c).bw, (*m).wh - 2 * (*c).bw, 0);

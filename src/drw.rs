@@ -16,19 +16,10 @@ use x11::xlib::{
 };
 
 use crate::enums::Col;
-use crate::util::between;
 use crate::util::die;
 use crate::Clr;
 use crate::Cursor as Cur;
 use crate::Window;
-
-// defined in drw.c
-const UTF_SIZ: usize = 4;
-const UTF_INVALID: usize = 0xFFFD;
-const UTFBYTE: [c_uchar; UTF_SIZ + 1] = [0x80, 0, 0xC0, 0xE0, 0xF0];
-const UTFMASK: [c_uchar; UTF_SIZ + 1] = [0xC0, 0x80, 0xE0, 0xF0, 0xF8];
-const UTFMIN: [c_long; UTF_SIZ + 1] = [0, 0, 0x80, 0x800, 0x10000];
-const UTFMAX: [c_long; UTF_SIZ + 1] = [0x10FFFF, 0x7F, 0x7FF, 0xFFFF, 0x10FFFF];
 
 // defined in /usr/include/fontconfig/fontconfig.h
 const FC_TRUE: i32 = 1;
@@ -55,65 +46,6 @@ pub struct Drw {
     pub scheme: Vec<Clr>,
     pub fonts: Vec<Fnt>,
 }
-
-fn utf8decodebyte(c: c_char, i: *mut usize) -> c_long {
-    unsafe {
-        *i = 0;
-        while *i < UTF_SIZ + 1 {
-            if c as c_uchar & UTFMASK[*i] == UTFBYTE[*i] {
-                return (c as c_uchar & !UTFMASK[*i]) as c_long;
-            }
-            *i += 1;
-        }
-        0
-    }
-}
-
-fn utf8validate(u: *mut c_long, i: usize) -> usize {
-    unsafe {
-        if !between(*u, UTFMIN[i], UTFMAX[i]) || between(*u, 0xD800, 0xDFFF) {
-            *u = UTF_INVALID as c_long;
-        }
-        let mut i = 1;
-        while *u > UTFMAX[i] {
-            i += 1;
-        }
-        i
-    }
-}
-
-fn utf8decode(c: *const i8, u: *mut c_long, clen: usize) -> usize {
-    unsafe {
-        *u = UTF_INVALID as c_long;
-        if clen == 0 {
-            return 0;
-        }
-        let mut len = 0;
-        let mut udecoded = utf8decodebyte(*c, &mut len);
-        if !between(len, 1, UTF_SIZ) {
-            return 1;
-        }
-        let mut i = 1;
-        let mut j = 1;
-        let mut type_ = 0;
-        while i < clen && j < len {
-            udecoded = (udecoded << 6) | utf8decodebyte(*c.add(i), &mut type_);
-            if type_ != 0 {
-                return j;
-            }
-            i += 1;
-            j += 1;
-        }
-        if j < len {
-            return 0;
-        }
-        *u = udecoded;
-        utf8validate(u, len);
-
-        len
-    }
-}
-
 /// # Safety
 pub unsafe fn create(
     dpy: *mut Display,
@@ -157,45 +89,33 @@ pub fn free(drw: &mut Drw) {
     }
 }
 
-/// # Safety
-pub unsafe fn rect(
-    drw: *mut Drw,
+pub fn rect(
+    drw: &mut Drw,
     x: c_int,
     y: c_int,
     w: c_uint,
     h: c_uint,
     filled: c_int,
-    invert: c_int,
+    invert: bool,
 ) {
+    if drw.scheme.is_empty() {
+        return;
+    }
     unsafe {
-        if drw.is_null() || (*drw).scheme.is_empty() {
-            // TODO can this be &mut Drw?
-            return;
-        }
         xlib::XSetForeground(
-            (*drw).dpy,
-            (*drw).gc,
-            if invert != 0 {
-                (*drw).scheme[Col::Bg as usize].pixel
-            } else {
-                (*drw).scheme[Col::Fg as usize].pixel
-            },
+            drw.dpy,
+            drw.gc,
+            drw.scheme
+                [if invert { Col::Bg as usize } else { Col::Fg as usize }]
+            .pixel,
         );
         if filled != 0 {
-            xlib::XFillRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
-                x,
-                y,
-                w,
-                h,
-            );
+            xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
         } else {
             xlib::XDrawRectangle(
-                (*drw).dpy,
-                (*drw).drawable,
-                (*drw).gc,
+                drw.dpy,
+                drw.drawable,
+                drw.gc,
                 x,
                 y,
                 w - 1,
@@ -205,8 +125,7 @@ pub unsafe fn rect(
     }
 }
 
-/// # Safety
-pub unsafe fn cur_create(drw: &Drw, shape: c_int) -> Cur {
+pub fn cur_create(drw: &Drw, shape: c_int) -> Cur {
     unsafe { Cur { cursor: xlib::XCreateFontCursor(drw.dpy, shape as c_uint) } }
 }
 
@@ -300,15 +219,15 @@ impl Drop for Fnt {
     }
 }
 
-fn clr_create(drw: *const Drw, dest: *mut Clr, clrname: *const c_char) {
-    if drw.is_null() || dest.is_null() || clrname.is_null() {
+fn clr_create(drw: &Drw, dest: *mut Clr, clrname: *const c_char) {
+    if dest.is_null() || clrname.is_null() {
         return;
     }
     unsafe {
         if xft::XftColorAllocName(
-            (*drw).dpy,
-            xlib::XDefaultVisual((*drw).dpy, (*drw).screen),
-            xlib::XDefaultColormap((*drw).dpy, (*drw).screen),
+            drw.dpy,
+            xlib::XDefaultVisual(drw.dpy, drw.screen),
+            xlib::XDefaultColormap(drw.dpy, drw.screen),
             clrname,
             dest,
         ) == 0
@@ -322,12 +241,12 @@ fn clr_create(drw: *const Drw, dest: *mut Clr, clrname: *const c_char) {
 }
 
 pub fn scm_create(
-    drw: *const Drw,
+    drw: &Drw,
     clrnames: &[CString],
     clrcount: usize,
 ) -> Vec<Clr> {
     let mut ret = Vec::new();
-    if drw.is_null() || clrnames.is_empty() || clrcount < 2 {
+    if clrnames.is_empty() || clrcount < 2 {
         return ret;
     }
     for clr in clrnames {
@@ -341,9 +260,9 @@ pub fn scm_create(
 }
 
 /// # Safety
-pub unsafe fn fontset_getwidth(drw: &mut Drw, text: *const c_char) -> c_uint {
+pub unsafe fn fontset_getwidth(drw: &mut Drw, text: &str) -> c_uint {
     log::trace!("fontset_getwidth");
-    if drw.fonts.is_empty() || text.is_null() {
+    if drw.fonts.is_empty() || text.is_empty() {
         return 0;
     }
     self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
@@ -357,7 +276,7 @@ pub unsafe fn text(
     mut w: c_uint,
     h: c_uint,
     lpad: c_uint,
-    mut text: *const c_char,
+    mut text: &str,
     invert: c_int,
 ) -> c_int {
     // this function is very confusing and likely can be dramatically simplified
@@ -366,7 +285,7 @@ pub unsafe fn text(
     unsafe {
         log::trace!(
             "text: {drw:?}, {x}, {y}, {w}, {h}, {lpad}, {:?}, {invert}",
-            std::ffi::CStr::from_ptr(text)
+            text
         );
         let mut ty: c_int;
         let mut ellipsis_x: c_int = 0;
@@ -396,7 +315,7 @@ pub unsafe fn text(
 
         let mut result: xft::FcResult = xft::FcResult::NoMatch;
 
-        let mut charexists: c_int = 0;
+        let mut charexists = false;
         let mut overflow: c_int = 0;
 
         // keep track of a couple codepoints for which we have no match
@@ -410,7 +329,7 @@ pub unsafe fn text(
         static mut ELLIPSIS_WIDTH: c_uint = 0;
 
         if (render != 0 && (drw.scheme.is_empty() || w == 0))
-            || text.is_null()
+            || text.is_empty()
             || drw.fonts.is_empty()
         {
             return 0;
@@ -441,7 +360,7 @@ pub unsafe fn text(
         }
 
         if ELLIPSIS_WIDTH == 0 && render != 0 {
-            ELLIPSIS_WIDTH = fontset_getwidth(drw, c"...".as_ptr());
+            ELLIPSIS_WIDTH = fontset_getwidth(drw, "...");
         }
         usedfont = 0;
         log::trace!("text: entering loop");
@@ -449,7 +368,7 @@ pub unsafe fn text(
             ew = 0;
             ellipsis_len = 0;
             utf8strlen = 0;
-            utf8str = text;
+            utf8str = text.as_ptr().cast();
             nextfont = None;
 
             // I believe this loop is just walking along the characters in text
@@ -462,23 +381,22 @@ pub unsafe fn text(
             // `while(*text)` to `while !text.is_null()`, but we actually need
             // to check if we're at the null byte at the end of the string, NOT
             // if text is a null pointer
-            while *text != b'\0' as i8 {
-                utf8charlen =
-                    utf8decode(text, &mut utf8codepoint, UTF_SIZ) as c_int;
+            for c in text.chars() {
+                utf8codepoint = c as i64;
+                utf8charlen = c.len_utf8() as i32;
                 for (font_idx, curfont) in drw.fonts.iter().enumerate() {
-                    charexists = (charexists != 0
+                    charexists = charexists
                         || xft::XftCharExists(
                             drw.dpy,
                             curfont.xfont,
                             utf8codepoint as u32,
-                        ) != 0) as c_int;
-                    if charexists != 0 {
+                        ) != 0;
+                    if charexists {
                         font_getexts(
                             curfont,
-                            text,
+                            text.as_ptr().cast(),
                             utf8charlen as u32,
                             &mut tmpw,
-                            null_mut(),
                         );
                         if ew + ELLIPSIS_WIDTH <= w {
                             // keep track where the ellipsis still fits
@@ -498,7 +416,7 @@ pub unsafe fn text(
                             }
                         } else if font_idx == usedfont {
                             utf8strlen += utf8charlen;
-                            text = text.add(utf8charlen as usize);
+                            text = &text[utf8charlen as usize..];
                             ew += tmpw;
                         } else {
                             nextfont = Some(font_idx);
@@ -508,12 +426,12 @@ pub unsafe fn text(
                 }
 
                 if overflow != 0
-                    || charexists == 0
+                    || !charexists
                     || nextfont.is_some_and(|n| n < drw.fonts.len())
                 {
                     break;
                 } else {
-                    charexists = 0;
+                    charexists = false;
                 }
             } // end while(*text)
 
@@ -542,27 +460,18 @@ pub unsafe fn text(
             }
             if render != 0 && overflow != 0 {
                 log::trace!("recursing for render != && overflow != 0");
-                self::text(
-                    drw,
-                    ellipsis_x,
-                    y,
-                    ellipsis_w,
-                    h,
-                    0,
-                    c"...".as_ptr(),
-                    invert,
-                );
+                self::text(drw, ellipsis_x, y, ellipsis_w, h, 0, "...", invert);
             }
 
-            if *text == b'\0' as i8 || overflow != 0 {
+            if text.is_empty() || overflow != 0 {
                 break;
             } else if nextfont.is_some_and(|n| n < drw.fonts.len()) {
-                charexists = 0;
+                charexists = false;
                 usedfont = nextfont.unwrap();
             } else {
                 // regardless of whether or not a fallback font is found, the
                 // character must be drawn
-                charexists = 1;
+                charexists = true;
 
                 for i in 0..NOMATCHES_LEN {
                     // avoid calling XftFontMatch if we know we won't find a
@@ -654,13 +563,7 @@ pub unsafe fn text(
     }
 }
 
-fn font_getexts(
-    font: *const Fnt,
-    text: *const i8,
-    len: u32,
-    w: *mut c_uint,
-    h: *mut c_uint,
-) {
+fn font_getexts(font: *const Fnt, text: *const i8, len: u32, w: &mut c_uint) {
     unsafe {
         if font.is_null() || text.is_null() {
             return;
@@ -674,79 +577,37 @@ fn font_getexts(
             ext.as_mut_ptr(),
         );
         let ext = ext.assume_init();
-        if !w.is_null() {
-            *w = ext.xOff as u32;
-        }
-        if !h.is_null() {
-            *h = (*font).h;
-        }
+        *w = ext.xOff as u32;
     }
 }
 
 pub unsafe fn map(
-    drw: *mut Drw,
+    drw: &Drw,
     win: Window,
     x: c_int,
     y: c_int,
     w: c_uint,
     h: c_uint,
 ) {
-    if drw.is_null() {
-        return;
-    }
     unsafe {
-        xlib::XCopyArea(
-            (*drw).dpy,
-            (*drw).drawable,
-            win,
-            (*drw).gc,
-            x,
-            y,
-            w,
-            h,
-            x,
-            y,
-        );
-        xlib::XSync((*drw).dpy, False);
+        xlib::XCopyArea(drw.dpy, drw.drawable, win, drw.gc, x, y, w, h, x, y);
+        xlib::XSync(drw.dpy, False);
     }
 }
 
-pub unsafe fn resize(drw: *mut Drw, w: c_uint, h: c_uint) {
+pub fn resize(drw: &mut Drw, w: c_uint, h: c_uint) {
     unsafe {
-        if drw.is_null() {
-            return;
+        drw.w = w;
+        drw.h = h;
+        if drw.drawable != 0 {
+            xlib::XFreePixmap(drw.dpy, drw.drawable);
         }
-        (*drw).w = w;
-        (*drw).h = h;
-        if (*drw).drawable != 0 {
-            xlib::XFreePixmap((*drw).dpy, (*drw).drawable);
-        }
-        (*drw).drawable = xlib::XCreatePixmap(
-            (*drw).dpy,
-            (*drw).root,
+        drw.drawable = xlib::XCreatePixmap(
+            drw.dpy,
+            drw.root,
             w,
             h,
-            xlib::XDefaultDepth((*drw).dpy, (*drw).screen) as c_uint,
+            xlib::XDefaultDepth(drw.dpy, drw.screen) as c_uint,
         );
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_utf8decode() {
-        let tests = [
-            (c"GNU Emacs at omsf", 71, 1),
-            (c"NU Emacs at omsf", 78, 1),
-            (c"U Emacs at omsf", 85, 1),
-            (c"🕔", 0x1f554, 4),
-        ];
-
-        for (inp, want_u, ret) in tests {
-            let mut u = 0;
-            let got = super::utf8decode(inp.as_ptr(), &mut u, super::UTF_SIZ);
-            assert_eq!(got, ret);
-            assert_eq!(u, want_u);
-        }
     }
 }
