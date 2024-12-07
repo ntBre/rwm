@@ -264,6 +264,8 @@ fn setup(dpy: *mut Display) -> State {
             numlockmask: 0,
             running: true,
             systray: None,
+
+            #[cfg(target_os = "linux")]
             xcon: null_mut(),
         };
 
@@ -2192,11 +2194,11 @@ fn unmanage(state: &mut State, c: *mut Client, destroyed: c_int) {
 /// I'm just using the OpenBSD version of the code in the patch rather than the
 /// Linux version that uses XCB
 fn winpid(state: &mut State, w: Window) -> pid_t {
-    let mut result = 0;
-
     #[cfg(target_os = "linux")]
     unsafe {
         log::trace!("winpid linux");
+
+        let mut result = 0;
 
         let spec = xcb::res::ClientIdSpec {
             client: w as u32,
@@ -2218,6 +2220,8 @@ fn winpid(state: &mut State, w: Window) -> pid_t {
                 result = id.value()[0] as i32;
             }
         }
+
+        result
     }
 
     #[cfg(not(target_os = "linux"))]
@@ -2249,10 +2253,9 @@ fn winpid(state: &mut State, w: Window) -> pid_t {
         }
         let ret = *(prop as *mut pid_t);
         XFree(prop.cast());
-        result = ret;
-    }
 
-    result
+        ret
+    }
 }
 
 /// this looks insane... rust has std::os::unix::process::parent_id, but it

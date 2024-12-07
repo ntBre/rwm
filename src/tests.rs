@@ -22,14 +22,16 @@ fn main() {
         let mut state = setup(dpy);
 
         #[cfg(target_os = "linux")]
-        let xcon = match Connection::connect(Some(":1.0")) {
-            Ok((xcon, _)) => xcon,
-            Err(e) => {
-                eprintln!("rwm: cannot get xcb connection: {e:?}");
-                break 'defer false;
-            }
-        };
-        state.xcon = Box::into_raw(Box::new(xcon));
+        {
+            let xcon = match Connection::connect(Some(":1.0")) {
+                Ok((xcon, _)) => xcon,
+                Err(e) => {
+                    eprintln!("rwm: cannot get xcb connection: {e:?}");
+                    break 'defer false;
+                }
+            };
+            state.xcon = Box::into_raw(Box::new(xcon));
+        }
 
         scan(&mut state);
 
