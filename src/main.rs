@@ -1226,8 +1226,7 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        // TODO remove lrpad subtraction. textw adds it only to subtract here
-        let sw = textw(&mut state.drw, &state.stext, state.lrpad) - state.lrpad
+        let sw = textw(&mut state.drw, &state.stext, 0)
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
@@ -1435,9 +1434,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
-            tw = textw(&mut state.drw, &state.stext, state.lrpad)
-                - state.lrpad / 2
-                + 2; // 2px right padding
+            tw = textw(&mut state.drw, &state.stext, state.lrpad / 2) + 2; // 2px right padding
             log::trace!("drawbar: text");
             drw::text(
                 &mut state.drw,
