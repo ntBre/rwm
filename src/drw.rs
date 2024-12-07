@@ -305,7 +305,7 @@ pub unsafe fn text(
         let mut utf8charlen: c_int;
         let render: c_int = (x != 0 || y != 0 || w != 0 || h != 0) as c_int;
 
-        let utf8codepoint: c_long = 0;
+        let mut utf8codepoint: c_long = 0;
 
         let mut utf8str: *const c_char;
 
@@ -381,9 +381,9 @@ pub unsafe fn text(
             // `while(*text)` to `while !text.is_null()`, but we actually need
             // to check if we're at the null byte at the end of the string, NOT
             // if text is a null pointer
-            for utf8codepoint in text.chars() {
-                dbg!(&utf8codepoint);
-                utf8charlen = utf8codepoint.len_utf8() as i32;
+            for c in text.chars() {
+                utf8codepoint = c as i64;
+                utf8charlen = c.len_utf8() as i32;
                 for (font_idx, curfont) in drw.fonts.iter().enumerate() {
                     charexists = charexists
                         || xft::XftCharExists(
@@ -450,8 +450,8 @@ pub unsafe fn text(
                         drw.fonts[usedfont].xfont,
                         x,
                         ty,
-                        dbg!(utf8str) as *const c_uchar,
-                        dbg!(utf8strlen),
+                        utf8str as *const c_uchar,
+                        utf8strlen,
                     );
                     log::trace!("text: XftDrawStringUtf8 finished");
                 }
