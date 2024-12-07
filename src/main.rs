@@ -2492,6 +2492,7 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         (*c).h = wa.height;
         (*c).oldh = wa.height;
         (*c).oldbw = wa.border_width;
+        (*c).name = String::new();
 
         let mut term: *mut Client = null_mut();
 
