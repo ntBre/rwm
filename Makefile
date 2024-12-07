@@ -6,7 +6,7 @@ test:
 
 clippy_args :=
 ifdef FIX
-    clippy_args += --fix
+    clippy_args += --fix --allow-dirty
 endif
 
 clippy:
