@@ -466,7 +466,6 @@ pub unsafe fn text(
                             text,
                             utf8charlen as u32,
                             &mut tmpw,
-                            null_mut(),
                         );
                         if ew + ELLIPSIS_WIDTH <= w {
                             // keep track where the ellipsis still fits
@@ -642,13 +641,7 @@ pub unsafe fn text(
     }
 }
 
-fn font_getexts(
-    font: *const Fnt,
-    text: *const i8,
-    len: u32,
-    w: *mut c_uint,
-    h: *mut c_uint,
-) {
+fn font_getexts(font: *const Fnt, text: *const i8, len: u32, w: *mut c_uint) {
     unsafe {
         if font.is_null() || text.is_null() {
             return;
@@ -664,9 +657,6 @@ fn font_getexts(
         let ext = ext.assume_init();
         if !w.is_null() {
             *w = ext.xOff as u32;
-        }
-        if !h.is_null() {
-            *h = (*font).h;
         }
     }
 }
