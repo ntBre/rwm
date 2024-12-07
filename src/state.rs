@@ -53,6 +53,8 @@ pub struct State {
     pub scheme: ClrScheme,
     pub screen: c_int,
     pub root: Window,
+    /// sum of left and right padding for text
+    pub lrpad: c_int,
 }
 
 impl Drop for State {

@@ -139,9 +139,6 @@ static mut WMCHECKWIN: Window = 0;
 
 static mut RUNNING: bool = true;
 
-/// sum of left and right padding for text
-static mut LRPAD: c_int = 0;
-
 static mut NUMLOCKMASK: c_uint = 0;
 
 type Atom = c_ulong;
@@ -238,7 +235,6 @@ fn setup(dpy: *mut Display) -> State {
         {
             panic!("no fonts could be loaded");
         }
-        LRPAD = drw.fonts[0].h as i32;
 
         /* init cursors */
         let cursors = rwm::Cursors {
@@ -255,6 +251,7 @@ fn setup(dpy: *mut Display) -> State {
             netatom: Default::default(),
             xatom: Default::default(),
             dpy,
+            lrpad: drw.fonts[0].h as i32,
             drw,
             selmon: null_mut(),
             mons: null_mut(),
@@ -1229,7 +1226,8 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(&mut state.drw, &state.stext) - LRPAD
+        // TODO remove lrpad subtraction. textw adds it only to subtract here
+        let sw = textw(&mut state.drw, &state.stext, state.lrpad) - state.lrpad
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
@@ -1237,7 +1235,7 @@ fn updatesystray(state: &mut State) {
             return;
         }
         if CONFIG.systrayonleft {
-            x -= sw + LRPAD / 2;
+            x -= sw + state.lrpad / 2;
         }
         if SYSTRAY.is_null() {
             // init systray
@@ -1408,9 +1406,9 @@ fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
     }
 }
 
-fn textw(drw: &mut Drw, x: &str) -> c_int {
+fn textw(drw: &mut Drw, x: &str, lrpad: c_int) -> c_int {
     log::trace!("textw");
-    unsafe { drw::fontset_getwidth(drw, x) as c_int + LRPAD }
+    unsafe { drw::fontset_getwidth(drw, x) as c_int + lrpad }
 }
 
 fn drawbar(state: &mut State, m: *mut Monitor) {
@@ -1437,7 +1435,9 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
-            tw = textw(&mut state.drw, &state.stext) - LRPAD / 2 + 2; // 2px right padding
+            tw = textw(&mut state.drw, &state.stext, state.lrpad)
+                - state.lrpad / 2
+                + 2; // 2px right padding
             log::trace!("drawbar: text");
             drw::text(
                 &mut state.drw,
@@ -1445,7 +1445,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 0,
                 tw as u32,
                 state.bh as u32,
-                (LRPAD / 2 - 2) as u32,
+                (state.lrpad / 2 - 2) as u32,
                 &state.stext,
                 0,
             );
@@ -1465,7 +1465,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         let mut x = 0;
         for (i, tag) in CONFIG.tags.iter().enumerate() {
             let text = tag.to_owned();
-            let w = textw(&mut state.drw, &text);
+            let w = textw(&mut state.drw, &text, state.lrpad);
             drw::setscheme(
                 &mut state.drw,
                 state.scheme[if ((*m).tagset[(*m).seltags as usize] & 1 << i)
@@ -1484,7 +1484,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 0,
                 w as u32,
                 state.bh as u32,
-                LRPAD as u32 / 2,
+                state.lrpad as u32 / 2,
                 &text,
                 (urg as i32) & 1 << i,
             );
@@ -1506,7 +1506,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             x += w as i32;
         }
 
-        let w = textw(&mut state.drw, &(*m).ltsymbol);
+        let w = textw(&mut state.drw, &(*m).ltsymbol, state.lrpad);
         drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
         log::trace!("drawbar: text 3");
         x = drw::text(
@@ -1515,7 +1515,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             0,
             w as u32,
             state.bh as u32,
-            LRPAD as u32 / 2,
+            state.lrpad as u32 / 2,
             &(*m).ltsymbol,
             0,
         ) as i32;
@@ -1540,7 +1540,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     0,
                     w as u32,
                     state.bh as u32,
-                    LRPAD as u32 / 2,
+                    state.lrpad as u32 / 2,
                     &(*(*m).sel).name,
                     0,
                 );
