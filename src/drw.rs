@@ -672,30 +672,16 @@ fn font_getexts(
 }
 
 pub unsafe fn map(
-    drw: *mut Drw,
+    drw: &Drw,
     win: Window,
     x: c_int,
     y: c_int,
     w: c_uint,
     h: c_uint,
 ) {
-    if drw.is_null() {
-        return;
-    }
     unsafe {
-        xlib::XCopyArea(
-            (*drw).dpy,
-            (*drw).drawable,
-            win,
-            (*drw).gc,
-            x,
-            y,
-            w,
-            h,
-            x,
-            y,
-        );
-        xlib::XSync((*drw).dpy, False);
+        xlib::XCopyArea(drw.dpy, drw.drawable, win, drw.gc, x, y, w, h, x, y);
+        xlib::XSync(drw.dpy, False);
     }
 }
 

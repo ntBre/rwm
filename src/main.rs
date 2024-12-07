@@ -1597,7 +1597,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             }
         }
         drw::map(
-            &mut state.drw,
+            &state.drw,
             (*m).barwin,
             0,
             0,
