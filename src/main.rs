@@ -3,7 +3,6 @@
 use std::cmp::max;
 use std::ffi::{c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
-use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
 use std::ptr::null_mut;
 use std::sync::LazyLock;
@@ -1123,9 +1122,7 @@ fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
 fn updatestatus(state: &mut State) {
     log::trace!("updatestatus");
     unsafe {
-        let size = size_of_val(&state.stext) as u32;
-        if gettextprop(state.dpy, ROOT, XA_WM_NAME, &mut state.stext, size) == 0
-        {
+        if gettextprop(state.dpy, ROOT, XA_WM_NAME, &mut state.stext) == 0 {
             state.stext = "rwm-1.0".to_string();
         }
         drawbar(state, state.selmon);
@@ -1596,13 +1593,9 @@ fn gettextprop(
     w: Window,
     atom: Atom,
     text: &mut String,
-    size: u32,
 ) -> c_int {
     log::trace!("gettextprop");
     unsafe {
-        if text.is_empty() || size == 0 {
-            return 0;
-        }
         let mut name = xlib::XTextProperty {
             value: std::ptr::null_mut(),
             encoding: 0,
@@ -2892,16 +2885,9 @@ fn updatetitle(state: &mut State, c: *mut Client) {
             (*c).win,
             state.netatom[Net::WMName as usize],
             &mut (*c).name,
-            size_of_val(&(*c).name) as u32,
         ) == 0
         {
-            gettextprop(
-                state.dpy,
-                (*c).win,
-                XA_WM_NAME,
-                &mut (*c).name,
-                size_of_val(&(*c).name) as u32,
-            );
+            gettextprop(state.dpy, (*c).win, XA_WM_NAME, &mut (*c).name);
         }
         if (*c).name.is_empty() {
             /* hack to mark broken clients */
