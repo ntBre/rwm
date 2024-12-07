@@ -58,7 +58,7 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(&mut state.drw, CONFIG.tags[i].as_ptr());
+                x += textw(&mut state.drw, &CONFIG.tags[i]);
                 // condition
                 if ev.x < x {
                     break;
@@ -72,15 +72,12 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::TagBar;
                 arg = Arg::Ui(1 << i);
             } else if ev.x
-                < x + textw(
-                    &mut state.drw,
-                    &raw const (*state.selmon).ltsymbol as *const _,
-                )
+                < x + textw(&mut state.drw, &(*state.selmon).ltsymbol)
             {
                 click = Clk::LtSymbol;
             } else if ev.x
                 > (*state.selmon).ww
-                    - textw(&mut state.drw, &raw const state.stext as *const _)
+                    - textw(&mut state.drw, &state.stext)
                     - getsystraywidth() as i32
             {
                 click = Clk::StatusText;

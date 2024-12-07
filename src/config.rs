@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     error::Error,
-    ffi::{c_float, c_int, c_uint, CStr, CString},
+    ffi::{c_float, c_int, c_uint, CString},
     path::Path,
     ptr::null,
     sync::LazyLock,
@@ -41,8 +41,8 @@ impl Default for Config {
             resize_hints: false,
             lock_fullscreen: true,
             fonts: vec![c"monospace:size=10".into()],
-            tags: [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"]
-                .map(CString::from)
+            tags: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                .map(String::from)
                 .to_vec(),
             colors: default_colors(),
             keys: default_keys().to_vec(),
@@ -56,7 +56,7 @@ impl Default for Config {
             showsystray: SHOWSYSTRAY,
             buttons: BUTTONS.to_vec(),
             layouts: LAYOUTS.to_vec(),
-            scratchpadname: SCRATCHPADNAME.into(),
+            scratchpadname: SCRATCHPADNAME.to_string(),
         }
     }
 }
@@ -88,7 +88,7 @@ pub struct Config {
 
     pub fonts: Vec<CString>,
 
-    pub tags: Vec<CString>,
+    pub tags: Vec<String>,
 
     pub colors: [[CString; 3]; 2],
 
@@ -118,7 +118,7 @@ pub struct Config {
 
     pub layouts: Vec<Layout>,
 
-    pub scratchpadname: CString,
+    pub scratchpadname: String,
 }
 
 unsafe impl Send for Config {}
@@ -181,11 +181,22 @@ fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
 
     // NOTE each into_raw call is a leak, but these should live as long as the
     // program runs anyway
-    let maybe_string = |val: Value| -> Result<*const c_char, FigError> {
+    let maybe_cstring = |val: Value| -> Result<*const c_char, FigError> {
         if let Ok(Ok(s)) = String::try_from(val.clone()).map(CString::new) {
             Ok(s.into_raw())
         } else if val.is_nil() {
             Ok(null())
+        } else {
+            log::error!("expected Str or Nil");
+            Err(FigError::Conversion)
+        }
+    };
+
+    let maybe_string = |val: Value| -> Result<String, FigError> {
+        if let Ok(s) = String::try_from(val.clone()) {
+            Ok(s)
+        } else if val.is_nil() {
+            Ok(String::new())
         } else {
             log::error!("expected Str or Nil");
             Err(FigError::Conversion)
@@ -200,8 +211,8 @@ fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
             return err;
         }
         ret.push(Rule {
-            class: maybe_string(rule[0].clone())?,
-            instance: maybe_string(rule[1].clone())?,
+            class: maybe_cstring(rule[0].clone())?,
+            instance: maybe_cstring(rule[1].clone())?,
             title: maybe_string(rule[2].clone())?,
             tags: i64::try_from(rule[3].clone())? as u32,
             isfloating: rule[4].clone().try_into()?,
@@ -280,9 +291,6 @@ fn get_layouts(
         }
 
         let symbol: String = layout[0].clone().try_into()?;
-        let symbol = CString::new(symbol).map_err(|_| FigError::Conversion)?;
-        // LEAK but okay since this should hang around for the whole program
-        let symbol = symbol.into_raw();
 
         type F = fn(&mut State, *mut Monitor);
         let arrange = match &layout[1] {
@@ -310,12 +318,16 @@ impl TryFrom<Fig> for Config {
             val.try_into_int().map_err(|_| "unable to parse int")
         };
         let bool = |val: fig::Value| val.try_into();
-        let str_list = |val: fig::Value| -> Result<Vec<CString>, _> {
+        let cstr_list = |val: fig::Value| -> Result<Vec<CString>, _> {
             let strs: Vec<String> = val.try_into()?;
             strs.into_iter()
                 .map(CString::new)
                 .collect::<Result<Vec<CString>, _>>()
                 .map_err(|_| Box::new(FigError::Conversion))
+        };
+        let str_list = |val: fig::Value| -> Result<Vec<String>, FigError> {
+            let strs: Vec<String> = val.try_into()?;
+            Ok(strs.into_iter().map(String::from).collect())
         };
         Ok(Self {
             borderpx: int(get(&mut v, "borderpx")?)? as c_uint,
@@ -326,7 +338,7 @@ impl TryFrom<Fig> for Config {
             nmaster: int(get(&mut v, "nmaster")?)? as c_int,
             resize_hints: bool(get(&mut v, "resize_hints")?)?,
             lock_fullscreen: bool(get(&mut v, "lock_fullscreen")?)?,
-            fonts: str_list(get(&mut v, "fonts")?)?,
+            fonts: cstr_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
             colors: get_colors(&mut v)?,
             keys: get_keys(&mut v)?,
@@ -343,10 +355,7 @@ impl TryFrom<Fig> for Config {
             showsystray: get(&mut v, "showsystray")?.try_into()?,
             buttons: get_buttons(&mut v)?,
             layouts: get_layouts(&mut v)?,
-            scratchpadname: CString::new(String::try_from(get(
-                &mut v,
-                "scratchpadname",
-            )?)?)?,
+            scratchpadname: String::try_from(get(&mut v, "scratchpadname")?)?,
         })
     }
 }
@@ -419,7 +428,7 @@ const RULES: [Rule; 3] = [
     Rule {
         class: c"Gimp".as_ptr(),
         instance: null(),
-        title: null(),
+        title: String::new(),
         tags: 0,
         isfloating: true,
         isterminal: false,
@@ -429,7 +438,7 @@ const RULES: [Rule; 3] = [
     Rule {
         class: c"Firefox".as_ptr(),
         instance: null(),
-        title: null(),
+        title: String::new(),
         tags: 1 << 8,
         isfloating: false,
         isterminal: false,
@@ -439,7 +448,7 @@ const RULES: [Rule; 3] = [
     Rule {
         class: c"st-256color".as_ptr(),
         instance: null(),
-        title: null(),
+        title: String::new(),
         tags: 0,
         isfloating: false,
         isterminal: true,
@@ -450,11 +459,13 @@ const RULES: [Rule; 3] = [
 
 // layouts
 
-const LAYOUTS: [Layout; 3] = [
-    Layout { symbol: c"[]=".as_ptr(), arrange: Some(tile) },
-    Layout { symbol: c"><>".as_ptr(), arrange: None },
-    Layout { symbol: c"[M]".as_ptr(), arrange: Some(monocle) },
-];
+static LAYOUTS: LazyLock<[Layout; 3]> = LazyLock::new(|| {
+    [
+        Layout { symbol: "[]=".to_string(), arrange: Some(tile) },
+        Layout { symbol: "><>".to_string(), arrange: None },
+        Layout { symbol: "[M]".to_string(), arrange: Some(monocle) },
+    ]
+});
 
 // key definitions
 const MODKEY: c_uint = Mod4Mask;
@@ -481,12 +492,12 @@ static DMENUCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
 });
 static TERMCMD: LazyLock<Vec<String>> = LazyLock::new(|| vec!["st".into()]);
 
-const SCRATCHPADNAME: &CStr = c"scratchpad";
+const SCRATCHPADNAME: &str = "scratchpad";
 static SCRATCHPADCMD: LazyLock<Vec<String>> = LazyLock::new(|| {
     vec![
         "st".into(),
         "-t".into(),
-        SCRATCHPADNAME.to_str().unwrap().to_owned(),
+        SCRATCHPADNAME.to_string(),
         "-g".into(),
         "120x34".into(),
     ]

@@ -258,11 +258,10 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
                     [(*state.selmon).pertag.curtag as usize]
                     [(*state.selmon).sellt as usize];
         }
-        libc::strncpy(
-            (*state.selmon).ltsymbol.as_mut_ptr(),
-            (*(*state.selmon).lt[(*state.selmon).sellt as usize]).symbol,
-            size_of_val(&(*state.selmon).ltsymbol),
-        );
+        (*state.selmon).ltsymbol = (*(*state.selmon).lt
+            [(*state.selmon).sellt as usize])
+            .symbol
+            .clone();
         if !(*state.selmon).sel.is_null() {
             arrange(state, state.selmon);
         } else {

@@ -1,7 +1,7 @@
 //! tiling window manager based on dwm
 
 use std::cmp::max;
-use std::ffi::{c_char, c_int, c_uint, c_ulong, CStr};
+use std::ffi::{c_int, c_uint, c_ulong, CStr};
 use std::io::Read;
 use std::mem::size_of_val;
 use std::mem::{size_of, MaybeUninit};
@@ -172,11 +172,7 @@ fn createmon() -> *mut Monitor {
         (*m).topbar = CONFIG.topbar;
         (*m).lt[0] = &CONFIG.layouts[0];
         (*m).lt[1] = &CONFIG.layouts[1 % CONFIG.layouts.len()];
-        libc::strncpy(
-            &mut (*m).ltsymbol as *mut _,
-            CONFIG.layouts[0].symbol,
-            size_of_val(&(*m).ltsymbol),
-        );
+        (*m).ltsymbol = CONFIG.layouts[0].symbol.clone();
 
         (*m).pertag = Pertag {
             curtag: 1,
@@ -269,7 +265,7 @@ fn setup(dpy: *mut Display) -> State {
             drw,
             selmon: null_mut(),
             mons: null_mut(),
-            stext: ['\0' as c_char; 256],
+            stext: String::new(),
             scheme: Default::default(),
         };
 
@@ -630,11 +626,7 @@ fn arrange(state: &mut State, mut m: *mut Monitor) {
 fn arrangemon(state: &mut State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
-        libc::strncpy(
-            (*m).ltsymbol.as_mut_ptr(),
-            (*(*m).lt[(*m).sellt as usize]).symbol,
-            size_of_val(&(*m).ltsymbol),
-        );
+        (*m).ltsymbol = (*(*m).lt[(*m).sellt as usize]).symbol.clone();
         let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
         if let Some(arrange) = arrange {
             (arrange)(state, m);
@@ -1131,15 +1123,10 @@ fn unfocus(state: &mut State, c: *mut Client, setfocus: bool) {
 fn updatestatus(state: &mut State) {
     log::trace!("updatestatus");
     unsafe {
-        if gettextprop(
-            state.dpy,
-            ROOT,
-            XA_WM_NAME,
-            state.stext.as_mut_ptr(),
-            size_of_val(&state.stext) as u32,
-        ) == 0
+        let size = size_of_val(&state.stext) as u32;
+        if gettextprop(state.dpy, ROOT, XA_WM_NAME, &mut state.stext, size) == 0
         {
-            libc::strcpy(&raw mut state.stext as *mut _, c"rwm-1.0".as_ptr());
+            state.stext = "rwm-1.0".to_string();
         }
         drawbar(state, state.selmon);
         updatesystray(state);
@@ -1251,8 +1238,7 @@ fn updatesystray(state: &mut State) {
         let mut i: *mut Client;
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
-        let sw = textw(&mut state.drw, &raw const state.stext as *const _)
-            - LRPAD
+        let sw = textw(&mut state.drw, &state.stext) - LRPAD
             + CONFIG.systrayspacing as i32;
         let mut w = 1;
 
@@ -1431,7 +1417,7 @@ fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
     }
 }
 
-fn textw(drw: &mut Drw, x: *const c_char) -> c_int {
+fn textw(drw: &mut Drw, x: &str) -> c_int {
     log::trace!("textw");
     unsafe { drw::fontset_getwidth(drw, x) as c_int + LRPAD }
 }
@@ -1460,9 +1446,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         if m == state.selmon {
             // status is only drawn on selected monitor
             drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
-            tw = textw(&mut state.drw, &raw const state.stext as *const _)
-                - LRPAD / 2
-                + 2; // 2px right padding
+            tw = textw(&mut state.drw, &state.stext) - LRPAD / 2 + 2; // 2px right padding
             log::trace!("drawbar: text");
             drw::text(
                 &mut state.drw,
@@ -1471,7 +1455,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 tw as u32,
                 state.bh as u32,
                 (LRPAD / 2 - 2) as u32,
-                &raw const state.stext as *const _,
+                &state.stext,
                 0,
             );
         }
@@ -1490,7 +1474,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
         let mut x = 0;
         for (i, tag) in CONFIG.tags.iter().enumerate() {
             let text = tag.to_owned();
-            let w = textw(&mut state.drw, text.as_ptr());
+            let w = textw(&mut state.drw, &text);
             drw::setscheme(
                 &mut state.drw,
                 state.scheme[if ((*m).tagset[(*m).seltags as usize] & 1 << i)
@@ -1510,7 +1494,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                 w as u32,
                 state.bh as u32,
                 LRPAD as u32 / 2,
-                text.as_ptr(),
+                &text,
                 (urg as i32) & 1 << i,
             );
 
@@ -1531,7 +1515,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             x += w as i32;
         }
 
-        let w = textw(&mut state.drw, (*m).ltsymbol.as_ptr());
+        let w = textw(&mut state.drw, &(*m).ltsymbol);
         drw::setscheme(&mut state.drw, state.scheme[Scheme::Norm].clone());
         log::trace!("drawbar: text 3");
         x = drw::text(
@@ -1541,7 +1525,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
             w as u32,
             state.bh as u32,
             LRPAD as u32 / 2,
-            (*m).ltsymbol.as_ptr(),
+            &(*m).ltsymbol,
             0,
         ) as i32;
         log::trace!("finished drawbar text 3");
@@ -1566,7 +1550,7 @@ fn drawbar(state: &mut State, m: *mut Monitor) {
                     w as u32,
                     state.bh as u32,
                     LRPAD as u32 / 2,
-                    (*(*m).sel).name.as_ptr(),
+                    &(*(*m).sel).name,
                     0,
                 );
                 if (*(*m).sel).isfloating {
@@ -1611,15 +1595,14 @@ fn gettextprop(
     dpy: *mut Display,
     w: Window,
     atom: Atom,
-    text: *mut i8,
+    text: &mut String,
     size: u32,
 ) -> c_int {
     log::trace!("gettextprop");
     unsafe {
-        if text.is_null() || size == 0 {
+        if text.is_empty() || size == 0 {
             return 0;
         }
-        *text = '\0' as i8;
         let mut name = xlib::XTextProperty {
             value: std::ptr::null_mut(),
             encoding: 0,
@@ -1634,7 +1617,8 @@ fn gettextprop(
         let mut n = 0;
         let mut list: *mut *mut i8 = std::ptr::null_mut();
         if name.encoding == XA_STRING {
-            libc::strncpy(text, name.value as *mut _, size as usize - 1);
+            let name_val = CStr::from_ptr(name.value.cast());
+            *text = name_val.to_string_lossy().to_string();
         } else if xlib::XmbTextPropertyToTextList(
             dpy,
             &name,
@@ -1644,11 +1628,10 @@ fn gettextprop(
             && n > 0
             && !(*list).is_null()
         {
-            libc::strncpy(text, *list, size as usize - 1);
+            let l = CStr::from_ptr(*list);
+            *text = l.to_string_lossy().to_string();
             xlib::XFreeStringList(list);
         }
-        let p = text.offset(size as isize - 1);
-        *p = '\0' as i8;
         xlib::XFree(name.value as *mut _);
     }
     1
@@ -2097,7 +2080,7 @@ fn cleanup(mut state: State) {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
         (*state.selmon).lt[(*state.selmon).sellt as usize] =
-            &Layout { symbol: c"".as_ptr(), arrange: None };
+            &Layout { symbol: String::new(), arrange: None };
 
         let mut m = state.mons;
         while !m.is_null() {
@@ -2551,8 +2534,7 @@ fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         // like something meant to be handled by RULES
         (*state.selmon).tagset[(*state.selmon).seltags as usize] &=
             !*SCRATCHTAG;
-        if libc::strcmp((*c).name.as_ptr(), CONFIG.scratchpadname.as_ptr()) == 0
-        {
+        if (*c).name == CONFIG.scratchpadname {
             (*c).tags = *SCRATCHTAG;
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
             (*c).isfloating = true;
@@ -2813,8 +2795,7 @@ fn applyrules(state: &mut State, c: *mut Client) {
         };
 
         for r in &CONFIG.rules {
-            if (r.title.is_null()
-                || !libc::strstr((*c).name.as_ptr(), r.title).is_null())
+            if (r.title.is_empty() || (*c).name.contains(&r.title))
                 && (r.class.is_null()
                     || !libc::strstr(class.as_ptr(), r.class).is_null())
                 && (r.instance.is_null()
@@ -2909,7 +2890,7 @@ fn updatetitle(state: &mut State, c: *mut Client) {
             state.dpy,
             (*c).win,
             state.netatom[Net::WMName as usize],
-            &mut (*c).name as *mut _,
+            &mut (*c).name,
             size_of_val(&(*c).name) as u32,
         ) == 0
         {
@@ -2917,16 +2898,13 @@ fn updatetitle(state: &mut State, c: *mut Client) {
                 state.dpy,
                 (*c).win,
                 XA_WM_NAME,
-                &mut (*c).name as *mut _,
+                &mut (*c).name,
                 size_of_val(&(*c).name) as u32,
             );
         }
-        if (*c).name[0] == '\0' as i8 {
+        if (*c).name.is_empty() {
             /* hack to mark broken clients */
-            libc::strcpy(
-                &mut (*c).name as *mut _,
-                BROKEN.as_ptr() as *const c_char,
-            );
+            (*c).name = BROKEN.to_string_lossy().to_string();
         }
     }
 }
