@@ -44,10 +44,8 @@ Config {
         Key {
             mod_: 64,
             keysym: 112,
-            func: KeyFn(
-                Some(
-                    0x00006459c2d32160,
-                ),
+            func: Some(
+                "[func]",
             ),
             arg: V(
                 [

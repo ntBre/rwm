@@ -429,6 +429,6 @@ mod tests {
     #[test]
     fn from_lua() {
         let got = Config::from_lua("example.lua").unwrap();
-        assert_debug_snapshot!(got);
+        assert_debug_snapshot!(got)
     }
 }

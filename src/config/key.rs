@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::c_uint, sync::LazyLock};
+use std::{collections::HashMap, ffi::c_uint, fmt::Debug, sync::LazyLock};
 
 use crate::{Arg, State};
 use x11::xlib::KeySym;
@@ -21,12 +21,23 @@ impl TryFrom<String> for KeyFn {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
     pub func: KeyFn,
     pub arg: Arg,
+}
+
+impl Debug for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Key")
+            .field("mod_", &self.mod_)
+            .field("keysym", &self.keysym)
+            .field("func", &self.func.0.map(|_| "[func]"))
+            .field("arg", &self.arg)
+            .finish()
+    }
 }
 
 impl Key {
