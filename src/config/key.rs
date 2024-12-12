@@ -54,7 +54,7 @@ impl Key {
 unsafe impl Sync for Key {}
 
 type FnMap = HashMap<&'static str, fn(&mut State, *const Arg)>;
-static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
+pub(crate) static FUNC_MAP: LazyLock<FnMap> = LazyLock::new(|| {
     use crate::key_handlers::*;
     type FN = fn(&mut State, *const Arg);
     HashMap::from([

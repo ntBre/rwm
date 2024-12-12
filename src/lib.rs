@@ -1,7 +1,11 @@
 #![allow(clippy::missing_safety_doc, clippy::not_unsafe_ptr_arg_deref)]
 
-use std::ffi::{c_int, c_uint};
+use std::{
+    ffi::{c_int, c_uint},
+    fmt::Debug,
+};
 
+use config::key::FUNC_MAP;
 use enums::Clk;
 use x11::xft::XftColor;
 
@@ -66,15 +70,28 @@ impl Arg {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(try_from = "String")]
 pub struct ButtonFn(pub Option<fn(&mut State, *const Arg)>);
 
 impl TryFrom<String> for ButtonFn {
     type Error = String;
 
-    fn try_from(_value: String) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self(Some(
+            FUNC_MAP
+                .get(value.as_str())
+                .cloned()
+                .ok_or_else(|| format!("no key `{value}`"))?,
+        )))
+    }
+}
+
+impl Debug for ButtonFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ButtonFn")
+            .field(&self.0.map(|_| "[func]"))
+            .finish()
     }
 }
 
@@ -85,7 +102,14 @@ pub struct Button {
     pub mask: c_uint,
     pub button: c_uint,
     pub func: ButtonFn,
+    #[serde(default = "default_button_arg")]
     pub arg: Arg,
+}
+
+/// Hack to get around `{L = nil}` equating to an empty table in Lua. If the
+/// table's empty, treat it as the only optional Arg variant
+fn default_button_arg() -> Arg {
+    Arg::L(None)
 }
 
 impl Button {
