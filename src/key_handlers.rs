@@ -118,6 +118,7 @@ pub(crate) fn setmfact(state: &mut State, arg: *const Arg) {
         if arg.is_null()
             || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                 .arrange
+                .0
                 .is_none()
         {
             return;
@@ -145,6 +146,7 @@ pub(crate) fn zoom(state: &mut State, _arg: *const Arg) {
         let mut c = (*state.selmon).sel;
         if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
             .arrange
+            .0
             .is_none()
             || c.is_null()
             || (*c).isfloating
@@ -564,6 +566,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                     if !c.isfloating
                         && (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                             .arrange
+                            .0
                             .is_some()
                         && ((nx - c.x).abs() > CONFIG.snap as c_int
                             || (ny - c.y).abs() > CONFIG.snap as c_int)
@@ -572,6 +575,7 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                     }
                     if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                         .arrange
+                        .0
                         .is_none()
                         || c.isfloating
                     {
@@ -664,6 +668,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
                         && !c.isfloating
                         && (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                             .arrange
+                            .0
                             .is_some()
                         && ((nw - c.w).abs() > CONFIG.snap as c_int
                             || (nh - c.h).abs() > CONFIG.snap as c_int)
@@ -672,6 +677,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
                     }
                     if (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                         .arrange
+                        .0
                         .is_none()
                         || c.isfloating
                     {

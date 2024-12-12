@@ -99,11 +99,11 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
         }
         for button in &CONFIG.buttons {
             if click as u32 == button.click
-                && button.func.is_some()
+                && button.func.0.is_some()
                 && button.button == ev.button
                 && cleanmask(state, button.mask) == cleanmask(state, ev.state)
             {
-                let f = button.func.unwrap();
+                let f = button.func.0.unwrap();
                 let a = if click == Clk::TagBar && button.arg.i() == 0 {
                     &arg
                 } else {
@@ -290,6 +290,7 @@ pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
             } else if (*c).isfloating
                 || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                     .arrange
+                    .0
                     .is_none()
             {
                 let m = (*c).mon;
@@ -480,9 +481,9 @@ pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
         for key in &CONFIG.keys {
             if keysym == key.keysym
                 && cleanmask(state, key.mod_) == cleanmask(state, ev.state)
-                && key.func.is_some()
+                && key.func.0.is_some()
             {
-                key.func.unwrap()(state, &(key.arg));
+                key.func.0.unwrap()(state, &(key.arg));
             }
         }
     }

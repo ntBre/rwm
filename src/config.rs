@@ -3,13 +3,11 @@ use std::{
     error::Error,
     ffi::{c_float, c_int, c_uint, CString},
     path::Path,
-    ptr::null,
     sync::LazyLock,
 };
 
 use fig::{Fig, FigError, Value};
 use key::{get_arg, FUNC_MAP};
-use libc::c_char;
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_grave, XK_h, XK_i,
     XK_j, XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
@@ -24,7 +22,7 @@ use crate::{
     key_handlers::*,
     layouts::{monocle, tile},
 };
-use rwm::{Arg, Button, Layout, Monitor, Rule, State};
+use rwm::{Arg, Button, ButtonFn, Layout, LayoutFn, Monitor, Rule, State};
 
 mod fig_env;
 pub mod key;
@@ -61,6 +59,7 @@ impl Default for Config {
     }
 }
 
+#[derive(serde::Deserialize)]
 pub struct Config {
     /// Border pixel of windows
     pub borderpx: c_uint,
@@ -179,19 +178,6 @@ fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
     };
     let rules: Vec<Value> = conv(rules.as_list())?;
 
-    // NOTE each into_raw call is a leak, but these should live as long as the
-    // program runs anyway
-    let maybe_cstring = |val: Value| -> Result<*const c_char, FigError> {
-        if let Ok(Ok(s)) = String::try_from(val.clone()).map(CString::new) {
-            Ok(s.into_raw())
-        } else if val.is_nil() {
-            Ok(null())
-        } else {
-            log::error!("expected Str or Nil");
-            Err(FigError::Conversion)
-        }
-    };
-
     let maybe_string = |val: Value| -> Result<String, FigError> {
         if let Ok(s) = String::try_from(val.clone()) {
             Ok(s)
@@ -211,8 +197,8 @@ fn get_rules(v: &mut HashMap<String, Value>) -> Result<Vec<Rule>, FigError> {
             return err;
         }
         ret.push(Rule {
-            class: maybe_cstring(rule[0].clone())?,
-            instance: maybe_cstring(rule[1].clone())?,
+            class: maybe_string(rule[0].clone())?,
+            instance: maybe_string(rule[1].clone())?,
             title: maybe_string(rule[2].clone())?,
             tags: i64::try_from(rule[3].clone())? as u32,
             isfloating: rule[4].clone().try_into()?,
@@ -262,7 +248,7 @@ fn get_buttons(
             click: i64::try_from(button[0].clone())? as u32,
             mask: i64::try_from(button[1].clone())? as u32,
             button: i64::try_from(button[2].clone())? as u32,
-            func,
+            func: ButtonFn(func),
             arg: get_arg(conv(button[4].as_map())?)?,
         });
     }
@@ -303,7 +289,7 @@ fn get_layouts(
             }
         };
 
-        ret.push(Layout { symbol, arrange });
+        ret.push(Layout { symbol, arrange: LayoutFn(arrange) });
     }
 
     Ok(ret)
@@ -424,46 +410,48 @@ fn default_colors() -> [[CString; 3]; 2] {
     ret
 }
 
-const RULES: [Rule; 3] = [
-    Rule {
-        class: c"Gimp".as_ptr(),
-        instance: null(),
-        title: String::new(),
-        tags: 0,
-        isfloating: true,
-        isterminal: false,
-        noswallow: false,
-        monitor: -1,
-    },
-    Rule {
-        class: c"Firefox".as_ptr(),
-        instance: null(),
-        title: String::new(),
-        tags: 1 << 8,
-        isfloating: false,
-        isterminal: false,
-        noswallow: true,
-        monitor: -1,
-    },
-    Rule {
-        class: c"st-256color".as_ptr(),
-        instance: null(),
-        title: String::new(),
-        tags: 0,
-        isfloating: false,
-        isterminal: true,
-        noswallow: false,
-        monitor: -1,
-    },
-];
+static RULES: LazyLock<[Rule; 3]> = LazyLock::new(|| {
+    [
+        Rule {
+            class: "Gimp".into(),
+            instance: String::new(),
+            title: String::new(),
+            tags: 0,
+            isfloating: true,
+            isterminal: false,
+            noswallow: false,
+            monitor: -1,
+        },
+        Rule {
+            class: "Firefox".into(),
+            instance: String::new(),
+            title: String::new(),
+            tags: 1 << 8,
+            isfloating: false,
+            isterminal: false,
+            noswallow: true,
+            monitor: -1,
+        },
+        Rule {
+            class: "st-256color".into(),
+            instance: String::new(),
+            title: String::new(),
+            tags: 0,
+            isfloating: false,
+            isterminal: true,
+            noswallow: false,
+            monitor: -1,
+        },
+    ]
+});
 
 // layouts
 
 static LAYOUTS: LazyLock<[Layout; 3]> = LazyLock::new(|| {
     [
-        Layout { symbol: "[]=".to_string(), arrange: Some(tile) },
-        Layout { symbol: "><>".to_string(), arrange: None },
-        Layout { symbol: "[M]".to_string(), arrange: Some(monocle) },
+        Layout { symbol: "[]=".to_string(), arrange: LayoutFn(Some(tile)) },
+        Layout { symbol: "><>".to_string(), arrange: LayoutFn(None) },
+        Layout { symbol: "[M]".to_string(), arrange: LayoutFn(Some(monocle)) },
     ]
 });
 

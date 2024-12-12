@@ -37,7 +37,8 @@ use x11::xlib::{
 use xcb::Connection;
 
 use rwm::{
-    drw, util, Arg, Client, Layout, Monitor, Pertag, State, Systray, Window,
+    drw, util, Arg, Client, Layout, LayoutFn, Monitor, Pertag, State, Systray,
+    Window,
 };
 
 use config::CONFIG;
@@ -625,7 +626,7 @@ fn arrangemon(state: &mut State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt as usize]).symbol.clone();
-        let arrange = (*(*m).lt[(*m).sellt as usize]).arrange;
+        let arrange = (*(*m).lt[(*m).sellt as usize]).arrange.0;
         if let Some(arrange) = arrange {
             (arrange)(state, m);
         }
@@ -640,11 +641,11 @@ fn restack(state: &mut State, m: *mut Monitor) {
             return;
         }
         if (*(*m).sel).isfloating
-            || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
+            || (*(*m).lt[(*m).sellt as usize]).arrange.0.is_none()
         {
             xlib::XRaiseWindow(state.dpy, (*(*m).sel).win);
         }
-        if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
+        if (*(*m).lt[(*m).sellt as usize]).arrange.0.is_some() {
             let mut wc = xlib::XWindowChanges {
                 stack_mode: Below,
                 sibling: (*m).barwin,
@@ -685,6 +686,7 @@ fn showhide(state: &mut State, c: *mut Client) {
             xlib::XMoveWindow(state.dpy, (*c).win, (*c).x, (*c).y);
             if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
+                .0
                 .is_none()
                 || (*c).isfloating)
                 && !(*c).isfullscreen
@@ -854,6 +856,7 @@ fn applysizehints(
             || (*c).isfloating
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
+                .0
                 .is_none()
         {
             if (*c).hintsvalid == 0 {
@@ -2085,7 +2088,7 @@ fn cleanup(mut state: State) {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
         (*state.selmon).lt[(*state.selmon).sellt as usize] =
-            &Layout { symbol: String::new(), arrange: None };
+            &Layout { symbol: String::new(), arrange: LayoutFn(None) };
 
         let mut m = state.mons;
         while !m.is_null() {
@@ -2805,10 +2808,10 @@ fn applyrules(state: &mut State, c: *mut Client) {
 
         for r in &CONFIG.rules {
             if (r.title.is_empty() || (*c).name.contains(&r.title))
-                && (r.class.is_null()
-                    || !libc::strstr(class.as_ptr(), r.class).is_null())
-                && (r.instance.is_null()
-                    || !libc::strstr(instance.as_ptr(), r.instance).is_null())
+                && (r.class.is_empty()
+                    || class.to_string_lossy().contains(&r.class))
+                && (r.instance.is_empty()
+                    || instance.to_string_lossy().contains(&r.instance))
             {
                 (*c).isterminal = r.isterminal;
                 (*c).noswallow = r.noswallow;

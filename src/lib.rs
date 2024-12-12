@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_uint};
+use std::ffi::{c_int, c_uint};
 
 use enums::Clk;
 use x11::xft::XftColor;
@@ -15,7 +15,7 @@ pub type Window = u64;
 pub type Clr = XftColor;
 
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub enum Arg {
     I(c_int),
     Ui(c_uint),
@@ -47,13 +47,25 @@ impl Arg {
     }
 }
 
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct ButtonFn(pub Option<fn(&mut State, *const Arg)>);
+
+impl TryFrom<String> for ButtonFn {
+    type Error = String;
+
+    fn try_from(_value: String) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize)]
 pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<fn(&mut State, *const Arg)>,
+    pub func: ButtonFn,
     pub arg: Arg,
 }
 
@@ -65,7 +77,13 @@ impl Button {
         func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
-        Self { click: click as c_uint, mask, button, func: Some(func), arg }
+        Self {
+            click: click as c_uint,
+            mask,
+            button,
+            func: ButtonFn(Some(func)),
+            arg,
+        }
     }
 }
 
@@ -76,10 +94,10 @@ pub struct Cursor {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Rule {
-    pub class: *const c_char,
-    pub instance: *const c_char,
+    pub class: String,
+    pub instance: String,
     pub title: String,
     pub tags: c_uint,
     pub isfloating: bool,
@@ -93,11 +111,23 @@ pub struct Systray {
     pub icons: *mut Client,
 }
 
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct LayoutFn(pub Option<fn(&mut State, *mut Monitor)>);
+
+impl TryFrom<String> for LayoutFn {
+    type Error = String;
+
+    fn try_from(_value: String) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Layout {
     pub symbol: String,
-    pub arrange: Option<fn(&mut State, *mut Monitor)>,
+    pub arrange: LayoutFn,
 }
 
 #[derive(Clone, Debug)]

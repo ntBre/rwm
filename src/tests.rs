@@ -56,6 +56,7 @@ fn main() {
         unsafe {
             assert!((*(*state.selmon).lt[(*state.selmon).sellt as usize])
                 .arrange
+                .0
                 .is_none());
         }
 

@@ -4,12 +4,24 @@ use fig::{FigError, Value};
 use rwm::{Arg, State};
 use x11::xlib::KeySym;
 
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct KeyFn(pub Option<fn(&mut State, *const Arg)>);
+
+impl TryFrom<String> for KeyFn {
+    type Error = String;
+
+    fn try_from(_value: String) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, serde::Deserialize)]
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
-    pub func: Option<fn(&mut State, *const Arg)>,
+    pub func: KeyFn,
     pub arg: Arg,
 }
 
@@ -20,7 +32,7 @@ impl Key {
         func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
-        Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
+        Self { mod_, keysym: keysym as KeySym, func: KeyFn(Some(func)), arg }
     }
 }
 
@@ -86,7 +98,7 @@ impl TryFrom<Value> for Key {
         Ok(Self {
             mod_: conv(l[0].as_int())? as u32,
             keysym: conv(l[1].as_int())? as u64,
-            func: Some(func),
+            func: KeyFn(Some(func)),
             arg,
         })
     }
