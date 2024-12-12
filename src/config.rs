@@ -391,7 +391,7 @@ impl Config {
         Self::try_from(f)
     }
 
-    #[allow(dependency_on_unit_never_type_fallback)]
+    #[allow(dependency_on_unit_never_type_fallback, unused)]
     pub fn from_lua(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
         let lua = Lua::new();
         let globals = lua.globals();
