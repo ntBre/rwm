@@ -72,8 +72,8 @@ impl TryFrom<HashMap<String, Vec<String>>> for ColorMap {
         value: HashMap<String, Vec<String>>,
     ) -> Result<Self, Self::Error> {
         let mut ret = default_colors();
-        let norm = value.get("norm").ok_or_else(|| "missing key norm")?;
-        let sel = value.get("sel").ok_or_else(|| "missing key sel")?;
+        let norm = value.get("norm").ok_or("missing key norm")?;
+        let sel = value.get("sel").ok_or("missing key sel")?;
         let [n0, n1, n2] = &norm[..] else {
             return Err("not enough colors for SchemeNorm".into());
         };
