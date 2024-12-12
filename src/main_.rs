@@ -1765,9 +1765,9 @@ pub fn updategeom(state: &mut State) -> i32 {
                     m = (*m).next;
                 }
                 if !m.is_null() {
-                    (*m).next = createmon(&state);
+                    (*m).next = createmon(state);
                 } else {
-                    state.mons = createmon(&state);
+                    state.mons = createmon(state);
                 }
             }
 
@@ -1831,7 +1831,7 @@ pub fn updategeom(state: &mut State) -> i32 {
 
             // default monitor setup
             if state.mons.is_null() {
-                state.mons = createmon(&state);
+                state.mons = createmon(state);
             }
             if (*state.mons).mw != state.sw || (*state.mons).mh != state.sh {
                 dirty = 1;
