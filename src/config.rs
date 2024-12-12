@@ -401,29 +401,31 @@ impl Config {
 
         Ok(lua.from_value(globals.get("rwm")?)?)
     }
+
+    /// Attempt to load a config file on first usage from `$XDG_CONFIG_HOME`,
+    /// then `$HOME`, before falling back to the default config.
+    pub fn load_home() -> Self {
+        let mut home = std::env::var("XDG_CONFIG_HOME");
+        if home.is_err() {
+            home = std::env::var("HOME");
+        }
+        if home.is_err() {
+            log::warn!("unable to determine config directory");
+            return Config::default();
+        }
+        let config_path = Path::new(&home.unwrap())
+            .join(".config")
+            .join("rwm")
+            .join("config.fig");
+
+        Config::load(config_path).unwrap_or_else(|e| {
+            log::error!("failed to read config file: {e:?}");
+            Config::default()
+        })
+    }
 }
 
-/// Attempt to load a config file on first usage from `$XDG_CONFIG_HOME`, then
-/// `$HOME`, before falling back to the default config.
-pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
-    let mut home = std::env::var("XDG_CONFIG_HOME");
-    if home.is_err() {
-        home = std::env::var("HOME");
-    }
-    if home.is_err() {
-        log::warn!("unable to determine config directory");
-        return Config::default();
-    }
-    let config_path = Path::new(&home.unwrap())
-        .join(".config")
-        .join("rwm")
-        .join("config.fig");
-
-    Config::load(config_path).unwrap_or_else(|e| {
-        log::error!("failed to read config file: {e:?}");
-        Config::default()
-    })
-});
+pub static CONFIG: LazyLock<Config> = LazyLock::new(Config::load_home);
 
 // appearance
 
