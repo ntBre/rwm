@@ -291,7 +291,6 @@ pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
             } else if (*c).isfloating
                 || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
                     .arrange
-                    .0
                     .is_none()
             {
                 let m = (*c).mon;

@@ -7,6 +7,7 @@ use std::{
 
 use config::key::FUNC_MAP;
 use enums::Clk;
+use layouts::{monocle, tile};
 use x11::xft::XftColor;
 
 pub mod config;
@@ -154,15 +155,25 @@ pub struct Systray {
     pub icons: *mut Client,
 }
 
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(try_from = "String")]
-pub struct LayoutFn(pub Option<fn(&mut State, *mut Monitor)>);
+pub struct LayoutFn(pub fn(&mut State, *mut Monitor));
 
 impl TryFrom<String> for LayoutFn {
     type Error = String;
 
-    fn try_from(_value: String) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "tile" => Ok(Self(tile)),
+            "monocle" => Ok(Self(monocle)),
+            s => Err(format!("unknown layout `{s}`")),
+        }
+    }
+}
+
+impl Debug for LayoutFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("LayoutFn").field(&"[func]").finish()
     }
 }
 
@@ -170,7 +181,8 @@ impl TryFrom<String> for LayoutFn {
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Layout {
     pub symbol: String,
-    pub arrange: LayoutFn,
+    #[serde(default)]
+    pub arrange: Option<LayoutFn>,
 }
 
 #[derive(Clone, Debug)]

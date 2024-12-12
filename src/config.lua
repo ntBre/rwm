@@ -66,6 +66,10 @@ rwm = {
 		 func = setlayout,
 	  },
    },
-   layouts = {}, 				-- TODO
+   layouts = {
+	  {symbol = "[]=", arrange = tile },
+	  {symbol = "><>", arrange = nil },
+	  {symbol = "[M]", arrange = monocle },
+   },
    scratchpadname = "scratchpad",
 }

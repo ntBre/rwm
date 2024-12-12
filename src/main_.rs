@@ -15,8 +15,8 @@ use crate::xembed::{
     XEMBED_WINDOW_DEACTIVATE,
 };
 use crate::{
-    drw, handlers, Arg, Client, Layout, LayoutFn, Monitor, Pertag, State,
-    Systray, Window, ICONIC_STATE, NORMAL_STATE, WITHDRAWN_STATE,
+    drw, handlers, Arg, Client, Layout, Monitor, Pertag, State, Systray,
+    Window, ICONIC_STATE, NORMAL_STATE, WITHDRAWN_STATE,
 };
 use libc::{c_long, c_uchar, pid_t, sigaction};
 use x11::keysym::XK_Num_Lock;
@@ -621,9 +621,9 @@ pub fn arrangemon(state: &mut State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
         (*m).ltsymbol = (*(*m).lt[(*m).sellt as usize]).symbol.clone();
-        let arrange = (*(*m).lt[(*m).sellt as usize]).arrange.0;
+        let arrange = &(*(*m).lt[(*m).sellt as usize]).arrange;
         if let Some(arrange) = arrange {
-            (arrange)(state, m);
+            (arrange.0)(state, m);
         }
     }
 }
@@ -636,11 +636,11 @@ pub fn restack(state: &mut State, m: *mut Monitor) {
             return;
         }
         if (*(*m).sel).isfloating
-            || (*(*m).lt[(*m).sellt as usize]).arrange.0.is_none()
+            || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
         {
             xlib::XRaiseWindow(state.dpy, (*(*m).sel).win);
         }
-        if (*(*m).lt[(*m).sellt as usize]).arrange.0.is_some() {
+        if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
             let mut wc = xlib::XWindowChanges {
                 stack_mode: Below,
                 sibling: (*m).barwin,
@@ -681,7 +681,6 @@ pub fn showhide(state: &mut State, c: *mut Client) {
             xlib::XMoveWindow(state.dpy, (*c).win, (*c).x, (*c).y);
             if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
-                .0
                 .is_none()
                 || (*c).isfloating)
                 && !(*c).isfullscreen
@@ -851,7 +850,6 @@ pub fn applysizehints(
             || (*c).isfloating
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
-                .0
                 .is_none()
         {
             if (*c).hintsvalid == 0 {
@@ -2091,7 +2089,7 @@ pub fn cleanup(mut state: State) {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
         (*state.selmon).lt[(*state.selmon).sellt as usize] =
-            &Layout { symbol: String::new(), arrange: LayoutFn(None) };
+            &Layout { symbol: String::new(), arrange: None };
 
         let mut m = state.mons;
         while !m.is_null() {

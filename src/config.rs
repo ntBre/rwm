@@ -283,9 +283,9 @@ static RULES: LazyLock<[Rule; 3]> = LazyLock::new(|| {
 
 static LAYOUTS: LazyLock<[Layout; 3]> = LazyLock::new(|| {
     [
-        Layout { symbol: "[]=".to_string(), arrange: LayoutFn(Some(tile)) },
-        Layout { symbol: "><>".to_string(), arrange: LayoutFn(None) },
-        Layout { symbol: "[M]".to_string(), arrange: LayoutFn(Some(monocle)) },
+        Layout { symbol: "[]=".to_string(), arrange: Some(LayoutFn(tile)) },
+        Layout { symbol: "><>".to_string(), arrange: None },
+        Layout { symbol: "[M]".to_string(), arrange: Some(LayoutFn(monocle)) },
     ]
 });
 

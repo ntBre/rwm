@@ -99,6 +99,27 @@ Config {
             ),
         },
     ],
-    layouts: [],
+    layouts: [
+        Layout {
+            symbol: "[]=",
+            arrange: Some(
+                LayoutFn(
+                    "[func]",
+                ),
+            ),
+        },
+        Layout {
+            symbol: "><>",
+            arrange: None,
+        },
+        Layout {
+            symbol: "[M]",
+            arrange: Some(
+                LayoutFn(
+                    "[func]",
+                ),
+            ),
+        },
+    ],
     scratchpadname: "scratchpad",
 }
