@@ -43,7 +43,7 @@ fn main() {
             unsafe { (*state.selmon).barwin },
             Button1,
             state
-                .CONFIG
+                .config
                 .tags
                 .iter()
                 .map(|tag| textw(&mut state.drw, tag, state.lrpad))

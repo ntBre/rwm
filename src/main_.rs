@@ -148,22 +148,22 @@ pub fn createmon(state: &State) -> *mut Monitor {
     unsafe {
         (*m).tagset[0] = 1;
         (*m).tagset[1] = 1;
-        (*m).mfact = state.CONFIG.mfact;
-        (*m).nmaster = state.CONFIG.nmaster;
-        (*m).showbar = state.CONFIG.showbar;
-        (*m).topbar = state.CONFIG.topbar;
-        (*m).lt[0] = &state.CONFIG.layouts[0];
-        (*m).lt[1] = &state.CONFIG.layouts[1 % state.CONFIG.layouts.len()];
-        (*m).ltsymbol = state.CONFIG.layouts[0].symbol.clone();
+        (*m).mfact = state.config.mfact;
+        (*m).nmaster = state.config.nmaster;
+        (*m).showbar = state.config.showbar;
+        (*m).topbar = state.config.topbar;
+        (*m).lt[0] = &state.config.layouts[0];
+        (*m).lt[1] = &state.config.layouts[1 % state.config.layouts.len()];
+        (*m).ltsymbol = state.config.layouts[0].symbol.clone();
 
         (*m).pertag = Pertag {
             curtag: 1,
             prevtag: 1,
-            nmasters: vec![(*m).nmaster; state.CONFIG.tags.len() + 1],
-            mfacts: vec![(*m).mfact; state.CONFIG.tags.len() + 1],
-            sellts: vec![(*m).sellt; state.CONFIG.tags.len() + 1],
-            ltidxs: vec![(*m).lt; state.CONFIG.tags.len() + 1],
-            showbars: vec![(*m).showbar; state.CONFIG.tags.len() + 1],
+            nmasters: vec![(*m).nmaster; state.config.tags.len() + 1],
+            mfacts: vec![(*m).mfact; state.config.tags.len() + 1],
+            sellts: vec![(*m).sellt; state.config.tags.len() + 1],
+            ltidxs: vec![(*m).lt; state.config.tags.len() + 1],
+            showbars: vec![(*m).showbar; state.config.tags.len() + 1],
         };
     }
 
@@ -223,8 +223,8 @@ pub fn setup(dpy: *mut Display) -> State {
         let root = xlib::XRootWindow(dpy, screen);
         let sw = xlib::XDisplayWidth(dpy, screen);
         let mut drw = drw::create(dpy, screen, root, sw as u32, sh as u32);
-        let CONFIG = Config::load_home();
-        if fontset_create(&mut drw, &CONFIG.fonts).is_err()
+        let config = Config::load_home();
+        if fontset_create(&mut drw, &config.fonts).is_err()
             || drw.fonts.is_empty()
         {
             panic!("no fonts could be loaded");
@@ -259,7 +259,7 @@ pub fn setup(dpy: *mut Display) -> State {
             numlockmask: 0,
             running: true,
             systray: None,
-            CONFIG: Config::load_home(),
+            config: Config::load_home(),
 
             #[cfg(target_os = "linux")]
             xcon: null_mut(),
@@ -324,10 +324,10 @@ pub fn setup(dpy: *mut Display) -> State {
             XInternAtom(state.dpy, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init appearance */
-        for i in 0..state.CONFIG.colors.0.len() {
+        for i in 0..state.config.colors.0.len() {
             state.scheme.push(drw::scm_create(
                 &state.drw,
-                &state.CONFIG.colors.0[i],
+                &state.config.colors.0[i],
                 3,
             ));
         }
@@ -570,7 +570,7 @@ pub fn grabbuttons(state: &mut State, c: *mut Client, focused: bool) {
                 XNONE as u64,
             );
         }
-        for button in &state.CONFIG.buttons {
+        for button in &state.config.buttons {
             if button.click == Clk::ClientWin as u32 {
                 for mod_ in modifiers {
                     xlib::XGrabButton(
@@ -753,9 +753,9 @@ pub fn resizeclient(
 pub fn resizebarwin(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut w = (*m).ww;
-        if state.CONFIG.showsystray
+        if state.config.showsystray
             && m == systraytomon(state, m)
-            && !state.CONFIG.systrayonleft
+            && !state.config.systrayonleft
         {
             w -= getsystraywidth(state) as i32;
         }
@@ -847,7 +847,7 @@ pub fn applysizehints(
         if *w < state.bh {
             *w = state.bh;
         }
-        if state.CONFIG.resize_hints
+        if state.config.resize_hints
             || (*c).isfloating
             || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
                 .arrange
@@ -1030,7 +1030,7 @@ pub fn grabkeys(state: &mut State) {
             return;
         }
         for k in start..=end {
-            for key in &state.CONFIG.keys {
+            for key in &state.config.keys {
                 // skip modifier codes, we do that ourselves
                 if key.keysym
                     == (*syms.offset(((k - start) * skip) as isize)) as u64
@@ -1166,7 +1166,7 @@ pub fn updatesystrayiconstate(
     unsafe {
         let mut flags: Atom = 0;
         let code;
-        if !state.CONFIG.showsystray
+        if !state.config.showsystray
             || i.is_null()
             || (*ev).atom != state.xatom[XEmbed::XEmbedInfo as usize]
         {
@@ -1232,13 +1232,13 @@ pub fn updatesystray(state: &mut State) {
         let m: *mut Monitor = systraytomon(state, null_mut());
         let mut x: c_int = (*m).mx + (*m).mw;
         let sw = textw(&mut state.drw, &state.stext, 0)
-            + state.CONFIG.systrayspacing as i32;
+            + state.config.systrayspacing as i32;
         let mut w = 1;
 
-        if !state.CONFIG.showsystray {
+        if !state.config.showsystray {
             return;
         }
-        if state.CONFIG.systrayonleft {
+        if state.config.systrayonleft {
             x -= sw + state.lrpad / 2;
         }
         if state.systray.is_none() {
@@ -1312,7 +1312,7 @@ pub fn updatesystray(state: &mut State) {
             wa.background_pixel = state.scheme[(Scheme::Norm , Col::Bg )].pixel;
             XChangeWindowAttributes(state.dpy, (*i).win, CWBackPixel, &mut wa);
             XMapRaised(state.dpy, (*i).win);
-            w += state.CONFIG.systrayspacing;
+            w += state.config.systrayspacing;
             (*i).x = w as i32;
             XMoveResizeWindow(state.dpy, (*i).win, (*i).x, 0, (*i).w as u32, (*i).h as u32);
             w += (*i).w as u32;
@@ -1320,7 +1320,7 @@ pub fn updatesystray(state: &mut State) {
                 (*i).mon = m;
             }
         });
-        w = if w != 0 { w + state.CONFIG.systrayspacing } else { 1 };
+        w = if w != 0 { w + state.config.systrayspacing } else { 1 };
         x -= w as i32;
         XMoveResizeWindow(
             state.dpy,
@@ -1369,7 +1369,7 @@ pub fn updatesystray(state: &mut State) {
 pub fn wintosystrayicon(state: &State, w: Window) -> *mut Client {
     unsafe {
         let mut i = null_mut();
-        if !state.CONFIG.showsystray || w == 0 {
+        if !state.config.showsystray || w == 0 {
             return i;
         }
         cfor!((i = state.systray().icons; !i.is_null() && (*i).win != w;
@@ -1384,7 +1384,7 @@ pub fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
         let mut t: *mut Monitor;
         let mut i;
         let mut n;
-        if state.CONFIG.systraypinning == 0 {
+        if state.config.systraypinning == 0 {
             if m.is_null() {
                 return state.selmon;
             }
@@ -1398,10 +1398,10 @@ pub fn systraytomon(state: &State, m: *mut Monitor) -> *mut Monitor {
             !t.is_null() && !(*t).next.is_null();
             (n, t) = (n+1, (*t).next)) {});
         cfor!(((i, t) = (1, state.mons);
-            !t.is_null() && !(*t).next.is_null() && i < state.CONFIG.systraypinning;
+            !t.is_null() && !(*t).next.is_null() && i < state.config.systraypinning;
             (i, t) = (i+1, (*t).next)) {});
-        if state.CONFIG.systraypinningfailfirst
-            && n < state.CONFIG.systraypinning
+        if state.config.systraypinningfailfirst
+            && n < state.config.systraypinning
         {
             return state.mons;
         }
@@ -1424,9 +1424,9 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
         let boxw = state.drw.fonts[0].h / 6 + 2;
         let (mut occ, mut urg) = (0, 0);
 
-        if state.CONFIG.showsystray
+        if state.config.showsystray
             && m == systraytomon(state, m)
-            && !state.CONFIG.systrayonleft
+            && !state.config.systrayonleft
         {
             stw = getsystraywidth(state);
         }
@@ -1465,7 +1465,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
         }
 
         let mut x = 0;
-        for (i, tag) in state.CONFIG.tags.iter().enumerate() {
+        for (i, tag) in state.config.tags.iter().enumerate() {
             let text = tag.to_owned();
             let w = textw(&mut state.drw, &text, state.lrpad);
             drw::setscheme(
@@ -1676,7 +1676,7 @@ pub fn updatebars(state: &mut State) {
                 continue;
             }
             let mut w = (*m).ww;
-            if state.CONFIG.showsystray && m == systraytomon(state, m) {
+            if state.config.showsystray && m == systraytomon(state, m) {
                 w -= getsystraywidth(state) as i32;
             }
             (*m).barwin = xlib::XCreateWindow(
@@ -1698,7 +1698,7 @@ pub fn updatebars(state: &mut State) {
                 (*m).barwin,
                 state.cursors.normal.cursor,
             );
-            if state.CONFIG.showsystray && m == systraytomon(state, m) {
+            if state.config.showsystray && m == systraytomon(state, m) {
                 xlib::XMapRaised(state.dpy, state.systray().win);
             }
             xlib::XMapRaised(state.dpy, (*m).barwin);
@@ -1917,7 +1917,7 @@ pub fn recttomon(
 
 pub fn removesystrayicon(state: &mut State, i: *mut Client) {
     unsafe {
-        if !state.CONFIG.showsystray || i.is_null() {
+        if !state.config.showsystray || i.is_null() {
             return;
         }
         let mut ii: *mut *mut Client;
@@ -2107,7 +2107,7 @@ pub fn cleanup(mut state: State) {
             cleanupmon(state.mons, &mut state);
         }
 
-        if state.CONFIG.showsystray {
+        if state.config.showsystray {
             XUnmapWindow(state.dpy, state.systray().win);
             XDestroyWindow(state.dpy, state.systray().win);
         }
@@ -2536,7 +2536,7 @@ pub fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         }
         (*c).x = max((*c).x, (*(*c).mon).wx as i32);
         (*c).y = max((*c).y, (*(*c).mon).wy as i32);
-        (*c).bw = state.CONFIG.borderpx as i32;
+        (*c).bw = state.config.borderpx as i32;
 
         // TODO pretty sure this doesn't work with pertags, which explains some
         // behavior I saw before in dwm. probably need to operate on
@@ -2547,7 +2547,7 @@ pub fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         // like something meant to be handled by RULES
         (*state.selmon).tagset[(*state.selmon).seltags as usize] &=
             !state.scratchtag();
-        if (*c).name == state.CONFIG.scratchpadname {
+        if (*c).name == state.config.scratchpadname {
             (*c).tags = state.scratchtag();
             (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
             (*c).isfloating = true;
@@ -2772,15 +2772,15 @@ pub fn getsystraywidth(state: &State) -> c_uint {
     unsafe {
         let mut w = 0;
         let mut i;
-        if state.CONFIG.showsystray {
+        if state.config.showsystray {
             cfor!((
                 i = state.systray().icons;
             !i.is_null();
-            (w, i) = (w + (*i).w + state.CONFIG.systrayspacing as i32, (*i).next))
+            (w, i) = (w + (*i).w + state.config.systrayspacing as i32, (*i).next))
             {});
         }
         if w != 0 {
-            w as c_uint + state.CONFIG.systrayspacing
+            w as c_uint + state.config.systrayspacing
         } else {
             1
         }
@@ -2809,7 +2809,7 @@ pub fn applyrules(state: &mut State, c: *mut Client) {
             BROKEN
         };
 
-        for r in &state.CONFIG.rules {
+        for r in &state.config.rules {
             if (r.title.is_empty() || (*c).name.contains(&r.title))
                 && (r.class.is_empty()
                     || class.to_string_lossy().contains(&r.class))
@@ -2849,7 +2849,7 @@ pub fn swallow(state: &mut State, p: *mut Client, c: *mut Client) {
         if c.noswallow || c.isterminal {
             return;
         }
-        if c.noswallow && !state.CONFIG.swallowfloating && c.isfloating {
+        if c.noswallow && !state.config.swallowfloating && c.isfloating {
             return;
         }
         detach(c);

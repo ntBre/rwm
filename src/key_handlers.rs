@@ -31,7 +31,7 @@ pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
             [(*state.selmon).pertag.curtag as usize];
         updatebarpos(state, state.selmon);
         resizebarwin(state, state.selmon);
-        if state.CONFIG.showsystray {
+        if state.config.showsystray {
             let mut wc = XWindowChanges {
                 x: 0,
                 y: 0,
@@ -67,7 +67,7 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
 
         if (*state.selmon).sel.is_null()
             || ((*(*state.selmon).sel).isfullscreen
-                && state.CONFIG.lock_fullscreen)
+                && state.config.lock_fullscreen)
         {
             return;
         }
@@ -245,7 +245,7 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
         if arg.is_null()
             || (*arg).l().is_none()
             || !std::ptr::eq(
-                &state.CONFIG.layouts[(*arg).l().unwrap()],
+                &state.config.layouts[(*arg).l().unwrap()],
                 (*state.selmon).lt[(*state.selmon).sellt as usize],
             )
         {
@@ -258,7 +258,7 @@ pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
             (*state.selmon).pertag.ltidxs
                 [(*state.selmon).pertag.curtag as usize]
                 [(*state.selmon).sellt as usize] =
-                &state.CONFIG.layouts[(*arg).l().unwrap()];
+                &state.config.layouts[(*arg).l().unwrap()];
             (*state.selmon).lt[(*state.selmon).sellt as usize] =
                 (*state.selmon).pertag.ltidxs
                     [(*state.selmon).pertag.curtag as usize]
@@ -546,24 +546,24 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                     let mut nx = ocx + (ev.motion.x - x);
                     let mut ny = ocy + (ev.motion.y - y);
                     if ((*state.selmon).wx - nx).abs()
-                        < state.CONFIG.snap as c_int
+                        < state.config.snap as c_int
                     {
                         nx = (*state.selmon).wx;
                     } else if (((*state.selmon).wx + (*state.selmon).ww)
                         - (nx + width(c)))
                     .abs()
-                        < state.CONFIG.snap as c_int
+                        < state.config.snap as c_int
                     {
                         nx = (*state.selmon).wx + (*state.selmon).ww - width(c);
                     }
                     if ((*state.selmon).wy - ny).abs()
-                        < state.CONFIG.snap as c_int
+                        < state.config.snap as c_int
                     {
                         ny = (*state.selmon).wy;
                     } else if (((*state.selmon).wy + (*state.selmon).wh)
                         - (ny + height(c)))
                     .abs()
-                        < state.CONFIG.snap as c_int
+                        < state.config.snap as c_int
                     {
                         ny =
                             (*state.selmon).wy + (*state.selmon).wh - height(c);
@@ -573,8 +573,8 @@ pub(crate) fn movemouse(state: &mut State, _arg: *const Arg) {
                             .arrange
                             .0
                             .is_some()
-                        && ((nx - c.x).abs() > state.CONFIG.snap as c_int
-                            || (ny - c.y).abs() > state.CONFIG.snap as c_int)
+                        && ((nx - c.x).abs() > state.config.snap as c_int
+                            || (ny - c.y).abs() > state.config.snap as c_int)
                     {
                         togglefloating(state, null_mut());
                     }
@@ -675,8 +675,8 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
                             .arrange
                             .0
                             .is_some()
-                        && ((nw - c.w).abs() > state.CONFIG.snap as c_int
-                            || (nh - c.h).abs() > state.CONFIG.snap as c_int)
+                        && ((nw - c.w).abs() > state.config.snap as c_int
+                            || (nh - c.h).abs() > state.config.snap as c_int)
                     {
                         togglefloating(state, null_mut());
                     }
@@ -721,7 +721,7 @@ pub(crate) fn resizemouse(state: &mut State, _arg: *const Arg) {
 pub(crate) fn spawn(state: &mut State, arg: *const Arg) {
     unsafe {
         let mut argv = (*arg).v();
-        if argv == *state.CONFIG.dmenucmd {
+        if argv == *state.config.dmenucmd {
             log::trace!("spawn: dmenucmd on monitor {}", (*state.selmon).num);
             argv.push("-m".into());
             argv.push((*state.selmon).num.to_string());

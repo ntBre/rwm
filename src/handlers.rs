@@ -56,17 +56,17 @@ pub fn buttonpress(state: &mut State, e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(&mut state.drw, &state.CONFIG.tags[i], state.lrpad);
+                x += textw(&mut state.drw, &state.config.tags[i], state.lrpad);
                 // condition
                 if ev.x < x {
                     break;
                 }
                 i += 1;
-                if i >= state.CONFIG.tags.len() {
+                if i >= state.config.tags.len() {
                     break;
                 }
             }
-            if i < state.CONFIG.tags.len() {
+            if i < state.config.tags.len() {
                 click = Clk::TagBar;
                 arg = Arg::Ui(1 << i);
             } else if ev.x
@@ -95,20 +95,20 @@ pub fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for i in 0..state.CONFIG.buttons.len() {
-            if click as u32 == state.CONFIG.buttons[i].click
-                && state.CONFIG.buttons[i].func.0.is_some()
-                && state.CONFIG.buttons[i].button == ev.button
-                && cleanmask(state, state.CONFIG.buttons[i].mask)
+        for i in 0..state.config.buttons.len() {
+            if click as u32 == state.config.buttons[i].click
+                && state.config.buttons[i].func.0.is_some()
+                && state.config.buttons[i].button == ev.button
+                && cleanmask(state, state.config.buttons[i].mask)
                     == cleanmask(state, ev.state)
             {
-                let f = state.CONFIG.buttons[i].func.0.unwrap();
+                let f = state.config.buttons[i].func.0.unwrap();
                 let a = if click == Clk::TagBar
-                    && state.CONFIG.buttons[i].arg.i() == 0
+                    && state.config.buttons[i].arg.i() == 0
                 {
                     &arg
                 } else {
-                    &state.CONFIG.buttons[i].arg
+                    &state.config.buttons[i].arg
                 };
                 f(state, a)
             }
@@ -121,7 +121,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
         let cme = &(*e).client_message;
         let mut c = wintoclient(state, cme.window);
 
-        if state.CONFIG.showsystray
+        if state.config.showsystray
             && cme.window == state.systray().win
             && cme.message_type == state.netatom[Net::SystemTrayOP as usize]
         {
@@ -479,15 +479,15 @@ pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
         let ev = &mut (*e).key;
         let keysym =
             xlib::XKeycodeToKeysym(state.dpy, ev.keycode as KeyCode, 0);
-        for i in 0..state.CONFIG.keys.len() {
-            if keysym == state.CONFIG.keys[i].keysym
-                && cleanmask(state, state.CONFIG.keys[i].mod_)
+        for i in 0..state.config.keys.len() {
+            if keysym == state.config.keys[i].keysym
+                && cleanmask(state, state.config.keys[i].mod_)
                     == cleanmask(state, ev.state)
-                && state.CONFIG.keys[i].func.0.is_some()
+                && state.config.keys[i].func.0.is_some()
             {
-                state.CONFIG.keys[i].func.0.unwrap()(
+                state.config.keys[i].func.0.unwrap()(
                     state,
-                    &(state.CONFIG.keys[i].arg),
+                    &(state.config.keys[i].arg),
                 );
             }
         }

@@ -67,7 +67,7 @@ pub struct State {
     pub wmcheckwin: Window,
     pub running: bool,
     pub numlockmask: c_uint,
-    pub CONFIG: Config,
+    pub config: Config,
 
     #[cfg(target_os = "linux")]
     pub xcon: *mut Connection,
@@ -83,11 +83,11 @@ impl State {
     }
 
     pub fn tagmask(&self) -> u32 {
-        (1 << self.CONFIG.tags.len()) - 1
+        (1 << self.config.tags.len()) - 1
     }
 
     pub fn scratchtag(&self) -> u32 {
-        1 << self.CONFIG.tags.len()
+        1 << self.config.tags.len()
     }
 }
 
