@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::c_uint, sync::LazyLock};
 
+use crate::{Arg, State};
 use fig::{FigError, Value};
-use rwm::{Arg, State};
 use x11::xlib::KeySym;
 
 #[derive(Clone, Debug, serde::Deserialize)]

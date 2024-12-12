@@ -24,7 +24,7 @@ use crate::{
     key_handlers::*,
     layouts::{monocle, tile},
 };
-use rwm::{Arg, Button, ButtonFn, Layout, LayoutFn, Monitor, Rule, State};
+use crate::{Arg, Button, ButtonFn, Layout, LayoutFn, Monitor, Rule, State};
 
 mod fig_env;
 pub mod key;
@@ -424,8 +424,6 @@ impl Config {
         })
     }
 }
-
-pub static CONFIG: LazyLock<Config> = LazyLock::new(Config::load_home);
 
 // appearance
 

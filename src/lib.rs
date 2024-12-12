@@ -1,15 +1,34 @@
+#![allow(clippy::missing_safety_doc, clippy::not_unsafe_ptr_arg_deref)]
+
 use std::ffi::{c_int, c_uint};
 
 use enums::Clk;
 use x11::xft::XftColor;
 
+pub mod config;
 pub mod drw;
 pub mod enums;
 pub mod events;
+pub mod handlers;
+pub mod key_handlers;
+pub mod layouts;
 pub mod util;
+pub mod xembed;
+
+pub use main_::*;
+mod main_;
 
 pub use state::*;
 mod state;
+
+/// most applications want to start this way
+pub const NORMAL_STATE: usize = 1;
+/// application wants to start as an icon
+pub const ICONIC_STATE: usize = 3;
+
+// from Xutil.h
+/// for windows that are not mapped
+pub const WITHDRAWN_STATE: usize = 0;
 
 pub type Window = u64;
 pub type Clr = XftColor;

@@ -3,8 +3,8 @@
 
 use std::{collections::HashMap, sync::LazyLock};
 
+use crate::enums::Clk;
 use fig::Value;
-use rwm::enums::Clk;
 use x11::xlib::{
     Button1, Button2, Button3, ControlMask, Mod2Mask, Mod3Mask, Mod4Mask,
     Mod5Mask, ShiftMask,

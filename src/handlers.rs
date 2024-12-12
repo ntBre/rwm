@@ -14,7 +14,7 @@ use x11::xlib::{
     XA_WM_TRANSIENT_FOR,
 };
 
-use rwm::{
+use crate::{
     drw,
     enums::{Col, Scheme, XEmbed},
     util::ecalloc,
@@ -22,9 +22,7 @@ use rwm::{
 };
 
 use crate::{
-    arrange, cleanmask,
-    config::CONFIG,
-    configure, drawbar, drawbars,
+    arrange, cleanmask, configure, drawbar, drawbars,
     enums::{Clk, Net},
     focus, getsystraywidth, grabkeys, height, is_visible, manage, recttomon,
     removesystrayicon, resizebarwin, resizeclient, restack, sendevent,
@@ -41,7 +39,7 @@ use crate::{
     NORMAL_STATE, WITHDRAWN_STATE,
 };
 
-pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
+pub fn buttonpress(state: &mut State, e: *mut XEvent) {
     unsafe {
         let mut arg = Arg::I(0);
         let ev = &(*e).button;
@@ -58,17 +56,17 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(&mut state.drw, &CONFIG.tags[i], state.lrpad);
+                x += textw(&mut state.drw, &state.CONFIG.tags[i], state.lrpad);
                 // condition
                 if ev.x < x {
                     break;
                 }
                 i += 1;
-                if i >= CONFIG.tags.len() {
+                if i >= state.CONFIG.tags.len() {
                     break;
                 }
             }
-            if i < CONFIG.tags.len() {
+            if i < state.CONFIG.tags.len() {
                 click = Clk::TagBar;
                 arg = Arg::Ui(1 << i);
             } else if ev.x
@@ -97,17 +95,20 @@ pub(crate) fn buttonpress(state: &mut State, e: *mut XEvent) {
                 click = Clk::ClientWin;
             }
         }
-        for button in &CONFIG.buttons {
-            if click as u32 == button.click
-                && button.func.0.is_some()
-                && button.button == ev.button
-                && cleanmask(state, button.mask) == cleanmask(state, ev.state)
+        for i in 0..state.CONFIG.buttons.len() {
+            if click as u32 == state.CONFIG.buttons[i].click
+                && state.CONFIG.buttons[i].func.0.is_some()
+                && state.CONFIG.buttons[i].button == ev.button
+                && cleanmask(state, state.CONFIG.buttons[i].mask)
+                    == cleanmask(state, ev.state)
             {
-                let f = button.func.0.unwrap();
-                let a = if click == Clk::TagBar && button.arg.i() == 0 {
+                let f = state.CONFIG.buttons[i].func.0.unwrap();
+                let a = if click == Clk::TagBar
+                    && state.CONFIG.buttons[i].arg.i() == 0
+                {
                     &arg
                 } else {
-                    &button.arg
+                    &state.CONFIG.buttons[i].arg
                 };
                 f(state, a)
             }
@@ -120,7 +121,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
         let cme = &(*e).client_message;
         let mut c = wintoclient(state, cme.window);
 
-        if CONFIG.showsystray
+        if state.CONFIG.showsystray
             && cme.window == state.systray().win
             && cme.message_type == state.netatom[Net::SystemTrayOP as usize]
         {
@@ -478,12 +479,16 @@ pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
         let ev = &mut (*e).key;
         let keysym =
             xlib::XKeycodeToKeysym(state.dpy, ev.keycode as KeyCode, 0);
-        for key in &CONFIG.keys {
-            if keysym == key.keysym
-                && cleanmask(state, key.mod_) == cleanmask(state, ev.state)
-                && key.func.0.is_some()
+        for i in 0..state.CONFIG.keys.len() {
+            if keysym == state.CONFIG.keys[i].keysym
+                && cleanmask(state, state.CONFIG.keys[i].mod_)
+                    == cleanmask(state, ev.state)
+                && state.CONFIG.keys[i].func.0.is_some()
             {
-                key.func.0.unwrap()(state, &(key.arg));
+                state.CONFIG.keys[i].func.0.unwrap()(
+                    state,
+                    &(state.CONFIG.keys[i].arg),
+                );
             }
         }
     }
