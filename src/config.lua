@@ -1,4 +1,16 @@
+function key (mod, keysym, func, arg)
+   return {
+	  mod_ = mod,
+	  keysym = keysym,
+	  func = func,
+	  arg = arg,
+   }
+end
+
 dmenufont =  "monospace:size=10"
+dmenucmd = {"dmenu_run", "-fn", dmenufont, "-nb"}
+modkey = Mod4Mask
+s_mod = ShiftMask | modkey
 
 rwm = {
    borderpx = 3,
@@ -17,8 +29,9 @@ rwm = {
 	  -- gray4, cyan, cyan
 	  sel = {"#eeeeee", "#005577", "#005577"},
    },
-   keys = {}, 					-- TODO
-   dmenucmd = {"dmenu_run", "-fn", dmenufont, "-nb"}, -- TODO
+   -- TODO
+   keys = {key(modkey, XK_p, spawn, {V = dmenucmd})},
+   dmenucmd = dmenucmd, -- TODO
    rules = {},										 -- TODO
    swallowfloating = false,
    systraypinning = 0,

@@ -176,14 +176,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fig"
-version = "0.1.0"
-source = "git+https://github.com/ntBre/fig#37dcfda168ddbf8d1b5b83838de8d3982e8791fe"
-dependencies = [
- "nom",
-]
-
-[[package]]
 name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -283,15 +275,6 @@ dependencies = [
  "cc",
  "cfg-if",
  "pkg-config",
-]
-
-[[package]]
-name = "nom"
-version = "8.0.0-alpha2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2785486691910e746b3d84220af18362bd15ba71f9b7bc0a47ac549550b7fe2"
-dependencies = [
- "memchr",
 ]
 
 [[package]]
@@ -423,7 +406,6 @@ name = "rwm"
 version = "0.1.0"
 dependencies = [
  "env_logger",
- "fig",
  "insta",
  "libc",
  "log",
