@@ -1,0 +1,60 @@
+---
+source: src/config.rs
+expression: got
+snapshot_kind: text
+---
+Config {
+    borderpx: 3,
+    snap: 32,
+    showbar: true,
+    topbar: true,
+    mfact: 0.5,
+    nmaster: 1,
+    resize_hints: false,
+    lock_fullscreen: true,
+    fonts: [
+        "monospace:size=10",
+    ],
+    tags: [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+    ],
+    colors: ColorMap(
+        [
+            [
+                "#bbbbbb",
+                "#222222",
+                "#444444",
+            ],
+            [
+                "#eeeeee",
+                "#005577",
+                "#005577",
+            ],
+        ],
+    ),
+    keys: [],
+    dmenucmd: [
+        "dmenu_run",
+        "-fn",
+        "monospace:size=10",
+        "-nb",
+    ],
+    rules: [],
+    swallowfloating: false,
+    systraypinning: 0,
+    systrayonleft: false,
+    systrayspacing: 2,
+    systraypinningfailfirst: true,
+    showsystray: true,
+    buttons: [],
+    layouts: [],
+    scratchpadname: "scratchpad",
+}

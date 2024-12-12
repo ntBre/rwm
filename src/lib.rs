@@ -47,7 +47,7 @@ impl Arg {
     }
 }
 
-#[derive(Clone, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 #[serde(try_from = "String")]
 pub struct ButtonFn(pub Option<fn(&mut State, *const Arg)>);
 
@@ -60,7 +60,7 @@ impl TryFrom<String> for ButtonFn {
 }
 
 #[repr(C)]
-#[derive(Clone, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,

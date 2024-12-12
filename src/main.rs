@@ -329,10 +329,10 @@ fn setup(dpy: *mut Display) -> State {
             XInternAtom(state.dpy, c"_XEMBED_INFO".as_ptr(), False);
 
         /* init appearance */
-        for i in 0..CONFIG.colors.len() {
+        for i in 0..CONFIG.colors.0.len() {
             state.scheme.push(drw::scm_create(
                 &state.drw,
-                &CONFIG.colors[i],
+                &CONFIG.colors.0[i],
                 3,
             ));
         }

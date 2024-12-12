@@ -4,7 +4,7 @@ use fig::{FigError, Value};
 use rwm::{Arg, State};
 use x11::xlib::KeySym;
 
-#[derive(Clone, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Deserialize)]
 #[serde(try_from = "String")]
 pub struct KeyFn(pub Option<fn(&mut State, *const Arg)>);
 
@@ -17,7 +17,7 @@ impl TryFrom<String> for KeyFn {
 }
 
 #[repr(C)]
-#[derive(Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,

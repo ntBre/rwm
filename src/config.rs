@@ -2,12 +2,14 @@ use std::{
     collections::HashMap,
     error::Error,
     ffi::{c_float, c_int, c_uint, CString},
+    fs::read_to_string,
     path::Path,
     sync::LazyLock,
 };
 
 use fig::{Fig, FigError, Value};
 use key::{get_arg, FUNC_MAP};
+use mlua::{Lua, LuaSerdeExt as _};
 use x11::keysym::{
     XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_grave, XK_h, XK_i,
     XK_j, XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
@@ -42,7 +44,7 @@ impl Default for Config {
             tags: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
                 .map(String::from)
                 .to_vec(),
-            colors: default_colors(),
+            colors: ColorMap(default_colors()),
             keys: default_keys().to_vec(),
             dmenucmd: DMENUCMD.to_vec(),
             rules: RULES.to_vec(),
@@ -59,7 +61,41 @@ impl Default for Config {
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
+#[serde(try_from = "HashMap<String, Vec<String>>")]
+pub struct ColorMap(pub [[CString; 3]; 2]);
+
+impl TryFrom<HashMap<String, Vec<String>>> for ColorMap {
+    type Error = Box<dyn Error>;
+
+    fn try_from(
+        value: HashMap<String, Vec<String>>,
+    ) -> Result<Self, Self::Error> {
+        let mut ret = default_colors();
+        let norm = value.get("norm").ok_or_else(|| "missing key norm")?;
+        let sel = value.get("sel").ok_or_else(|| "missing key sel")?;
+        let [n0, n1, n2] = &norm[..] else {
+            return Err("not enough colors for SchemeNorm".into());
+        };
+        ret[Scheme::Norm as usize] = [
+            CString::new(n0.clone())?,
+            CString::new(n1.clone())?,
+            CString::new(n2.clone())?,
+        ];
+        let [s0, s1, s2] = &sel[..] else {
+            return Err("not enough colors for SchemeSel".into());
+        };
+        ret[Scheme::Sel as usize] = [
+            CString::new(s0.clone())?,
+            CString::new(s1.clone())?,
+            CString::new(s2.clone())?,
+        ];
+
+        Ok(Self(ret))
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
 pub struct Config {
     /// Border pixel of windows
     pub borderpx: c_uint,
@@ -89,7 +125,7 @@ pub struct Config {
 
     pub tags: Vec<String>,
 
-    pub colors: [[CString; 3]; 2],
+    pub colors: ColorMap,
 
     pub keys: Vec<Key>,
 
@@ -326,7 +362,7 @@ impl TryFrom<Fig> for Config {
             lock_fullscreen: bool(get(&mut v, "lock_fullscreen")?)?,
             fonts: cstr_list(get(&mut v, "fonts")?)?,
             tags: str_list(get(&mut v, "tags")?)?,
-            colors: get_colors(&mut v)?,
+            colors: ColorMap(get_colors(&mut v)?),
             keys: get_keys(&mut v)?,
             dmenucmd: get(&mut v, "dmenucmd")?.try_into()?,
             rules: get_rules(&mut v)?,
@@ -353,6 +389,17 @@ impl Config {
         f.variables = fig_env::FIG_ENV.clone();
         f.parse(&s)?;
         Self::try_from(f)
+    }
+
+    #[allow(dependency_on_unit_never_type_fallback)]
+    pub fn from_lua(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        lua.load(include_str!("config.lua")).eval()?;
+        lua.load(read_to_string(path)?).eval()?;
+
+        Ok(lua.from_value(globals.get("rwm")?)?)
     }
 }
 
@@ -588,6 +635,8 @@ static BUTTONS: LazyLock<[Button; 11]> = LazyLock::new(|| {
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_debug_snapshot;
+
     use super::*;
 
     #[test]
@@ -596,5 +645,11 @@ mod tests {
         let conf = Config::load("example.fig").unwrap();
 
         assert_eq!(conf.tags.len(), 9);
+    }
+
+    #[test]
+    fn from_lua() {
+        let got = Config::from_lua("example.lua").unwrap();
+        assert_debug_snapshot!(got);
     }
 }
