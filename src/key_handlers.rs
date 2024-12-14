@@ -12,13 +12,13 @@ use x11::xlib::{
     XUngrabServer, XWarpPointer, XWindowChanges, CWY,
 };
 
-use crate::enums::WM;
-use crate::main_::{
+use crate::core::{
     arrange, attach, attachstack, detach, detachstack, drawbar, focus,
     getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
     resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
     width, xerror, xerrordummy, HANDLER, MOUSEMASK, XNONE,
 };
+use crate::enums::WM;
 use crate::{cfor, State};
 use crate::{Arg, Client, Monitor};
 

@@ -20,8 +20,8 @@ pub mod layouts;
 pub mod util;
 pub mod xembed;
 
-pub use main_::*;
-mod main_;
+pub use core::*;
+mod core;
 
 pub use state::*;
 mod state;
