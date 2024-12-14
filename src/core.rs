@@ -259,7 +259,7 @@ pub fn setup(dpy: *mut Display) -> State {
             numlockmask: 0,
             running: true,
             systray: None,
-            config: Config::load_home(),
+            config,
 
             #[cfg(target_os = "linux")]
             xcon: null_mut(),
