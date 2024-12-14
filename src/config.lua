@@ -167,5 +167,5 @@ rwm = {
 	  {symbol = "><>", arrange = nil },
 	  {symbol = "[M]", arrange = monocle },
    },
-   scratchpadname = "scratchpad",
+   scratchpadname = scratchpadname,
 }
