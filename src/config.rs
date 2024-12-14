@@ -182,7 +182,7 @@ impl Config {
         let config_path = Path::new(&home.unwrap())
             .join(".config")
             .join("rwm")
-            .join("config.fig");
+            .join("config.lua");
 
         Config::from_lua(config_path).unwrap_or_else(|e| {
             log::error!("failed to read config file: {e:?}");
