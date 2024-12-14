@@ -31,6 +31,15 @@ function rule (class, instance, title, tags, isfloating, isterminal, noswallow, 
    }
 end
 
+-- For each tag key (N = 1, 2, ...) you generally want to set four bindings:
+--
+-- * MOD+N to view the tag
+-- * MOD+Ctrl+N to toggle viewing the tag
+-- * MOD+Shift+N to send a window to the tag
+-- * MOD+Shift+Control+N to toggle the display of a window on a tag
+--
+-- This function inserts each of those into `keys` for the default tag keys XK_1
+-- through XK_9.
 function tagkeys (keys)
    for i, xk in ipairs({XK_1, XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9}) do
 	  arg = {Ui = 1 << (i - 1)}
@@ -127,11 +136,18 @@ rwm = {
    rules = {
 	  rule("st-256color", "", "", 0, false, true, false, -1),
    },
+   -- Whether to swallow floating windows
    swallowfloating = false,
+   -- If 0, sloppy systray follows monitor, otherwise pin systray to monitor n
    systraypinning = 0,
+   -- Pin the systray to the left size of the bar
    systrayonleft = false,
+   -- Spacing in pixels between icons in the systray
    systrayspacing = 2,
+   -- If pinning the systray to the active monitor fails, display it on first
+   -- monitor. If `false`, display it instead on the last monitor
    systraypinningfailfirst = true,
+   -- Show the systray
    showsystray = true,
    buttons = {
 	  button(ClkLtSymbol, 0, Button1, setlayout),
