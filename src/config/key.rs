@@ -26,6 +26,7 @@ pub struct Key {
     pub mod_: c_uint,
     pub keysym: KeySym,
     pub func: KeyFn,
+    #[serde(default = "crate::default_button_arg")]
     pub arg: Arg,
 }
 
