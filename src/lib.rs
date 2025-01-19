@@ -1,21 +1,45 @@
-use std::ffi::{c_char, c_int, c_uint};
+#![allow(clippy::missing_safety_doc, clippy::not_unsafe_ptr_arg_deref)]
 
+use std::{
+    ffi::{c_int, c_uint},
+    fmt::Debug,
+};
+
+use config::key::FUNC_MAP;
 use enums::Clk;
+use layouts::{monocle, tile};
 use x11::xft::XftColor;
 
+pub mod config;
 pub mod drw;
 pub mod enums;
 pub mod events;
+pub mod handlers;
+pub mod key_handlers;
+pub mod layouts;
 pub mod util;
+pub mod xembed;
+
+pub use core::*;
+mod core;
 
 pub use state::*;
 mod state;
+
+/// most applications want to start this way
+pub const NORMAL_STATE: usize = 1;
+/// application wants to start as an icon
+pub const ICONIC_STATE: usize = 3;
+
+// from Xutil.h
+/// for windows that are not mapped
+pub const WITHDRAWN_STATE: usize = 0;
 
 pub type Window = u64;
 pub type Clr = XftColor;
 
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub enum Arg {
     I(c_int),
     Ui(c_uint),
@@ -47,14 +71,46 @@ impl Arg {
     }
 }
 
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct ButtonFn(pub Option<fn(&mut State, *const Arg)>);
+
+impl TryFrom<String> for ButtonFn {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self(Some(
+            FUNC_MAP
+                .get(value.as_str())
+                .cloned()
+                .ok_or_else(|| format!("no key `{value}`"))?,
+        )))
+    }
+}
+
+impl Debug for ButtonFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ButtonFn")
+            .field(&self.0.map(|_| "[func]"))
+            .finish()
+    }
+}
+
 #[repr(C)]
-#[derive(Clone)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<fn(&mut State, *const Arg)>,
+    pub func: ButtonFn,
+    #[serde(default = "default_button_arg")]
     pub arg: Arg,
+}
+
+/// Hack to get around `{L = nil}` equating to an empty table in Lua. If the
+/// table's empty, treat it as the only optional Arg variant
+fn default_button_arg() -> Arg {
+    Arg::L(None)
 }
 
 impl Button {
@@ -65,7 +121,13 @@ impl Button {
         func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
-        Self { click: click as c_uint, mask, button, func: Some(func), arg }
+        Self {
+            click: click as c_uint,
+            mask,
+            button,
+            func: ButtonFn(Some(func)),
+            arg,
+        }
     }
 }
 
@@ -76,10 +138,10 @@ pub struct Cursor {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Rule {
-    pub class: *const c_char,
-    pub instance: *const c_char,
+    pub class: String,
+    pub instance: String,
     pub title: String,
     pub tags: c_uint,
     pub isfloating: bool,
@@ -93,11 +155,34 @@ pub struct Systray {
     pub icons: *mut Client,
 }
 
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct LayoutFn(pub fn(&mut State, *mut Monitor));
+
+impl TryFrom<String> for LayoutFn {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "tile" => Ok(Self(tile)),
+            "monocle" => Ok(Self(monocle)),
+            s => Err(format!("unknown layout `{s}`")),
+        }
+    }
+}
+
+impl Debug for LayoutFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("LayoutFn").field(&"[func]").finish()
+    }
+}
+
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Layout {
     pub symbol: String,
-    pub arrange: Option<fn(&mut State, *mut Monitor)>,
+    #[serde(default)]
+    pub arrange: Option<LayoutFn>,
 }
 
 #[derive(Clone, Debug)]

@@ -1,5 +1,5 @@
-use rwm::events::Event;
-use xlib::Button1;
+use rwm::{events::Event, handlers, textw};
+use x11::xlib::{Button1, XOpenDisplay};
 
 use super::*;
 
@@ -11,9 +11,9 @@ fn main() {
     let mut cmd = Command::new("Xvfb").arg(":1").spawn().unwrap();
 
     // wait for xephyr to start
-    let mut dpy = unsafe { xlib::XOpenDisplay(c":1.0".as_ptr()) };
+    let mut dpy = unsafe { XOpenDisplay(c":1.0".as_ptr()) };
     while dpy.is_null() {
-        dpy = unsafe { xlib::XOpenDisplay(c":1.0".as_ptr()) };
+        dpy = unsafe { XOpenDisplay(c":1.0".as_ptr()) };
     }
 
     // goto for killing xephyr no matter what
@@ -42,7 +42,8 @@ fn main() {
         let mut button = Event::button(
             unsafe { (*state.selmon).barwin },
             Button1,
-            CONFIG
+            state
+                .config
                 .tags
                 .iter()
                 .map(|tag| textw(&mut state.drw, tag, state.lrpad))

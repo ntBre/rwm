@@ -24,11 +24,11 @@ jobs:
         if: ${{ ! matrix.is_mac }}
         run: |
           sudo apt-get update
-          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
         run: |
-          brew install libxft libxinerama
+          brew install libxft libxinerama lua
           brew install --cask xquartz
           echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
       - name: Install ${{ matrix.toolchain }}

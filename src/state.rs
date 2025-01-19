@@ -9,6 +9,7 @@ use x11::xlib::{self, Atom, Display};
 use xcb::Connection;
 
 use crate::{
+    config::Config,
     drw::{self, Drw},
     enums::{Col, Net, Scheme, XEmbed, WM},
     Clr, Cursors, Monitor, Systray, Window,
@@ -66,6 +67,7 @@ pub struct State {
     pub wmcheckwin: Window,
     pub running: bool,
     pub numlockmask: c_uint,
+    pub config: Config,
 
     #[cfg(target_os = "linux")]
     pub xcon: *mut Connection,
@@ -78,6 +80,14 @@ impl State {
 
     pub fn systray_mut(&mut self) -> &mut Systray {
         self.systray.as_mut().unwrap()
+    }
+
+    pub fn tagmask(&self) -> u32 {
+        (1 << self.config.tags.len()) - 1
+    }
+
+    pub fn scratchtag(&self) -> u32 {
+        1 << self.config.tags.len()
     }
 }
 

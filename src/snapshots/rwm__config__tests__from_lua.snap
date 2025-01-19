@@ -1,0 +1,908 @@
+---
+source: src/config.rs
+expression: got
+snapshot_kind: text
+---
+Config {
+    borderpx: 3,
+    snap: 32,
+    showbar: true,
+    topbar: true,
+    mfact: 0.5,
+    nmaster: 1,
+    resize_hints: false,
+    lock_fullscreen: true,
+    fonts: [
+        "monospace:size=10",
+    ],
+    tags: [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+    ],
+    colors: ColorMap(
+        [
+            [
+                "#bbbbbb",
+                "#222222",
+                "#444444",
+            ],
+            [
+                "#eeeeee",
+                "#005577",
+                "#005577",
+            ],
+        ],
+    ),
+    keys: [
+        Key {
+            mod_: 64,
+            keysym: 112,
+            func: Some(
+                "[func]",
+            ),
+            arg: V(
+                [
+                    "dmenu_run",
+                    "-fn",
+                    "monospace:size=10",
+                    "-nb",
+                    "#222222",
+                    "-nf",
+                    "#bbbbbb",
+                    "-sb",
+                    "#005577",
+                    "-sf",
+                    "#eeeeee",
+                ],
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 65293,
+            func: Some(
+                "[func]",
+            ),
+            arg: V(
+                [
+                    "st",
+                    "-e",
+                    "zsh",
+                ],
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 96,
+            func: Some(
+                "[func]",
+            ),
+            arg: V(
+                [
+                    "st",
+                    "-t",
+                    "scratchpad",
+                    "-g",
+                    "120x34",
+                ],
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 98,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 106,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 107,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                -1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 106,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 107,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                -1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 105,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 100,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                -1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 104,
+            func: Some(
+                "[func]",
+            ),
+            arg: F(
+                -0.05,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 108,
+            func: Some(
+                "[func]",
+            ),
+            arg: F(
+                0.05,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 65293,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 65289,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                0,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 99,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 116,
+            func: Some(
+                "[func]",
+            ),
+            arg: L(
+                Some(
+                    0,
+                ),
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 102,
+            func: Some(
+                "[func]",
+            ),
+            arg: L(
+                Some(
+                    1,
+                ),
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 109,
+            func: Some(
+                "[func]",
+            ),
+            arg: L(
+                Some(
+                    2,
+                ),
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 32,
+            func: Some(
+                "[func]",
+            ),
+            arg: L(
+                None,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 32,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 48,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4294967295,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 48,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4294967295,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 44,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                -1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 46,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 44,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                -1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 46,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 113,
+            func: Some(
+                "[func]",
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 49,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                1,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 49,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                1,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 49,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                1,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 49,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                1,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 50,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                2,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 50,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                2,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 50,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                2,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 50,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                2,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 51,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 51,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 51,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 51,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                4,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 52,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                8,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 52,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                8,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 52,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                8,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 52,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                8,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 53,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                16,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 53,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                16,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 53,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                16,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 53,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                16,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 54,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                32,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 54,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                32,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 54,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                32,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 54,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                32,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 55,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                64,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 55,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                64,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 55,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                64,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 55,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                64,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 56,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                128,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 56,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                128,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 56,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                128,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 56,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                128,
+            ),
+        },
+        Key {
+            mod_: 64,
+            keysym: 57,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                256,
+            ),
+        },
+        Key {
+            mod_: 68,
+            keysym: 57,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                256,
+            ),
+        },
+        Key {
+            mod_: 65,
+            keysym: 57,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                256,
+            ),
+        },
+        Key {
+            mod_: 69,
+            keysym: 57,
+            func: Some(
+                "[func]",
+            ),
+            arg: Ui(
+                256,
+            ),
+        },
+    ],
+    dmenucmd: [
+        "dmenu_run",
+        "-fn",
+        "monospace:size=10",
+        "-nb",
+        "#222222",
+        "-nf",
+        "#bbbbbb",
+        "-sb",
+        "#005577",
+        "-sf",
+        "#eeeeee",
+    ],
+    rules: [
+        Rule {
+            class: "st-256color",
+            instance: "",
+            title: "",
+            tags: 0,
+            isfloating: false,
+            isterminal: true,
+            noswallow: false,
+            monitor: -1,
+        },
+    ],
+    swallowfloating: false,
+    systraypinning: 0,
+    systrayonleft: false,
+    systrayspacing: 2,
+    systraypinningfailfirst: true,
+    showsystray: true,
+    buttons: [
+        Button {
+            click: 1,
+            mask: 0,
+            button: 1,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: L(
+                None,
+            ),
+        },
+        Button {
+            click: 1,
+            mask: 0,
+            button: 3,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: L(
+                Some(
+                    2,
+                ),
+            ),
+        },
+        Button {
+            click: 3,
+            mask: 0,
+            button: 2,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 2,
+            mask: 0,
+            button: 2,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: V(
+                [
+                    "st",
+                    "-e",
+                    "zsh",
+                ],
+            ),
+        },
+        Button {
+            click: 4,
+            mask: 64,
+            button: 1,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 4,
+            mask: 64,
+            button: 2,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 4,
+            mask: 64,
+            button: 3,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 0,
+            mask: 0,
+            button: 1,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 0,
+            mask: 0,
+            button: 3,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 0,
+            mask: 64,
+            button: 1,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+        Button {
+            click: 0,
+            mask: 64,
+            button: 3,
+            func: ButtonFn(
+                Some(
+                    "[func]",
+                ),
+            ),
+            arg: I(
+                0,
+            ),
+        },
+    ],
+    layouts: [
+        Layout {
+            symbol: "[]=",
+            arrange: Some(
+                LayoutFn(
+                    "[func]",
+                ),
+            ),
+        },
+        Layout {
+            symbol: "><>",
+            arrange: None,
+        },
+        Layout {
+            symbol: "[M]",
+            arrange: Some(
+                LayoutFn(
+                    "[func]",
+                ),
+            ),
+        },
+    ],
+    scratchpadname: "scratchpad",
+}
