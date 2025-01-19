@@ -1,322 +1,205 @@
 use std::{
-    ffi::{c_float, c_int, c_uint, CStr},
-    ptr::{null, null_mut},
-    sync::LazyLock,
+    collections::HashMap,
+    error::Error,
+    ffi::{c_float, c_int, c_uint, CString},
+    fs::read_to_string,
+    path::Path,
 };
 
-use libc::c_char;
-use x11::xlib::{Button1, Button2, Button3, ControlMask, Mod4Mask, ShiftMask};
+use fig_env::{CLICKS, HANDLERS, KEYS, XKEYS};
+use mlua::{Lua, LuaSerdeExt as _, Table};
 
-use crate::{
-    enums::{Clk, Scheme},
-    key_handlers::*,
-    layouts::{monocle, tile},
-};
-use rwm::{Arg, Button, Key, Layout, Rule};
+use crate::{config::key::Key, enums::Scheme, Button, Layout, Rule};
 
-// appearance
+mod fig_env;
+pub mod key;
 
-/// Border pixel of windows
-pub const BORDERPX: c_uint = 3;
-// Snap pixel
-pub const SNAP: c_uint = 32;
-/// Swallow floating windows by default
-pub const SWALLOWFLOATING: bool = false;
+#[derive(Debug, serde::Deserialize)]
+#[serde(try_from = "HashMap<String, Vec<String>>")]
+pub struct ColorMap(pub Vec<Vec<CString>>);
 
-/// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
-pub static SYSTRAYPINNING: c_uint = 0;
-/// 0: systray in the right corner, >0: systray on left of status text
-pub const SYSTRAYONLEFT: c_uint = 0;
-/// systray spacing
-pub const SYSTRAYSPACING: c_uint = 2;
-/// 1: if pinning fails, display systray on the first monitor, False: display
-/// systray on the last monitor
-pub const SYSTRAYPINNINGFAILFIRST: c_int = 1;
-/// 0 means no systray
-pub const SHOWSYSTRAY: c_int = 1;
+impl TryFrom<HashMap<String, Vec<String>>> for ColorMap {
+    type Error = Box<dyn Error>;
 
-/// 0 means no bar
-pub const SHOWBAR: c_int = 1;
-/// 0 means bottom bar
-pub const TOPBAR: c_int = 1;
-pub const FONTS: [&CStr; 1] = [c"monospace:size=12"];
-const DMENUFONT: &CStr = c"monospace:size=12";
-const COL_GRAY1: &CStr = c"#222222";
-const COL_GRAY2: &CStr = c"#444444";
-const COL_GRAY3: &CStr = c"#bbbbbb";
-const COL_GRAY4: &CStr = c"#eeeeee";
-const COL_CYAN: &CStr = c"#005577";
+    fn try_from(
+        mut value: HashMap<String, Vec<String>>,
+    ) -> Result<Self, Self::Error> {
+        let mut ret = vec![vec![], vec![]];
+        let norm = value.remove("norm").ok_or("missing key norm")?;
+        let sel = value.remove("sel").ok_or("missing key sel")?;
 
-pub static COLORS: LazyLock<[[&CStr; 3]; 2]> = LazyLock::new(|| {
-    let mut ret = [[c""; 3]; 2];
-    ret[Scheme::Norm as usize] = [COL_GRAY3, COL_GRAY1, COL_GRAY2];
-    ret[Scheme::Sel as usize] = [COL_GRAY4, COL_CYAN, COL_CYAN];
-    ret
-});
+        if norm.len() != 3 {
+            return Err("not enough colors for SchemeNorm".into());
+        };
+        ret[Scheme::Norm as usize] = norm
+            .into_iter()
+            .map(CString::new)
+            .collect::<Result<_, _>>()?;
 
-// tagging
-pub const TAGS: [&CStr; 9] =
-    [c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9"];
+        if sel.len() != 3 {
+            return Err("not enough colors for SchemeSel".into());
+        };
+        ret[Scheme::Sel as usize] = sel
+            .into_iter()
+            .map(CString::new)
+            .collect::<Result<_, _>>()?;
 
-pub const RULES: [Rule; 3] = [
-    Rule {
-        class: c"Gimp".as_ptr(),
-        instance: null(),
-        title: null(),
-        tags: 0,
-        isfloating: true,
-        isterminal: false,
-        noswallow: false,
-        monitor: -1,
-    },
-    Rule {
-        class: c"Firefox".as_ptr(),
-        instance: null(),
-        title: null(),
-        tags: 1 << 8,
-        isfloating: false,
-        isterminal: false,
-        noswallow: true,
-        monitor: -1,
-    },
-    Rule {
-        class: c"st-256color".as_ptr(),
-        instance: null(),
-        title: null(),
-        tags: 0,
-        isfloating: false,
-        isterminal: true,
-        noswallow: false,
-        monitor: -1,
-    },
-];
+        Ok(Self(ret))
+    }
+}
 
-// layouts
+#[derive(Debug, serde::Deserialize)]
+pub struct Config {
+    /// Border pixel of windows
+    pub borderpx: c_uint,
 
-/// Factor of master area size [0.05..0.95]
-pub const MFACT: c_float = 0.5;
-/// Number of clients in master area
-pub const NMASTER: c_int = 1;
-/// 1 means respect size hints in tiled resizals
-pub const RESIZE_HINTS: c_int = 0;
-/// 1 will force focus on the fullscreen window
-pub const LOCK_FULLSCREEN: c_int = 1;
+    /// Snap pixel
+    pub snap: c_uint,
 
-pub const LAYOUTS: [Layout; 3] = [
-    Layout { symbol: c"[]=".as_ptr(), arrange: Some(tile) },
-    Layout { symbol: c"><>".as_ptr(), arrange: None },
-    Layout { symbol: c"[M]".as_ptr(), arrange: Some(monocle) },
-];
+    /// Whether to show the bar
+    pub showbar: bool,
 
-// key definitions
-pub const MODKEY: c_uint = Mod4Mask;
+    /// Whether to show the bar at the top or bottom
+    pub topbar: bool,
 
-/// This type is needed just to implement Sync for this raw pointer
-pub struct DmenuCmd(pub [*const c_char; 14]);
+    /// Factor of master area size [0.05..0.95]
+    pub mfact: c_float,
 
-unsafe impl Sync for DmenuCmd {}
+    /// Number of clients in master area
+    pub nmaster: c_int,
 
-pub static mut DMENUMON: [c_char; 2] = ['0' as c_char, '\0' as c_char];
+    /// Respect size hints in tiled resizals
+    pub resize_hints: bool,
 
-// commands
-pub static DMENUCMD: DmenuCmd = DmenuCmd([
-    c"dmenu_run".as_ptr(),
-    c"-m".as_ptr(),
-    unsafe { DMENUMON.as_ptr() },
-    c"-fn".as_ptr(),
-    DMENUFONT.as_ptr(),
-    c"-nb".as_ptr(),
-    COL_GRAY1.as_ptr(),
-    c"-nf".as_ptr(),
-    COL_GRAY3.as_ptr(),
-    c"-sb".as_ptr(),
-    COL_CYAN.as_ptr(),
-    c"-sf".as_ptr(),
-    COL_GRAY4.as_ptr(),
-    null_mut(),
-]);
-pub const TERMCMD: [*const c_char; 2] = [c"st".as_ptr(), null_mut()];
+    /// Force focus on the fullscreen window
+    pub lock_fullscreen: bool,
 
-pub const SCRATCHPADNAME: *const c_char = c"scratchpad".as_ptr();
-pub const SCRATCHPADCMD: [*const c_char; 6] = [
-    c"st".as_ptr(),
-    c"-t".as_ptr(),
-    SCRATCHPADNAME,
-    c"-g".as_ptr(),
-    c"120x34".as_ptr(),
-    null_mut(),
-];
+    pub fonts: Vec<CString>,
 
-use x11::keysym::{
-    XK_Return, XK_Tab, XK_b, XK_c, XK_comma, XK_d, XK_f, XK_grave, XK_h, XK_i,
-    XK_j, XK_k, XK_l, XK_m, XK_p, XK_period, XK_q, XK_space, XK_t, XK_0, XK_1,
-    XK_2, XK_3, XK_4, XK_5, XK_6, XK_7, XK_8, XK_9,
-};
+    pub tags: Vec<String>,
 
-pub static KEYS: [Key; 61] = [
-    Key::new(MODKEY, XK_p, spawn, Arg { v: DMENUCMD.0.as_ptr().cast() }),
-    Key::new(
-        MODKEY | ShiftMask,
-        XK_Return,
-        spawn,
-        Arg { v: TERMCMD.as_ptr().cast() },
-    ),
-    Key::new(
-        MODKEY,
-        XK_grave,
-        togglescratch,
-        Arg { v: SCRATCHPADCMD.as_ptr().cast() },
-    ),
-    Key::new(MODKEY, XK_b, togglebar, Arg { i: 0 }),
-    Key::new(MODKEY, XK_j, focusstack, Arg { i: 1 }),
-    Key::new(MODKEY, XK_k, focusstack, Arg { i: -1 }),
-    Key::new(MODKEY, XK_i, incnmaster, Arg { i: 1 }),
-    Key::new(MODKEY, XK_d, incnmaster, Arg { i: -1 }),
-    Key::new(MODKEY, XK_h, setmfact, Arg { f: -0.05 }),
-    Key::new(MODKEY, XK_l, setmfact, Arg { f: 0.05 }),
-    Key::new(MODKEY, XK_Return, zoom, Arg { i: 0 }),
-    Key::new(MODKEY, XK_Tab, view, Arg { i: 0 }),
-    Key::new(MODKEY | ShiftMask, XK_c, killclient, Arg { i: 0 }),
-    Key::new(
-        MODKEY,
-        XK_t,
-        setlayout,
-        Arg { v: &LAYOUTS[0] as *const _ as *const _ },
-    ),
-    Key::new(
-        MODKEY,
-        XK_f,
-        setlayout,
-        Arg { v: &LAYOUTS[1] as *const _ as *const _ },
-    ),
-    Key::new(
-        MODKEY,
-        XK_m,
-        setlayout,
-        Arg { v: &LAYOUTS[2] as *const _ as *const _ },
-    ),
-    Key::new(MODKEY, XK_space, setlayout, Arg { i: 0 }),
-    Key::new(MODKEY | ShiftMask, XK_space, togglefloating, Arg { i: 0 }),
-    Key::new(MODKEY, XK_0, view, Arg { ui: !0 }),
-    Key::new(MODKEY | ShiftMask, XK_0, tag, Arg { ui: !0 }),
-    Key::new(MODKEY, XK_comma, focusmon, Arg { i: -1 }),
-    Key::new(MODKEY, XK_period, focusmon, Arg { i: 1 }),
-    Key::new(MODKEY | ShiftMask, XK_comma, tagmon, Arg { i: -1 }),
-    Key::new(MODKEY | ShiftMask, XK_period, tagmon, Arg { i: 1 }),
-    Key::new(MODKEY, XK_1, view, Arg { ui: 1 << 0 }),
-    Key::new(MODKEY | ControlMask, XK_1, toggleview, Arg { ui: 1 << 0 }),
-    Key::new(MODKEY | ShiftMask, XK_1, tag, Arg { ui: 1 << 0 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_1,
-        toggletag,
-        Arg { ui: 1 << 0 },
-    ),
-    Key::new(MODKEY, XK_2, view, Arg { ui: 1 << 1 }),
-    Key::new(MODKEY | ControlMask, XK_2, toggleview, Arg { ui: 1 << 1 }),
-    Key::new(MODKEY | ShiftMask, XK_2, tag, Arg { ui: 1 << 1 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_2,
-        toggletag,
-        Arg { ui: 1 << 1 },
-    ),
-    Key::new(MODKEY, XK_3, view, Arg { ui: 1 << 2 }),
-    Key::new(MODKEY | ControlMask, XK_3, toggleview, Arg { ui: 1 << 2 }),
-    Key::new(MODKEY | ShiftMask, XK_3, tag, Arg { ui: 1 << 2 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_3,
-        toggletag,
-        Arg { ui: 1 << 2 },
-    ),
-    Key::new(MODKEY, XK_4, view, Arg { ui: 1 << 3 }),
-    Key::new(MODKEY | ControlMask, XK_4, toggleview, Arg { ui: 1 << 3 }),
-    Key::new(MODKEY | ShiftMask, XK_4, tag, Arg { ui: 1 << 3 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_4,
-        toggletag,
-        Arg { ui: 1 << 3 },
-    ),
-    Key::new(MODKEY, XK_5, view, Arg { ui: 1 << 4 }),
-    Key::new(MODKEY | ControlMask, XK_5, toggleview, Arg { ui: 1 << 4 }),
-    Key::new(MODKEY | ShiftMask, XK_5, tag, Arg { ui: 1 << 4 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_5,
-        toggletag,
-        Arg { ui: 1 << 4 },
-    ),
-    Key::new(MODKEY, XK_6, view, Arg { ui: 1 << 5 }),
-    Key::new(MODKEY | ControlMask, XK_6, toggleview, Arg { ui: 1 << 5 }),
-    Key::new(MODKEY | ShiftMask, XK_6, tag, Arg { ui: 1 << 5 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_6,
-        toggletag,
-        Arg { ui: 1 << 5 },
-    ),
-    Key::new(MODKEY, XK_7, view, Arg { ui: 1 << 6 }),
-    Key::new(MODKEY | ControlMask, XK_7, toggleview, Arg { ui: 1 << 6 }),
-    Key::new(MODKEY | ShiftMask, XK_7, tag, Arg { ui: 1 << 6 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_7,
-        toggletag,
-        Arg { ui: 1 << 6 },
-    ),
-    Key::new(MODKEY, XK_8, view, Arg { ui: 1 << 7 }),
-    Key::new(MODKEY | ControlMask, XK_8, toggleview, Arg { ui: 1 << 7 }),
-    Key::new(MODKEY | ShiftMask, XK_8, tag, Arg { ui: 1 << 7 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_8,
-        toggletag,
-        Arg { ui: 1 << 7 },
-    ),
-    Key::new(MODKEY, XK_9, view, Arg { ui: 1 << 8 }),
-    Key::new(MODKEY | ControlMask, XK_9, toggleview, Arg { ui: 1 << 8 }),
-    Key::new(MODKEY | ShiftMask, XK_9, tag, Arg { ui: 1 << 8 }),
-    Key::new(
-        MODKEY | ControlMask | ShiftMask,
-        XK_9,
-        toggletag,
-        Arg { ui: 1 << 8 },
-    ),
-    Key::new(MODKEY | ShiftMask, XK_q, quit, Arg { i: 0 }),
-];
+    pub colors: ColorMap,
 
-// button definitions
+    pub keys: Vec<Key>,
 
-pub static BUTTONS: [Button; 11] = [
-    Button::new(Clk::LtSymbol, 0, Button1, setlayout, Arg { i: 0 }),
-    Button::new(
-        Clk::LtSymbol,
-        0,
-        Button3,
-        setlayout,
-        Arg { v: &LAYOUTS[2] as *const _ as *const _ },
-    ),
-    Button::new(Clk::WinTitle, 0, Button2, zoom, Arg { i: 0 }),
-    Button::new(
-        Clk::StatusText,
-        0,
-        Button2,
-        spawn,
-        Arg { v: TERMCMD.as_ptr().cast() },
-    ),
-    Button::new(Clk::ClientWin, MODKEY, Button1, movemouse, Arg { i: 0 }),
-    Button::new(
-        Clk::ClientWin,
-        MODKEY,
-        Button2,
-        togglefloating,
-        Arg { i: 0 },
-    ),
-    Button::new(Clk::ClientWin, MODKEY, Button3, resizemouse, Arg { i: 0 }),
-    Button::new(Clk::TagBar, 0, Button1, view, Arg { i: 0 }),
-    Button::new(Clk::TagBar, 0, Button3, toggleview, Arg { i: 0 }),
-    Button::new(Clk::TagBar, MODKEY, Button1, tag, Arg { i: 0 }),
-    Button::new(Clk::TagBar, MODKEY, Button3, toggletag, Arg { i: 0 }),
-];
+    pub dmenucmd: Vec<String>,
+
+    pub rules: Vec<Rule>,
+
+    /// Swallow floating windows by default
+    pub swallowfloating: bool,
+
+    /// 0: sloppy systray follows selected monitor, >0: pin systray to monitor x
+    pub systraypinning: c_uint,
+
+    pub systrayonleft: bool,
+
+    pub systrayspacing: c_uint,
+
+    /// if pinning fails and this is true, display systray on the first monitor,
+    /// else display systray on the last monitor
+    pub systraypinningfailfirst: bool,
+
+    pub showsystray: bool,
+
+    pub buttons: Vec<Button>,
+
+    pub layouts: Vec<Layout>,
+
+    pub scratchpadname: String,
+}
+
+unsafe impl Send for Config {}
+unsafe impl Sync for Config {}
+
+struct ConfigBuilder {
+    lua: Lua,
+    globals: Table,
+}
+
+impl ConfigBuilder {
+    fn new() -> Self {
+        let lua = Lua::new();
+        let globals = lua.globals();
+
+        // install handler functions for keybindings
+        for (k, v) in HANDLERS {
+            globals.set(k, v).unwrap();
+        }
+
+        // install key definitions
+        for (k, v) in KEYS.iter().chain(XKEYS.iter()) {
+            globals.set(*k, *v).unwrap();
+        }
+
+        // install click and button definitions
+        for (k, v) in CLICKS {
+            globals.set(k, v).unwrap();
+        }
+
+        for (k, v) in fig_env::BUTTONS {
+            globals.set(k, v).unwrap();
+        }
+
+        lua.load(include_str!("config.lua")).exec().unwrap();
+
+        Self { lua, globals }
+    }
+
+    /// Load and eval `path` into the Lua interpreter in `self`.
+    fn load(self, path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
+        self.lua.load(read_to_string(path)?).exec()?;
+        Ok(self)
+    }
+
+    fn finish(self) -> Result<Config, Box<dyn Error>> {
+        Ok(self.lua.from_value(self.globals.get("rwm")?)?)
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        ConfigBuilder::new().finish().unwrap()
+    }
+}
+
+impl Config {
+    pub fn from_lua(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
+        ConfigBuilder::new().load(path)?.finish()
+    }
+
+    /// Attempt to load a config file on first usage from `$XDG_CONFIG_HOME`,
+    /// then `$HOME`, before falling back to the default config.
+    pub fn load_home() -> Self {
+        let mut home = std::env::var("XDG_CONFIG_HOME");
+        if home.is_err() {
+            home = std::env::var("HOME");
+        }
+        if home.is_err() {
+            log::warn!("unable to determine config directory");
+            return Config::default();
+        }
+        let config_path = Path::new(&home.unwrap())
+            .join(".config")
+            .join("rwm")
+            .join("config.lua");
+
+        Config::from_lua(config_path).unwrap_or_else(|e| {
+            log::error!("failed to read config file: {e:?}");
+            Config::default()
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_debug_snapshot;
+
+    use super::*;
+
+    #[test]
+    fn from_lua() {
+        let got = Config::from_lua("example.lua").unwrap();
+        assert_debug_snapshot!(got)
+    }
+}

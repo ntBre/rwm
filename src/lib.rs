@@ -1,30 +1,116 @@
-use std::ffi::{c_char, c_int, c_uint, c_void};
+#![allow(clippy::missing_safety_doc, clippy::not_unsafe_ptr_arg_deref)]
 
-use x11::xlib::KeySym;
+use std::{
+    ffi::{c_int, c_uint},
+    fmt::Debug,
+};
 
+use config::key::FUNC_MAP;
 use enums::Clk;
+use layouts::{monocle, tile};
+use x11::xft::XftColor;
 
+pub mod config;
+pub mod drw;
 pub mod enums;
+pub mod events;
+pub mod handlers;
+pub mod key_handlers;
+pub mod layouts;
+pub mod util;
+pub mod xembed;
+
+pub use core::*;
+mod core;
+
+pub use state::*;
+mod state;
+
+/// most applications want to start this way
+pub const NORMAL_STATE: usize = 1;
+/// application wants to start as an icon
+pub const ICONIC_STATE: usize = 3;
+
+// from Xutil.h
+/// for windows that are not mapped
+pub const WITHDRAWN_STATE: usize = 0;
 
 pub type Window = u64;
+pub type Clr = XftColor;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub union Arg {
-    pub i: c_int,
-    pub ui: c_uint,
-    pub f: f32,
-    pub v: *const c_void,
+#[derive(Clone, Debug, serde::Deserialize)]
+pub enum Arg {
+    I(c_int),
+    Ui(c_uint),
+    F(f32),
+    /// Argument for execvp in spawn
+    V(Vec<String>),
+    /// CONFIG.layouts index for setlayout
+    L(Option<usize>),
+}
+
+macro_rules! arg_getters {
+    ($($field:ident => $fn:ident => $ty:ty$(,)*)*) => {
+        $(pub fn $fn(&self) -> $ty {
+            if let Self::$field(x) = self {
+                return x.clone();
+            }
+            panic!("{self:?}");
+        })*
+    }
+}
+
+impl Arg {
+    arg_getters! {
+        I => i => c_int,
+        Ui => ui => c_uint,
+        F => f => f32,
+        V => v => Vec<String>,
+        L => l => Option<usize>,
+    }
+}
+
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct ButtonFn(pub Option<fn(&mut State, *const Arg)>);
+
+impl TryFrom<String> for ButtonFn {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(Self(Some(
+            FUNC_MAP
+                .get(value.as_str())
+                .cloned()
+                .ok_or_else(|| format!("no key `{value}`"))?,
+        )))
+    }
+}
+
+impl Debug for ButtonFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ButtonFn")
+            .field(&self.0.map(|_| "[func]"))
+            .finish()
+    }
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct Button {
     pub click: c_uint,
     pub mask: c_uint,
     pub button: c_uint,
-    pub func: Option<unsafe extern "C" fn(arg: *const Arg)>,
+    pub func: ButtonFn,
+    #[serde(default = "default_button_arg")]
     pub arg: Arg,
+}
+
+/// Hack to get around `{L = nil}` equating to an empty table in Lua. If the
+/// table's empty, treat it as the only optional Arg variant
+fn default_button_arg() -> Arg {
+    Arg::L(None)
 }
 
 impl Button {
@@ -32,10 +118,16 @@ impl Button {
         click: Clk,
         mask: c_uint,
         button: c_uint,
-        func: unsafe extern "C" fn(arg: *const Arg),
+        func: fn(&mut State, *const Arg),
         arg: Arg,
     ) -> Self {
-        Self { click: click as c_uint, mask, button, func: Some(func), arg }
+        Self {
+            click: click as c_uint,
+            mask,
+            button,
+            func: ButtonFn(Some(func)),
+            arg,
+        }
     }
 }
 
@@ -46,33 +138,11 @@ pub struct Cursor {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Key {
-    pub mod_: c_uint,
-    pub keysym: KeySym,
-    pub func: Option<unsafe extern "C" fn(arg1: *const Arg)>,
-    pub arg: Arg,
-}
-
-impl Key {
-    pub const fn new(
-        mod_: c_uint,
-        keysym: u32,
-        func: unsafe extern "C" fn(arg1: *const Arg),
-        arg: Arg,
-    ) -> Self {
-        Self { mod_, keysym: keysym as KeySym, func: Some(func), arg }
-    }
-}
-
-unsafe impl Sync for Key {}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Rule {
-    pub class: *const c_char,
-    pub instance: *const c_char,
-    pub title: *const c_char,
+    pub class: String,
+    pub instance: String,
+    pub title: String,
     pub tags: c_uint,
     pub isfloating: bool,
     pub isterminal: bool,
@@ -85,13 +155,37 @@ pub struct Systray {
     pub icons: *mut Client,
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct Layout {
-    pub symbol: *const c_char,
-    pub arrange: Option<unsafe extern "C" fn(arg1: *mut Monitor)>,
+#[derive(Clone, serde::Deserialize)]
+#[serde(try_from = "String")]
+pub struct LayoutFn(pub fn(&mut State, *mut Monitor));
+
+impl TryFrom<String> for LayoutFn {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "tile" => Ok(Self(tile)),
+            "monocle" => Ok(Self(monocle)),
+            s => Err(format!("unknown layout `{s}`")),
+        }
+    }
 }
 
+impl Debug for LayoutFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("LayoutFn").field(&"[func]").finish()
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Layout {
+    pub symbol: String,
+    #[serde(default)]
+    pub arrange: Option<LayoutFn>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Pertag {
     /// Current tag
     pub curtag: c_uint,
@@ -106,13 +200,13 @@ pub struct Pertag {
     /// Matrix of tag and layout indices
     pub ltidxs: Vec<[*const Layout; 2]>,
     /// Whether to display the bar
-    pub showbars: Vec<c_int>,
+    pub showbars: Vec<bool>,
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Monitor {
-    pub ltsymbol: [c_char; 16usize],
+    pub ltsymbol: String,
     pub mfact: f32,
     pub nmaster: c_int,
     pub num: c_int,
@@ -128,21 +222,21 @@ pub struct Monitor {
     pub seltags: c_uint,
     pub sellt: c_uint,
     pub tagset: [c_uint; 2usize],
-    pub showbar: c_int,
-    pub topbar: c_int,
+    pub showbar: bool,
+    pub topbar: bool,
     pub clients: *mut Client,
     pub sel: *mut Client,
     pub stack: *mut Client,
     pub next: *mut Monitor,
     pub barwin: Window,
     pub lt: [*const Layout; 2usize],
-    pub pertag: *mut Pertag,
+    pub pertag: Pertag,
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Client {
-    pub name: [c_char; 256usize],
+    pub name: String,
     pub mina: f32,
     pub maxa: f32,
     pub x: c_int,
@@ -179,4 +273,10 @@ pub struct Client {
     pub swallowing: *mut Client,
     pub mon: *mut Monitor,
     pub win: Window,
+}
+
+pub struct Cursors {
+    pub normal: Cursor,
+    pub resize: Cursor,
+    pub move_: Cursor,
 }

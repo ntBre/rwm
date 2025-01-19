@@ -2,10 +2,10 @@ use std::{cmp::min, ffi::c_uint};
 
 use libc::c_int;
 
-use crate::{height, is_visible, nexttiled, resize};
-use rwm::Monitor;
+use crate::{cfor, height, is_visible, nexttiled, resize};
+use crate::{Monitor, State};
 
-pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
+pub(crate) fn monocle(state: &mut State, m: *mut Monitor) {
     unsafe {
         let mut n = 0;
         let mut c;
@@ -16,20 +16,15 @@ pub(crate) unsafe extern "C" fn monocle(m: *mut Monitor) {
         });
         if n > 0 {
             // override layout symbol
-            libc::snprintf(
-                (*m).ltsymbol.as_mut_ptr(),
-                size_of_val(&(*m).ltsymbol),
-                c"[%d]".as_ptr(),
-                n,
-            );
+            (*m).ltsymbol = format!("[{n}]");
         }
         cfor!((c = nexttiled((*m).clients); !c.is_null(); c = nexttiled((*c).next)) {
-            resize(c, (*m).wx, (*m).wy, (*m).ww - 2 * (*c).bw, (*m).wh - 2 * (*c).bw, 0);
+            resize(state, c, (*m).wx, (*m).wy, (*m).ww - 2 * (*c).bw, (*m).wh - 2 * (*c).bw, 0);
         });
     }
 }
 
-pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
+pub(crate) fn tile(state: &mut State, m: *mut Monitor) {
     log::trace!("tile");
     unsafe {
         let mut i;
@@ -67,6 +62,7 @@ pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
             if i < (*m).nmaster {
                 h = ((*m).wh - my) / (min(n, (*m).nmaster) - i);
                 resize(
+                    state,
                     c,
                     (*m).wx,
                     (*m).wy + my,
@@ -81,6 +77,7 @@ pub(crate) unsafe extern "C" fn tile(m: *mut Monitor) {
             } else {
                 h = ((*m).wh - ty) / (n - i);
                 resize(
+                    state,
                     c,
                     (*m).wx + mw as c_int,
                     (*m).wy + ty,

@@ -1,7 +1,7 @@
 use std::{
     ffi::{c_long, c_uint},
     mem::MaybeUninit,
-    ptr::{addr_of, addr_of_mut, null_mut},
+    ptr::null_mut,
 };
 
 use x11::xlib::{
@@ -14,110 +14,116 @@ use x11::xlib::{
     XA_WM_TRANSIENT_FOR,
 };
 
-use rwm::{
+use crate::{
+    drw,
     enums::{Col, Scheme, XEmbed},
-    Arg, Client, Monitor, Window,
+    util::ecalloc,
+    Arg, Client, Monitor, State, Window,
 };
 
 use crate::{
-    arrange, cleanmask,
-    config::{self, BUTTONS, KEYS, TAGS},
-    configure, drawbar, drawbars, drw,
+    arrange, cleanmask, configure, drawbar, drawbars,
     enums::{Clk, Net},
-    focus, get_scheme_color, getsystraywidth, grabkeys, height, is_visible,
-    manage, recttomon, removesystrayicon, resizebarwin, resizeclient, restack,
-    sendevent, setclientstate, setfocus, setfullscreen, seturgent,
-    swallowingclient, textw, unfocus, unmanage, updatebars, updategeom,
-    updatesizehints, updatestatus, updatesystray, updatesystrayicongeom,
-    updatesystrayiconstate, updatetitle, updatewindowtype, updatewmhints,
-    util::ecalloc,
-    width, wintoclient, wintomon, wintosystrayicon,
+    focus, getsystraywidth, grabkeys, height, is_visible, manage, recttomon,
+    removesystrayicon, resizebarwin, resizeclient, restack, sendevent,
+    setclientstate, setfocus, setfullscreen, seturgent, swallowingclient,
+    textw, unfocus, unmanage, updatebars, updategeom, updatesizehints,
+    updatestatus, updatesystray, updatesystrayicongeom, updatesystrayiconstate,
+    updatetitle, updatewindowtype, updatewmhints, width, wintoclient, wintomon,
+    wintosystrayicon,
     xembed::{
         SYSTEM_TRAY_REQUEST_DOCK, XEMBED_EMBEDDED_NOTIFY,
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    BH, DPY, DRW, MONS, NETATOM, NORMAL_STATE, ROOT, SCHEME, SELMON, SH, STEXT,
-    SW, SYSTRAY, WITHDRAWN_STATE,
+    NORMAL_STATE, WITHDRAWN_STATE,
 };
 
-pub(crate) fn buttonpress(e: *mut XEvent) {
+pub fn buttonpress(state: &mut State, e: *mut XEvent) {
     unsafe {
-        let mut arg = Arg { i: 0 };
+        let mut arg = Arg::I(0);
         let ev = &(*e).button;
         let mut click = Clk::RootWin;
         // focus monitor if necessary
-        let m = wintomon(ev.window);
-        if !m.is_null() && m != SELMON {
-            crate::unfocus((*SELMON).sel, true);
-            SELMON = m;
-            crate::focus(null_mut());
+        let m = wintomon(state, ev.window);
+        if !m.is_null() && m != state.selmon {
+            crate::unfocus(state, (*state.selmon).sel, true);
+            state.selmon = m;
+            crate::focus(state, null_mut());
         }
-        if ev.window == (*SELMON).barwin {
+        if ev.window == (*state.selmon).barwin {
             let mut i = 0;
             let mut x = 0;
             // emulating do-while
             loop {
-                x += textw(TAGS[i].as_ptr());
+                x += textw(&mut state.drw, &state.config.tags[i], state.lrpad);
                 // condition
                 if ev.x < x {
                     break;
                 }
                 i += 1;
-                if i >= TAGS.len() {
+                if i >= state.config.tags.len() {
                     break;
                 }
             }
-            if i < TAGS.len() {
+            if i < state.config.tags.len() {
                 click = Clk::TagBar;
-                arg = Arg { ui: 1 << i };
-            } else if ev.x < x + textw(addr_of!((*SELMON).ltsymbol) as *const _)
+                arg = Arg::Ui(1 << i);
+            } else if ev.x
+                < x + textw(
+                    &mut state.drw,
+                    &(*state.selmon).ltsymbol,
+                    state.lrpad,
+                )
             {
                 click = Clk::LtSymbol;
             } else if ev.x
-                > (*SELMON).ww
-                    - textw(addr_of!(STEXT) as *const _)
-                    - getsystraywidth() as i32
+                > (*state.selmon).ww
+                    - textw(&mut state.drw, &state.stext, state.lrpad)
+                    - getsystraywidth(state) as i32
             {
                 click = Clk::StatusText;
             } else {
                 click = Clk::WinTitle;
             }
         } else {
-            let c = wintoclient(ev.window);
+            let c = wintoclient(state, ev.window);
             if !c.is_null() {
-                crate::focus(c);
-                restack(SELMON);
-                xlib::XAllowEvents(DPY, ReplayPointer, CurrentTime);
+                crate::focus(state, c);
+                restack(state, state.selmon);
+                xlib::XAllowEvents(state.dpy, ReplayPointer, CurrentTime);
                 click = Clk::ClientWin;
             }
         }
-        for button in BUTTONS {
-            if click as u32 == button.click
-                && button.func.is_some()
-                && button.button == ev.button
-                && cleanmask(button.mask) == cleanmask(ev.state)
+        for i in 0..state.config.buttons.len() {
+            if click as u32 == state.config.buttons[i].click
+                && state.config.buttons[i].func.0.is_some()
+                && state.config.buttons[i].button == ev.button
+                && cleanmask(state, state.config.buttons[i].mask)
+                    == cleanmask(state, ev.state)
             {
-                let f = button.func.unwrap();
-                let a = if click == Clk::TagBar && button.arg.i == 0 {
+                let f = state.config.buttons[i].func.0.unwrap();
+                let a = if click == Clk::TagBar
+                    && state.config.buttons[i].arg.i() == 0
+                {
                     &arg
                 } else {
-                    &button.arg
+                    &state.config.buttons[i].arg
                 };
-                f(a)
+                f(state, a)
             }
         }
     }
 }
 
-pub(crate) fn clientmessage(e: *mut XEvent) {
+pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
     unsafe {
         let cme = &(*e).client_message;
-        let mut c = wintoclient(cme.window);
+        let mut c = wintoclient(state, cme.window);
 
-        if config::SHOWSYSTRAY != 0
-            && cme.window == (*SYSTRAY).win
-            && cme.message_type == NETATOM[Net::SystemTrayOP as usize]
+        if state.config.showsystray
+            && cme.window == state.systray().win
+            && cme.message_type == state.netatom[Net::SystemTrayOP as usize]
         {
             // add systray icons
             if cme.data.get_long(1) == SYSTEM_TRAY_REQUEST_DOCK as c_long {
@@ -128,14 +134,15 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                 libc::free(c.cast());
                 return;
             }
-            (*c).mon = SELMON;
-            (*c).next = (*SYSTRAY).icons;
-            (*SYSTRAY).icons = c;
+            (*c).mon = state.selmon;
+            (*c).next = state.systray().icons;
+            let place = &mut state.systray_mut().icons;
+            *place = c;
             let mut wa = MaybeUninit::uninit();
-            if XGetWindowAttributes(DPY, (*c).win, wa.as_mut_ptr()) == 0 {
+            if XGetWindowAttributes(state.dpy, (*c).win, wa.as_mut_ptr()) == 0 {
                 // use sane defaults
-                (*wa.as_mut_ptr()).width = BH;
-                (*wa.as_mut_ptr()).height = BH;
+                (*wa.as_mut_ptr()).width = state.bh;
+                (*wa.as_mut_ptr()).height = state.bh;
                 (*wa.as_mut_ptr()).border_width = 0;
             }
             let wa = wa.assume_init();
@@ -160,24 +167,20 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
 
             // reuse tags field as mapped status
             c.tags = 1;
-            updatesizehints(c);
-            updatesystrayicongeom(c, wa.width, wa.height);
-            XAddToSaveSet(DPY, c.win);
+            updatesizehints(state, c);
+            updatesystrayicongeom(state, c, wa.width, wa.height);
+            XAddToSaveSet(state.dpy, c.win);
             XSelectInput(
-                DPY,
+                state.dpy,
                 c.win,
                 StructureNotifyMask | PropertyChangeMask | ResizeRedirectMask,
             );
-            XReparentWindow(DPY, c.win, (*SYSTRAY).win, 0, 0);
+            XReparentWindow(state.dpy, c.win, state.systray().win, 0, 0);
             // use parent's background color
             let mut swa = XSetWindowAttributes {
                 background_pixmap: 0,
-                background_pixel: get_scheme_color(
-                    SCHEME,
-                    Scheme::Norm as usize,
-                    Col::Bg as usize,
-                )
-                .pixel,
+                background_pixel: state.scheme[Scheme::Norm][Col::Bg as usize]
+                    .pixel,
                 border_pixmap: 0,
                 border_pixel: 0,
                 bit_gravity: 0,
@@ -192,58 +195,62 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
                 colormap: 0,
                 cursor: 0,
             };
-            XChangeWindowAttributes(DPY, c.win, CWBackPixel, &mut swa);
+            XChangeWindowAttributes(state.dpy, c.win, CWBackPixel, &mut swa);
             // TODO this looks like the wrong index. xembed should be used to
             // index xatom. this could be coincidentally correct since they're
             // all integers though. the net atom at the same index would be
             // Net::WMName
             sendevent(
+                state,
                 c.win,
-                NETATOM[XEmbed::XEmbed as usize],
+                state.netatom[XEmbed::XEmbed as usize],
                 StructureNotifyMask as i32,
                 CurrentTime as i64,
                 XEMBED_EMBEDDED_NOTIFY as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
 
             // FIXME (original author) not sure if I have to send these events
             // too
             sendevent(
+                state,
                 c.win,
-                NETATOM[XEmbed::XEmbed as usize],
+                state.netatom[XEmbed::XEmbed as usize],
                 StructureNotifyMask as i32,
                 CurrentTime as i64,
                 XEMBED_FOCUS_IN as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
+                state,
                 c.win,
-                NETATOM[XEmbed::XEmbed as usize],
+                state.netatom[XEmbed::XEmbed as usize],
                 StructureNotifyMask as i32,
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
             sendevent(
+                state,
                 c.win,
-                NETATOM[XEmbed::XEmbed as usize],
+                state.netatom[XEmbed::XEmbed as usize],
                 StructureNotifyMask as i32,
                 CurrentTime as i64,
                 XEMBED_MODALITY_ON as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
-            XSync(DPY, False);
-            resizebarwin(SELMON);
-            updatesystray();
-            setclientstate(c, NORMAL_STATE);
+            XSync(state.dpy, False);
+            resizebarwin(state, state.selmon);
+            updatesystray(state);
+            setclientstate(state, c, NORMAL_STATE);
 
             return;
         }
@@ -251,37 +258,40 @@ pub(crate) fn clientmessage(e: *mut XEvent) {
         if c.is_null() {
             return;
         }
-        if cme.message_type == NETATOM[Net::WMState as usize] {
+        if cme.message_type == state.netatom[Net::WMState as usize] {
             if cme.data.get_long(1)
-                == NETATOM[Net::WMFullscreen as usize] as i64
+                == state.netatom[Net::WMFullscreen as usize] as i64
                 || cme.data.get_long(2)
-                    == NETATOM[Net::WMFullscreen as usize] as i64
+                    == state.netatom[Net::WMFullscreen as usize] as i64
             {
                 setfullscreen(
+                    state,
                     c,
                     cme.data.get_long(0) == 1 // _NET_WM_STATE_ADD
                         || (cme.data.get_long(0) == 2 // _NET_WM_STATE_TOGGLE
                             && !(*c).isfullscreen),
                 );
             }
-        } else if cme.message_type == NETATOM[Net::ActiveWindow as usize]
-            && c != (*SELMON).sel
+        } else if cme.message_type == state.netatom[Net::ActiveWindow as usize]
+            && c != (*state.selmon).sel
             && (*c).isurgent == 0
         {
-            seturgent(c, true);
+            seturgent(state, c, true);
         }
     }
 }
 
-pub(crate) fn configurerequest(e: *mut XEvent) {
+pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).configure_request;
-        let c = wintoclient(ev.window);
+        let c = wintoclient(state, ev.window);
         if !c.is_null() {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
                 (*c).bw = ev.border_width;
             } else if (*c).isfloating
-                || (*(*SELMON).lt[(*SELMON).sellt as usize]).arrange.is_none()
+                || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
+                    .arrange
+                    .is_none()
             {
                 let m = (*c).mon;
                 if ev.value_mask & CWX as u64 != 0 {
@@ -313,15 +323,15 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 if (ev.value_mask & (CWX | CWY) as u64) != 0
                     && (ev.value_mask & (CWWidth | CWHeight) as u64) == 0
                 {
-                    configure(c);
+                    configure(state, c);
                 }
                 if is_visible(c) {
                     xlib::XMoveResizeWindow(
-                        DPY, c.win, c.x, c.y, c.w as u32, c.h as u32,
+                        state.dpy, c.win, c.x, c.y, c.w as u32, c.h as u32,
                     );
                 }
             } else {
-                configure(c);
+                configure(state, c);
             }
         } else {
             let x = ev.x;
@@ -341,98 +351,110 @@ pub(crate) fn configurerequest(e: *mut XEvent) {
                 stack_mode,
             };
             xlib::XConfigureWindow(
-                DPY,
+                state.dpy,
                 ev.window,
                 ev.value_mask as u32,
                 &mut wc,
             );
         }
-        xlib::XSync(DPY, False);
+        xlib::XSync(state.dpy, False);
     }
 }
 
-pub(crate) fn configurenotify(e: *mut XEvent) {
+pub(crate) fn configurenotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).configure;
         /* TODO: updategeom handling sucks, needs to be simplified */
-        if ev.window == ROOT {
-            let dirty = SW != ev.width || SH != ev.height;
-            SW = ev.width;
-            SH = ev.height;
-            if updategeom() != 0 || dirty {
-                drw::resize(DRW, SW as c_uint, BH as c_uint);
-                updatebars();
-                let mut m = MONS;
+        if ev.window == state.root {
+            let dirty = state.sw != ev.width || state.sh != ev.height;
+            state.sw = ev.width;
+            state.sh = ev.height;
+            if updategeom(state) != 0 || dirty {
+                drw::resize(
+                    &mut state.drw,
+                    state.sw as c_uint,
+                    state.bh as c_uint,
+                );
+                updatebars(state);
+                let mut m = state.mons;
                 while !m.is_null() {
                     let mut c = (*m).clients;
                     while !c.is_null() {
                         if (*c).isfullscreen {
-                            resizeclient(c, (*m).mx, (*m).my, (*m).mw, (*m).mh);
+                            resizeclient(
+                                state,
+                                c,
+                                (*m).mx,
+                                (*m).my,
+                                (*m).mw,
+                                (*m).mh,
+                            );
                         }
                         c = (*c).next;
                     }
-                    resizebarwin(m);
+                    resizebarwin(state, m);
                     m = (*m).next;
                 }
-                focus(null_mut());
-                arrange(null_mut());
+                focus(state, null_mut());
+                arrange(state, null_mut());
             }
         }
     }
 }
 
-pub(crate) fn destroynotify(e: *mut XEvent) {
+pub(crate) fn destroynotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).destroy_window;
-        let mut c = wintoclient(ev.window);
+        let mut c = wintoclient(state, ev.window);
         if !c.is_null() {
-            unmanage(c, 1);
+            unmanage(state, c, 1);
         } else {
-            c = swallowingclient(ev.window);
+            c = swallowingclient(state, ev.window);
             if !c.is_null() {
-                unmanage((*c).swallowing, 1);
+                unmanage(state, (*c).swallowing, 1);
             } else {
-                c = wintosystrayicon(ev.window);
+                c = wintosystrayicon(state, ev.window);
                 if !c.is_null() {
-                    removesystrayicon(c);
-                    resizebarwin(SELMON);
-                    updatesystray();
+                    removesystrayicon(state, c);
+                    resizebarwin(state, state.selmon);
+                    updatesystray(state);
                 }
             }
         }
     }
 }
 
-pub(crate) fn enternotify(e: *mut XEvent) {
+pub(crate) fn enternotify(state: &mut State, e: *mut XEvent) {
     log::trace!("enternotify");
     unsafe {
         let ev = &mut (*e).crossing;
         if (ev.mode != NotifyNormal || ev.detail == NotifyInferior)
-            && ev.window != ROOT
+            && ev.window != state.root
         {
             return;
         }
-        let c = wintoclient(ev.window);
-        let m = if !c.is_null() { (*c).mon } else { wintomon(ev.window) };
-        if m != SELMON {
-            unfocus((*SELMON).sel, true);
-            SELMON = m;
-        } else if c.is_null() || c == (*SELMON).sel {
+        let c = wintoclient(state, ev.window);
+        let m =
+            if !c.is_null() { (*c).mon } else { wintomon(state, ev.window) };
+        if m != state.selmon {
+            unfocus(state, (*state.selmon).sel, true);
+            state.selmon = m;
+        } else if c.is_null() || c == (*state.selmon).sel {
             return;
         }
-        focus(c)
+        focus(state, c)
     }
 }
 
-pub(crate) fn expose(e: *mut XEvent) {
+pub(crate) fn expose(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).expose;
         if ev.count == 0 {
-            let m = wintomon(ev.window);
+            let m = wintomon(state, ev.window);
             if !m.is_null() {
-                drawbar(m);
-                if m == SELMON {
-                    updatesystray();
+                drawbar(state, m);
+                if m == state.selmon {
+                    updatesystray(state);
                 }
             }
         }
@@ -440,41 +462,48 @@ pub(crate) fn expose(e: *mut XEvent) {
 }
 
 /* there are some broken focus acquiring clients needing extra handling */
-pub(crate) fn focusin(e: *mut XEvent) {
+pub(crate) fn focusin(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &(*e).focus_change;
-        if !(*SELMON).sel.is_null() && ev.window != (*(*SELMON).sel).win {
-            setfocus((*SELMON).sel);
+        if !(*state.selmon).sel.is_null()
+            && ev.window != (*(*state.selmon).sel).win
+        {
+            setfocus(state, (*state.selmon).sel);
         }
     }
 }
 
-pub(crate) fn keypress(e: *mut XEvent) {
+pub(crate) fn keypress(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).key;
-        let keysym = xlib::XKeycodeToKeysym(DPY, ev.keycode as KeyCode, 0);
-        for key in KEYS {
-            if keysym == key.keysym
-                && cleanmask(key.mod_) == cleanmask(ev.state)
-                && key.func.is_some()
+        let keysym =
+            xlib::XKeycodeToKeysym(state.dpy, ev.keycode as KeyCode, 0);
+        for i in 0..state.config.keys.len() {
+            if keysym == state.config.keys[i].keysym
+                && cleanmask(state, state.config.keys[i].mod_)
+                    == cleanmask(state, ev.state)
+                && state.config.keys[i].func.0.is_some()
             {
-                key.func.unwrap()(&(key.arg));
+                state.config.keys[i].func.0.unwrap()(
+                    state,
+                    &(state.config.keys[i].arg),
+                );
             }
         }
     }
 }
 
-pub(crate) fn mappingnotify(e: *mut XEvent) {
+pub(crate) fn mappingnotify(state: &mut State, e: *mut XEvent) {
     unsafe {
         let ev = &mut (*e).mapping;
         xlib::XRefreshKeyboardMapping(ev);
         if ev.request == MappingKeyboard {
-            grabkeys();
+            grabkeys(state);
         }
     }
 }
 
-pub(crate) fn maprequest(e: *mut XEvent) {
+pub(crate) fn maprequest(state: &mut State, e: *mut XEvent) {
     static mut WA: XWindowAttributes = XWindowAttributes {
         x: 0,
         y: 0,
@@ -507,75 +536,76 @@ pub(crate) fn maprequest(e: *mut XEvent) {
     // in its previous state.
     unsafe {
         let ev = &(*e).map_request;
-        let i = wintosystrayicon(ev.window);
+        let i = wintosystrayicon(state, ev.window);
         if !i.is_null() {
             sendevent(
+                state,
                 (*i).win,
-                NETATOM[XEmbed::XEmbed as usize],
+                state.netatom[XEmbed::XEmbed as usize],
                 StructureNotifyMask as i32,
                 CurrentTime as i64,
                 XEMBED_WINDOW_ACTIVATE as i64,
                 0,
-                (*SYSTRAY).win as i64,
+                state.systray().win as i64,
                 XEMBED_EMBEDDED_VERSION as i64,
             );
-            resizebarwin(SELMON);
-            updatesystray();
+            resizebarwin(state, state.selmon);
+            updatesystray(state);
         }
         log::trace!("maprequest: XGetWindowAttributes");
-        let res = xlib::XGetWindowAttributes(DPY, ev.window, addr_of_mut!(WA));
+        let res = xlib::XGetWindowAttributes(state.dpy, ev.window, &raw mut WA);
         // XGetWindowAttributes returns a zero if the function fails
         if res == 0 || WA.override_redirect != 0 {
             return;
         }
-        if wintoclient(ev.window).is_null() {
-            manage(ev.window, addr_of_mut!(WA));
+        if wintoclient(state, ev.window).is_null() {
+            manage(state, ev.window, &raw mut WA);
         }
     }
 }
 
-pub(crate) fn motionnotify(e: *mut XEvent) {
+pub(crate) fn motionnotify(state: &mut State, e: *mut XEvent) {
     log::trace!("motionnotify");
     static mut MON: *mut Monitor = null_mut();
     unsafe {
         let ev = &(*e).motion;
-        if ev.window != ROOT {
+        if ev.window != state.root {
             return;
         }
-        let m = recttomon(ev.x_root, ev.y_root, 1, 1);
+        let m = recttomon(state, ev.x_root, ev.y_root, 1, 1);
         if m != MON && !MON.is_null() {
-            unfocus((*SELMON).sel, true);
-            SELMON = m;
-            focus(null_mut());
+            unfocus(state, (*state.selmon).sel, true);
+            state.selmon = m;
+            focus(state, null_mut());
         }
         MON = m;
     }
 }
 
-pub(crate) fn propertynotify(e: *mut XEvent) {
+pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
     log::trace!("propertynotify");
     unsafe {
         let mut trans: Window = 0;
         let ev = &mut (*e).property;
 
-        let c = wintosystrayicon(ev.window);
+        let c = wintosystrayicon(state, ev.window);
         if !c.is_null() {
             if ev.atom == XA_WM_NORMAL_HINTS {
-                updatesizehints(c);
-                updatesystrayicongeom(c, (*c).w, (*c).h);
+                updatesizehints(state, c);
+                updatesystrayicongeom(state, c, (*c).w, (*c).h);
             } else {
-                updatesystrayiconstate(c, ev);
+                updatesystrayiconstate(state, c, ev);
             }
-            resizebarwin(SELMON);
-            updatesystray();
+            resizebarwin(state, state.selmon);
+            updatesystray(state);
         }
 
-        if ev.window == ROOT && ev.atom == XA_WM_NAME {
-            updatestatus();
+        if ev.window == state.root && ev.atom == XA_WM_NAME {
+            updatestatus(state);
         } else if ev.state == PropertyDelete {
             return; // ignore
         } else {
-            let c = wintoclient(ev.window);
+            let c = wintoclient(state, ev.window);
             if c.is_null() {
                 return;
             }
@@ -583,12 +613,13 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
             match ev.atom {
                 XA_WM_TRANSIENT_FOR => {
                     if !c.isfloating
-                        && (xlib::XGetTransientForHint(DPY, c.win, &mut trans)
-                            != 0)
+                        && (xlib::XGetTransientForHint(
+                            state.dpy, c.win, &mut trans,
+                        ) != 0)
                     {
-                        c.isfloating = !wintoclient(trans).is_null();
+                        c.isfloating = !wintoclient(state, trans).is_null();
                         if c.isfloating {
-                            arrange(c.mon);
+                            arrange(state, c.mon);
                         }
                     }
                 }
@@ -596,58 +627,59 @@ pub(crate) fn propertynotify(e: *mut XEvent) {
                     c.hintsvalid = 0;
                 }
                 XA_WM_HINTS => {
-                    updatewmhints(c);
-                    drawbars();
+                    updatewmhints(state, c);
+                    drawbars(state);
                 }
                 _ => {}
             }
-            if ev.atom == XA_WM_NAME || ev.atom == NETATOM[Net::WMName as usize]
+            if ev.atom == XA_WM_NAME
+                || ev.atom == state.netatom[Net::WMName as usize]
             {
-                updatetitle(c);
+                updatetitle(state, c);
                 if c as *mut _ == (*c.mon).sel {
-                    drawbar(c.mon);
+                    drawbar(state, c.mon);
                 }
             }
-            if ev.atom == NETATOM[Net::WMWindowType as usize] {
-                updatewindowtype(c);
+            if ev.atom == state.netatom[Net::WMWindowType as usize] {
+                updatewindowtype(state, c);
             }
         }
     }
 }
 
-pub(crate) fn unmapnotify(e: *mut XEvent) {
+pub(crate) fn unmapnotify(state: &mut State, e: *mut XEvent) {
     log::trace!("unmapnotify");
     unsafe {
         let ev = &(*e).unmap;
-        let mut c = wintoclient(ev.window);
+        let mut c = wintoclient(state, ev.window);
         if !c.is_null() {
             if ev.send_event != 0 {
-                setclientstate(c, WITHDRAWN_STATE);
+                setclientstate(state, c, WITHDRAWN_STATE);
             } else {
-                unmanage(c, 0);
+                unmanage(state, c, 0);
             }
         } else {
-            c = wintosystrayicon(ev.window);
+            c = wintosystrayicon(state, ev.window);
             if !c.is_null() {
                 // KLUDGE (systray author) sometimes icons occasionally unmap
                 // their windows but do _not_ destroy them. we map those windows
                 // back
-                XMapRaised(DPY, (*c).win);
-                updatesystray();
+                XMapRaised(state.dpy, (*c).win);
+                updatesystray(state);
             }
         }
     }
 }
 
-pub(crate) fn resizerequest(e: *mut XEvent) {
+pub(crate) fn resizerequest(state: &mut State, e: *mut XEvent) {
     log::trace!("resizerequest");
     unsafe {
         let ev = &(*e).resize_request;
-        let i = wintosystrayicon(ev.window);
+        let i = wintosystrayicon(state, ev.window);
         if !i.is_null() {
-            updatesystrayicongeom(i, ev.width, ev.height);
-            resizebarwin(SELMON);
-            updatesystray();
+            updatesystrayicongeom(state, i, ev.width, ev.height);
+            resizebarwin(state, state.selmon);
+            updatesystray(state);
         }
     }
 }

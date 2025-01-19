@@ -1,0 +1,136 @@
+let borderpx = 3;
+let snap = 32;
+let showbar = true;
+let topbar = true;
+let mfact = 0.5;
+let nmaster = 1;
+let resize_hints = false;
+let lock_fullscreen = true;
+
+let swallowfloating = false;
+let systraypinning = 0;
+let systrayonleft = false;
+let systrayspacing = 2;
+let systraypinningfailfirst = true;
+let showsystray = true;
+
+let scratchpadname = "scratchpad";
+let scratchpadcmd = ["st", "-t", scratchpadname, "-g", "120x34"];
+
+let fonts = ["monospace:size=10"];
+let tags = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+
+let gray1 = "#222222";
+let gray2 = "#444444";
+let gray3 = "#bbbbbb";
+let gray4 = "#eeeeee";
+let cyan = "#005577";
+
+let colors = {SchemeNorm: [gray3, gray1, gray2], SchemeSel: [gray4, cyan, cyan]};
+
+# class, instance, title, tags, isfloating, isterminal, noswallow, monitor
+let rules = [
+	["st-256color", nil, nil, 0, false, true, false, -1],
+];
+
+let dmenufont = "monospace:size=12";
+let dmenucmd = [
+	"dmenu_run",
+	"-fn", dmenufont,
+	"-nb", gray1,
+	"-nf", gray3,
+	"-sb", cyan,
+	"-sf", gray4,
+];
+
+let termcmd = ["st", "-e", "zsh"];
+
+let MODKEY = Mod4Mask;
+let S_MOD = ShiftMask | MODKEY;
+
+let keys = [
+	[MODKEY, XK_p, spawn, {v: dmenucmd}],
+	[S_MOD, XK_Return, spawn, {v: termcmd}],
+	[MODKEY, XK_grave, togglescratch, {v: scratchpadcmd}],
+	[MODKEY, XK_b, togglebar, {i: 0}],
+	[MODKEY, XK_j, focusstack, {i: 1}],
+	[MODKEY, XK_k, focusstack, {i: -1}],
+	[S_MOD, XK_j, pushstack, {i: 1}],
+	[S_MOD, XK_k, pushstack, {i: -1}],
+	[MODKEY, XK_i, incnmaster, {i: 1}],
+	[MODKEY, XK_d, incnmaster, {i: -1}],
+	[MODKEY, XK_h, setmfact, {f: -0.05}],
+	[MODKEY, XK_l, setmfact, {f: 0.05}],
+	[MODKEY, XK_Return, zoom, {i: 0}],
+	[MODKEY, XK_Tab, view, {ui: 0}],
+	[S_MOD, XK_c, killclient, {i: 0}],
+	[MODKEY, XK_t, setlayout, {l: 0}],
+	[MODKEY, XK_f, setlayout, {l: 1}],
+	[MODKEY, XK_m, setlayout, {l: 2}],
+	[MODKEY, XK_space, setlayout, {l: "none"}],
+	[S_MOD, XK_space, togglefloating, {i: 0}],
+	[MODKEY, XK_0, view, {ui: !0}],
+	[S_MOD, XK_0, tag, {ui: !0}],
+	[MODKEY, XK_comma, focusmon, {i: -1}],
+	[MODKEY, XK_period, focusmon, {i: 1}],
+	[S_MOD, XK_comma, tagmon, {i: -1}],
+	[S_MOD, XK_period, tagmon, {i: 1}],
+	[MODKEY, XK_1, view, {ui: 1 << 0}],
+	[MODKEY | ControlMask, XK_1, toggleview, {ui: 1 << 0}],
+	[S_MOD, XK_1, tag, {ui: 1 << 0}],
+	[S_MOD | ControlMask, XK_1, toggletag, {ui: 1 << 0}],
+	[MODKEY, XK_2, view, {ui: 1 << 1}],
+	[MODKEY | ControlMask, XK_2, toggleview, {ui: 1 << 1}],
+	[S_MOD, XK_2, tag, {ui: 1 << 1}],
+	[S_MOD | ControlMask, XK_2, toggletag, {ui: 1 << 1}],
+	[MODKEY, XK_3, view, {ui: 1 << 2}],
+	[MODKEY | ControlMask, XK_3, toggleview, {ui: 1 << 2}],
+	[S_MOD, XK_3, tag, {ui: 1 << 2}],
+	[S_MOD | ControlMask, XK_3, toggletag, {ui: 1 << 2}],
+	[MODKEY, XK_4, view, {ui: 1 << 3}],
+	[MODKEY | ControlMask, XK_4, toggleview, {ui: 1 << 3}],
+	[S_MOD, XK_4, tag, {ui: 1 << 3}],
+	[S_MOD | ControlMask, XK_4, toggletag, {ui: 1 << 3}],
+	[MODKEY, XK_5, view, {ui: 1 << 4}],
+	[MODKEY | ControlMask, XK_5, toggleview, {ui: 1 << 4}],
+	[S_MOD, XK_5, tag, {ui: 1 << 4}],
+	[S_MOD | ControlMask, XK_5, toggletag, {ui: 1 << 4}],
+	[MODKEY, XK_6, view, {ui: 1 << 5}],
+	[MODKEY | ControlMask, XK_6, toggleview, {ui: 1 << 5}],
+	[S_MOD, XK_6, tag, {ui: 1 << 5}],
+	[S_MOD | ControlMask, XK_6, toggletag, {ui: 1 << 5}],
+	[MODKEY, XK_7, view, {ui: 1 << 6}],
+	[MODKEY | ControlMask, XK_7, toggleview, {ui: 1 << 6}],
+	[S_MOD, XK_7, tag, {ui: 1 << 6}],
+	[S_MOD | ControlMask, XK_7, toggletag, {ui: 1 << 6}],
+	[MODKEY, XK_8, view, {ui: 1 << 7}],
+	[MODKEY | ControlMask, XK_8, toggleview, {ui: 1 << 7}],
+	[S_MOD, XK_8, tag, {ui: 1 << 7}],
+	[S_MOD | ControlMask, XK_8, toggletag, {ui: 1 << 7}],
+	[MODKEY, XK_9, view, {ui: 1 << 8}],
+	[MODKEY | ControlMask, XK_9, toggleview, {ui: 1 << 8}],
+	[S_MOD, XK_9, tag, {ui: 1 << 8}],
+	[S_MOD | ControlMask, XK_9, toggletag, {ui: 1 << 8}],
+	[S_MOD, XK_q, quit, {i: 0}],
+];
+
+let buttons = [
+	[ClkLtSymbol, 0, Button1, setlayout, {l: nil}],
+	[ClkLtSymbol, 0, Button3, setlayout, {l: 2}],
+	[ClkWinTitle, 0, Button2, zoom, {i: 0}],
+	[ClkStatusText, 0, Button2, spawn, {v: termcmd}],
+	[ClkClientWin, MODKEY, Button1, movemouse, {i: 0}],
+	[ClkClientWin, MODKEY, Button2, togglefloating, {i: 0}],
+	[ClkClientWin, MODKEY, Button3, resizemouse, {i: 0}],
+	[ClkTagBar, 0, Button1, view, {i: 0}],
+	[ClkTagBar, 0, Button3, toggleview, {i: 0}],
+	[ClkTagBar, MODKEY, Button1, tag, {i: 0}],
+	[ClkTagBar, MODKEY, Button3, toggletag, {i: 0}],
+];
+
+let layouts = [
+	["[]=", tile],
+	["><>", nil],
+	["[M]", monocle],
+];
+

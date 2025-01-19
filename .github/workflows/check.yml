@@ -37,7 +37,7 @@ jobs:
       - name: Install X libraries
         run: |
           sudo apt-get update
-          sudo apt-get install libxft-dev libxinerama-dev
+          sudo apt-get install libxft-dev libxinerama-dev lua5.4 liblua5.4-dev
       - name: Install ${{ matrix.toolchain }}
         uses: dtolnay/rust-toolchain@master
         with:
@@ -58,7 +58,7 @@ jobs:
       - name: Install X libraries
         run: |
           sudo apt-get update
-          sudo apt-get install libxft-dev libxinerama-dev
+          sudo apt-get install libxft-dev libxinerama-dev lua5.4 liblua5.4-dev
       - name: Install nightly
         uses: dtolnay/rust-toolchain@nightly
       - name: cargo doc

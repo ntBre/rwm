@@ -12,3 +12,11 @@ libc = "0.2.158"
 yeslogic-fontconfig-sys = "6.0.0"
 env_logger = "0.11.3"
 log = "0.4.21"
+mlua = { version = "0.10.2", features = ["lua54", "serialize"] }
+serde = { version = "1.0.216", features = ["derive"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+xcb = { version = "1.5.0", features = [ "res" ] }
+
+[dev-dependencies]
+insta = "1.41.1"

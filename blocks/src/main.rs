@@ -21,6 +21,53 @@ struct Globals<const N: usize> {
     statusstr: [String; 2],
 }
 
+fn getsigcmds<const N: usize>(g: *mut Globals<N>, signal: c_int) {
+    for (i, current) in BLOCKS.iter().enumerate() {
+        if current.signal == signal {
+            unsafe {
+                (*g).statusbar[i] = current.getcmd();
+            }
+        }
+    }
+}
+
+fn getstatus<const N: usize>(g: *mut Globals<N>) -> bool {
+    unsafe {
+        (*g).statusstr[1] = std::mem::take(&mut (*g).statusstr[0]);
+        (*g).statusstr[0] = (*g).statusbar.join("").replace('\n', "");
+        (*g).statusstr[0] != (*g).statusstr[1]
+    }
+}
+
+/// NOTE: inlined from setroot, can also be pstdout with -p flag, presumably
+/// for debugging
+fn writestatus<const N: usize>(g: *mut Globals<N>) {
+    // only set root if text has changed
+    if !getstatus(g) {
+        return;
+    }
+    unsafe {
+        let dpy = XOpenDisplay(null());
+        let screen = XDefaultScreen(dpy);
+        let root = XRootWindow(dpy, screen);
+        let s = CString::new((*g).statusstr[0].clone()).unwrap();
+        XStoreName(dpy, root, s.as_ptr());
+        XCloseDisplay(dpy);
+    }
+}
+
+fn statusloop<const N: usize>(g: *mut Globals<N>) {
+    setupsignals();
+    unsafe {
+        (*g).getcmds(-1);
+        for i in 0.. {
+            (*g).getcmds(i);
+            writestatus(g);
+            sleep(Duration::from_secs(1));
+        }
+    }
+}
+
 impl<const N: usize> Globals<N> {
     const fn new() -> Self {
         const S: String = String::new();
@@ -36,47 +83,6 @@ impl<const N: usize> Globals<N> {
             }
         }
     }
-
-    fn getsigcmds(&mut self, signal: c_int) {
-        for (i, current) in BLOCKS.iter().enumerate() {
-            if current.signal == signal {
-                self.statusbar[i] = current.getcmd();
-            }
-        }
-    }
-
-    fn getstatus(&mut self) -> bool {
-        self.statusstr[1] = std::mem::take(&mut self.statusstr[0]);
-        self.statusstr[0] = self.statusbar.join("").replace('\n', "");
-        self.statusstr[0] != self.statusstr[1]
-    }
-
-    /// NOTE: inlined from setroot, can also be pstdout with -p flag, presumably
-    /// for debugging
-    fn writestatus(&mut self) {
-        // only set root if text has changed
-        if !self.getstatus() {
-            return;
-        }
-        unsafe {
-            let dpy = XOpenDisplay(null());
-            let screen = XDefaultScreen(dpy);
-            let root = XRootWindow(dpy, screen);
-            let s = CString::new(self.statusstr[0].clone()).unwrap();
-            XStoreName(dpy, root, s.as_ptr());
-            XCloseDisplay(dpy);
-        }
-    }
-
-    fn statusloop(&mut self) {
-        setupsignals();
-        self.getcmds(-1);
-        for i in 0.. {
-            self.getcmds(i);
-            self.writestatus();
-            sleep(Duration::from_secs(1));
-        }
-    }
 }
 
 /// adapted from
@@ -90,10 +96,8 @@ extern "C" fn termhandler(_: c_int) {
 }
 
 extern "C" fn sighandler(signum: c_int) {
-    unsafe {
-        GLOB.getsigcmds(signum - SIGRTMIN());
-        GLOB.writestatus();
-    }
+    getsigcmds(&raw mut GLOB, signum - SIGRTMIN());
+    writestatus(&raw mut GLOB);
 }
 
 struct Block {
@@ -139,6 +143,6 @@ fn main() {
     unsafe {
         signal(SIGTERM, get_handler(termhandler));
         signal(SIGINT, get_handler(termhandler));
-        GLOB.statusloop();
+        statusloop(&raw mut GLOB);
     }
 }
