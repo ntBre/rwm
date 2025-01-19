@@ -985,31 +985,203 @@ SKIP = {
     "XK_zerosubscript",
     "XK_zerosuperior",
     "XK_zstroke",
+    "XF86XK_10ChannelsDown",
+    "XF86XK_10ChannelsUp",
+    "XF86XK_3DMode",
+    "XF86XK_ALSToggle",
+    "XF86XK_Addressbook",
+    "XF86XK_AppSelect",
+    "XF86XK_AspectRatio",
+    "XF86XK_Assistant",
+    "XF86XK_AttendantOff",
+    "XF86XK_AttendantOn",
+    "XF86XK_AttendantToggle",
+    "XF86XK_Audio",
+    "XF86XK_AudioDesc",
+    "XF86XK_AudioPreset",
+    "XF86XK_AutopilotEngageToggle",
+    "XF86XK_Break",
+    "XF86XK_BrightnessAuto",
+    "XF86XK_BrightnessMax",
+    "XF86XK_BrightnessMin",
+    "XF86XK_Buttonconfig",
+    "XF86XK_CameraAccessDisable",
+    "XF86XK_CameraAccessEnable",
+    "XF86XK_CameraAccessToggle",
+    "XF86XK_CameraDown",
+    "XF86XK_CameraFocus",
+    "XF86XK_CameraLeft",
+    "XF86XK_CameraRight",
+    "XF86XK_CameraUp",
+    "XF86XK_CameraZoomIn",
+    "XF86XK_CameraZoomOut",
+    "XF86XK_ChannelDown",
+    "XF86XK_ChannelUp",
+    "XF86XK_ClearvuSonar",
+    "XF86XK_ContextMenu",
+    "XF86XK_ControlPanel",
+    "XF86XK_DVD",
+    "XF86XK_Data",
+    "XF86XK_Database",
+    "XF86XK_Dictate",
+    "XF86XK_DisplayOff",
+    "XF86XK_DisplayToggle",
+    "XF86XK_DualRangeRadar",
+    "XF86XK_Editor",
+    "XF86XK_EmojiPicker",
+    "XF86XK_FastReverse",
+    "XF86XK_FishingChart",
+    "XF86XK_Fn",
+    "XF86XK_FnRightShift",
+    "XF86XK_Fn_Esc",
+    "XF86XK_FullScreen",
+    "XF86XK_GraphicsEditor",
+    "XF86XK_HangupPhone",
+    "XF86XK_Images",
+    "XF86XK_Info",
+    "XF86XK_Journal",
+    "XF86XK_KbdInputAssistAccept",
+    "XF86XK_KbdInputAssistCancel",
+    "XF86XK_KbdInputAssistNext",
+    "XF86XK_KbdInputAssistNextgroup",
+    "XF86XK_KbdInputAssistPrev",
+    "XF86XK_KbdInputAssistPrevgroup",
+    "XF86XK_KbdLcdMenu1",
+    "XF86XK_KbdLcdMenu2",
+    "XF86XK_KbdLcdMenu3",
+    "XF86XK_KbdLcdMenu4",
+    "XF86XK_KbdLcdMenu5",
+    "XF86XK_Keyboard",
+    "XF86XK_LeftDown",
+    "XF86XK_LeftUp",
+    "XF86XK_LightsToggle",
+    "XF86XK_Macro1",
+    "XF86XK_Macro10",
+    "XF86XK_Macro11",
+    "XF86XK_Macro12",
+    "XF86XK_Macro13",
+    "XF86XK_Macro14",
+    "XF86XK_Macro15",
+    "XF86XK_Macro16",
+    "XF86XK_Macro17",
+    "XF86XK_Macro18",
+    "XF86XK_Macro19",
+    "XF86XK_Macro2",
+    "XF86XK_Macro20",
+    "XF86XK_Macro21",
+    "XF86XK_Macro22",
+    "XF86XK_Macro23",
+    "XF86XK_Macro24",
+    "XF86XK_Macro25",
+    "XF86XK_Macro26",
+    "XF86XK_Macro27",
+    "XF86XK_Macro28",
+    "XF86XK_Macro29",
+    "XF86XK_Macro3",
+    "XF86XK_Macro30",
+    "XF86XK_Macro4",
+    "XF86XK_Macro5",
+    "XF86XK_Macro6",
+    "XF86XK_Macro7",
+    "XF86XK_Macro8",
+    "XF86XK_Macro9",
+    "XF86XK_MacroPreset1",
+    "XF86XK_MacroPreset2",
+    "XF86XK_MacroPreset3",
+    "XF86XK_MacroPresetCycle",
+    "XF86XK_MacroRecordStart",
+    "XF86XK_MacroRecordStop",
+    "XF86XK_MarkWaypoint",
+    "XF86XK_MediaRepeat",
+    "XF86XK_MediaTopMenu",
+    "XF86XK_MonBrightnessCycle",
+    "XF86XK_NavChart",
+    "XF86XK_NavInfo",
+    "XF86XK_NextElement",
+    "XF86XK_NextFavorite",
+    "XF86XK_NotificationCenter",
+    "XF86XK_Numeric0",
+    "XF86XK_Numeric1",
+    "XF86XK_Numeric11",
+    "XF86XK_Numeric12",
+    "XF86XK_Numeric2",
+    "XF86XK_Numeric3",
+    "XF86XK_Numeric4",
+    "XF86XK_Numeric5",
+    "XF86XK_Numeric6",
+    "XF86XK_Numeric7",
+    "XF86XK_Numeric8",
+    "XF86XK_Numeric9",
+    "XF86XK_NumericA",
+    "XF86XK_NumericB",
+    "XF86XK_NumericC",
+    "XF86XK_NumericD",
+    "XF86XK_NumericPound",
+    "XF86XK_NumericStar",
+    "XF86XK_OnScreenKeyboard",
+    "XF86XK_PauseRecord",
+    "XF86XK_PickupPhone",
+    "XF86XK_Presentation",
+    "XF86XK_PreviousElement",
+    "XF86XK_PrivacyScreenToggle",
+    "XF86XK_RFKill",
+    "XF86XK_RadarOverlay",
+    "XF86XK_RightDown",
+    "XF86XK_RightUp",
+    "XF86XK_RootMenu",
+    "XF86XK_RotationLockToggle",
+    "XF86XK_Screensaver",
+    "XF86XK_SelectiveScreenshot",
+    "XF86XK_SidevuSonar",
+    "XF86XK_SingleRangeRadar",
+    "XF86XK_SlowReverse",
+    "XF86XK_Sos",
+    "XF86XK_SpellCheck",
+    "XF86XK_StopRecord",
+    "XF86XK_Taskmanager",
+    "XF86XK_TraditionalSonar",
+    "XF86XK_Unmute",
+    "XF86XK_VOD",
+    "XF86XK_VideoPhone",
+    "XF86XK_VoiceCommand",
+    "XF86XK_Voicemail",
+    "XF86XK_WPSButton",
+    "XF86XK_WWAN",
+    "XF86XK_ZoomReset",
 }
 
 
 def main():
     # leave a format specifier to patch up with the length later
-    s = StringIO()
+    body = StringIO()
     # writing replaces the initial value?? so I have to do this out here
-    s.write("pub(super) static XKEYS: [(&str, u32); {}] = keys! {{\n")
+    body.write("")
     count = 0
     with open("/usr/include/X11/keysymdef.h") as f:
-        for line in f:
-            if line.startswith("#define XK_"):
-                _def, xkey, *rest = line.split()
-                if xkey in SKIP:
-                    continue
-                s.write(xkey + ", ")
-                count += 1
-    s.write("\n}};")
+        lines = f.readlines()
+    with open("/usr/include/X11/XF86keysym.h") as f:
+        lines.extend(f.readlines())
 
+    for line in lines:
+        if line.startswith("#define XK_") or line.startswith(
+            "#define XF86XK_"
+        ):
+            _def, xkey, *rest = line.split()
+            if xkey in SKIP:
+                continue
+            body.write(xkey + ", ")
+            count += 1
+
+    body = textwrap.fill(
+        body.getvalue(),
+        width=80,
+        initial_indent=" " * 4,
+        subsequent_indent=" " * 4,
+    )
     print(
-        textwrap.fill(
-            s.getvalue(),
-            width=80,
-            subsequent_indent=" " * 4,
-        ).format(count)
+        f"""pub(super) static XKEYS: [(&str, u32); {count}] = keys! {{
+{body}
+}};"""
     )
 
 
