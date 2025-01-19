@@ -183,7 +183,7 @@ pub(crate) fn view(state: &mut State, arg: *const Arg) {
                 pertag.curtag = 0;
             } else {
                 let mut i;
-                cfor!((i = 0; ((*arg).ui() & 1 << i) == 0; i += 1) {});
+                cfor!((i = 0; ((*arg).ui() & (1 << i)) == 0; i += 1) {});
                 pertag.curtag = i + 1;
             }
         } else {
@@ -442,10 +442,10 @@ pub(crate) fn toggleview(state: &mut State, arg: *const Arg) {
             }
 
             // test if the user did not select the same tag
-            if (newtagset & 1 << ((*state.selmon).pertag.curtag - 1)) == 0 {
+            if (newtagset & (1 << ((*state.selmon).pertag.curtag - 1))) == 0 {
                 (*state.selmon).pertag.prevtag = (*state.selmon).pertag.curtag;
                 let mut i;
-                cfor!((i = 0; (newtagset & 1 << i) == 0; i += 1) {});
+                cfor!((i = 0; (newtagset & (1 << i)) == 0; i += 1) {});
                 (*state.selmon).pertag.curtag = i + 1;
             }
 

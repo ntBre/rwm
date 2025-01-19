@@ -1468,7 +1468,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
             let w = textw(&mut state.drw, &text, state.lrpad);
             drw::setscheme(
                 &mut state.drw,
-                state.scheme[if ((*m).tagset[(*m).seltags as usize] & 1 << i)
+                state.scheme[if ((*m).tagset[(*m).seltags as usize] & (1 << i))
                     != 0
                 {
                     Scheme::Sel
@@ -1486,10 +1486,10 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                 state.bh as u32,
                 state.lrpad as u32 / 2,
                 &text,
-                (urg as i32) & 1 << i,
+                (urg as i32) & (1 << i),
             );
 
-            if (occ & 1 << i) != 0 {
+            if (occ & (1 << i)) != 0 {
                 drw::rect(
                     &mut state.drw,
                     x + boxs as i32,
@@ -1498,9 +1498,9 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                     boxw,
                     (m == state.selmon
                         && !(*state.selmon).sel.is_null()
-                        && ((*(*state.selmon).sel).tags & 1 << i) != 0)
+                        && ((*(*state.selmon).sel).tags & (1 << i)) != 0)
                         as c_int,
-                    (urg & 1 << i) != 0,
+                    (urg & (1 << i)) != 0,
                 );
             }
             x += w as i32;
