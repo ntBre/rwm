@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use fig_env::{CLICKS, HANDLERS, KEYS};
+use fig_env::{CLICKS, HANDLERS, KEYS, XKEYS};
 use mlua::{Lua, LuaSerdeExt as _, Table};
 
 use crate::{config::key::Key, enums::Scheme, Button, Layout, Rule};
@@ -128,8 +128,8 @@ impl ConfigBuilder {
         }
 
         // install key definitions
-        for (k, v) in KEYS {
-            globals.set(k, v).unwrap();
+        for (k, v) in KEYS.iter().chain(XKEYS.iter()) {
+            globals.set(*k, *v).unwrap();
         }
 
         // install click and button definitions
