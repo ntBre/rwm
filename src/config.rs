@@ -3,7 +3,7 @@ use std::{
     error::Error,
     ffi::{c_float, c_int, c_uint, CString},
     fs::read_to_string,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use env::{CLICKS, HANDLERS, KEYS, XKEYS};
@@ -171,18 +171,16 @@ impl Config {
     /// Attempt to load a config file on first usage from `$XDG_CONFIG_HOME`,
     /// then `$HOME`, before falling back to the default config.
     pub fn load_home() -> Self {
-        let mut home = std::env::var("XDG_CONFIG_HOME");
-        if home.is_err() {
-            home = std::env::var("HOME");
-        }
-        if home.is_err() {
+        let base = if let Ok(xdg_home) = std::env::var("XDG_CONFIG_HOME") {
+            PathBuf::from(xdg_home)
+        } else if let Ok(home) = std::env::var("HOME") {
+            PathBuf::from(home).join(".config")
+        } else {
             log::warn!("unable to determine config directory");
             return Config::default();
-        }
-        let config_path = Path::new(&home.unwrap())
-            .join(".config")
-            .join("rwm")
-            .join("config.lua");
+        };
+
+        let config_path = base.join("rwm").join("config.lua");
 
         Config::from_lua(config_path).unwrap_or_else(|e| {
             log::error!("failed to read config file: {e:?}");
