@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn from_lua() {
-        let got = Config::from_lua("example.lua").unwrap();
+        let got = Config::from_lua("testfiles/config.lua").unwrap();
         assert_debug_snapshot!(got)
     }
 }
