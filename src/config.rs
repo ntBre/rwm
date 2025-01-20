@@ -6,12 +6,12 @@ use std::{
     path::Path,
 };
 
-use fig_env::{CLICKS, HANDLERS, KEYS, XKEYS};
+use env::{CLICKS, HANDLERS, KEYS, XKEYS};
 use mlua::{Lua, LuaSerdeExt as _, Table};
 
 use crate::{config::key::Key, enums::Scheme, Button, Layout, Rule};
 
-mod fig_env;
+mod env;
 pub mod key;
 
 #[derive(Debug, serde::Deserialize)]
@@ -137,7 +137,7 @@ impl ConfigBuilder {
             globals.set(k, v).unwrap();
         }
 
-        for (k, v) in fig_env::BUTTONS {
+        for (k, v) in env::BUTTONS {
             globals.set(k, v).unwrap();
         }
 

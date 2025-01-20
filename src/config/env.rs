@@ -1,5 +1,5 @@
-//! Build an initial Fig environment containing useful symbols for writing
-//! your config
+//! Build sequences of key-value pairs containing useful symbols to include in
+//! the initial Lua environment for writing your config.
 
 use crate::enums::Clk;
 use x11::xlib::{

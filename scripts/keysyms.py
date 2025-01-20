@@ -1,6 +1,7 @@
 """Generate a table of X keysyms for inclusion in the Lua config file
-environment. This should be included in `fig_env.rs` to take advantage of the
-`use x11::keysym::*` and `keys` macros that are used in the generated output.
+environment. This should be included in `config/env.rs` to take advantage of
+the `use x11::keysym::*` and `keys` macros that are used in the generated
+output.
 """
 
 import textwrap
