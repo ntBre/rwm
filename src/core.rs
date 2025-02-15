@@ -524,8 +524,8 @@ pub fn sendevent(
             if xlib::XGetWMProtocols(state.dpy, w, &mut protocols, &mut n) != 0
             {
                 while exists == 0 && n > 0 {
-                    exists = (*protocols.offset(n as isize) == proto) as c_int;
                     n -= 1;
+                    exists = (*protocols.offset(n as isize) == proto) as c_int;
                 }
                 XFree(protocols.cast());
             }
