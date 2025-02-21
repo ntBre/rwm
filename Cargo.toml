@@ -11,7 +11,7 @@ x11 = { version = "2.21.0", features = ["xlib", "xft", "xinerama"] }
 libc = "0.2.169"
 yeslogic-fontconfig-sys = "6.0.0"
 env_logger = "0.11.6"
-log = "0.4.25"
+log = "0.4.26"
 mlua = { version = "0.10.3", features = ["lua54", "serialize"] }
 serde = { version = "1.0.218", features = ["derive"] }
 
