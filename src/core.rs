@@ -15,7 +15,7 @@ use crate::xembed::{
     XEMBED_WINDOW_DEACTIVATE,
 };
 use crate::{
-    drw, handlers, Arg, Client, Layout, Monitor, Pertag, State, Systray,
+    drw, handlers, x, Arg, Client, Layout, Monitor, Pertag, State, Systray,
     Window, ICONIC_STATE, NORMAL_STATE, WITHDRAWN_STATE,
 };
 use libc::{c_long, c_uchar, pid_t, sigaction};
@@ -512,8 +512,6 @@ pub fn sendevent(
     d4: c_long,
 ) -> c_int {
     log::trace!("sendevent");
-    let mut n = 0;
-    let mut protocols = std::ptr::null_mut();
     let mt;
     let mut exists = 0;
     unsafe {
@@ -521,13 +519,8 @@ pub fn sendevent(
             || proto == state.wmatom[WM::Delete as usize]
         {
             mt = state.wmatom[WM::Protocols as usize];
-            if xlib::XGetWMProtocols(state.dpy, w, &mut protocols, &mut n) != 0
-            {
-                while exists == 0 && n > 0 {
-                    n -= 1;
-                    exists = (*protocols.offset(n as isize) == proto) as c_int;
-                }
-                XFree(protocols.cast());
+            if let Ok(protocols) = x::get_wm_protocols(state.dpy, w) {
+                exists = protocols.iter().rev().any(|p| *p == proto) as c_int;
             }
         } else {
             exists = 1;
