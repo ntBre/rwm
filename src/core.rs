@@ -426,7 +426,7 @@ pub unsafe fn focus(state: &mut State, mut c: *mut Client) {
             if (*c).mon != state.selmon {
                 state.selmon = (*c).mon;
             }
-            if (*c).isurgent != 0 {
+            if (*c).isurgent {
                 seturgent(state, c, false);
             }
             detachstack(c);
@@ -1067,7 +1067,7 @@ pub fn updatenumlockmask(state: &mut State) {
 pub fn seturgent(state: &mut State, c: *mut Client, urg: bool) {
     log::trace!("seturgent");
     unsafe {
-        (*c).isurgent = urg as c_int;
+        (*c).isurgent = urg;
         let wmh = xlib::XGetWMHints(state.dpy, (*c).win);
         if wmh.is_null() {
             return;
@@ -1449,7 +1449,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
         let mut c = (*m).clients;
         while !c.is_null() {
             occ |= (*c).tags;
-            if (*c).isurgent != 0 {
+            if (*c).isurgent {
                 urg |= (*c).tags;
             }
             c = (*c).next;
@@ -2635,7 +2635,7 @@ pub fn updatewmhints(state: &mut State, c: *mut Client) {
                 (*wmh).flags &= !URGENT;
                 xlib::XSetWMHints(state.dpy, (*c).win, wmh);
             } else {
-                (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
+                (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool;
             }
             if (*wmh).flags & InputHint != 0 {
                 (*c).neverfocus = ((*wmh).input == 0) as c_int;

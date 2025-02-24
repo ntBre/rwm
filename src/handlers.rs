@@ -274,7 +274,7 @@ pub(crate) fn clientmessage(state: &mut State, e: *mut XEvent) {
             }
         } else if cme.message_type == state.netatom[Net::ActiveWindow as usize]
             && c != (*state.selmon).sel
-            && (*c).isurgent == 0
+            && !(*c).isurgent
         {
             seturgent(state, c, true);
         }

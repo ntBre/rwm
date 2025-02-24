@@ -262,7 +262,7 @@ pub struct Client {
     pub tags: c_uint,
     pub isfixed: c_int,
     pub isfloating: bool,
-    pub isurgent: c_int,
+    pub isurgent: bool,
     pub neverfocus: c_int,
     pub oldstate: bool,
     pub isfullscreen: bool,
