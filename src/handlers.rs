@@ -624,7 +624,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
                     }
                 }
                 XA_WM_NORMAL_HINTS => {
-                    c.hintsvalid = 0;
+                    c.hintsvalid = false;
                 }
                 XA_WM_HINTS => {
                     updatewmhints(state, c);

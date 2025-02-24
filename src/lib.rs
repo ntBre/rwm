@@ -256,7 +256,7 @@ pub struct Client {
     pub maxh: c_int,
     pub minw: c_int,
     pub minh: c_int,
-    pub hintsvalid: c_int,
+    pub hintsvalid: bool,
     pub bw: c_int,
     pub oldbw: c_int,
     pub tags: c_uint,

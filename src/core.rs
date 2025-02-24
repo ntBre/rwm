@@ -845,7 +845,7 @@ pub fn applysizehints(
                 .arrange
                 .is_none()
         {
-            if (*c).hintsvalid == 0 {
+            if !(*c).hintsvalid {
                 updatesizehints(state, c);
             }
             /* see last two sentences in ICCCM 4.1.2.3 */
@@ -967,7 +967,7 @@ pub fn updatesizehints(state: &mut State, c: *mut Client) {
             && (*c).maxh != 0
             && (*c).maxw == (*c).minw
             && (*c).maxh == (*c).minh;
-        (*c).hintsvalid = 1;
+        (*c).hintsvalid = true;
     }
 }
 
