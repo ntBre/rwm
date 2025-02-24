@@ -18,6 +18,7 @@ pub mod handlers;
 pub mod key_handlers;
 pub mod layouts;
 pub mod util;
+pub mod x;
 pub mod xembed;
 
 pub use core::*;
