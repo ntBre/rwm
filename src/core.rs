@@ -510,23 +510,23 @@ pub fn sendevent(
     d2: c_long,
     d3: c_long,
     d4: c_long,
-) -> c_int {
+) -> bool {
     log::trace!("sendevent");
     let mt;
-    let mut exists = 0;
+    let mut exists = false;
     unsafe {
         if proto == state.wmatom[WM::TakeFocus as usize]
             || proto == state.wmatom[WM::Delete as usize]
         {
             mt = state.wmatom[WM::Protocols as usize];
             if let Ok(protocols) = x::get_wm_protocols(state.dpy, w) {
-                exists = protocols.iter().rev().any(|p| *p == proto) as c_int;
+                exists = protocols.iter().rev().any(|p| *p == proto);
             }
         } else {
-            exists = 1;
+            exists = true;
             mt = proto;
         }
-        if exists != 0 {
+        if exists {
             let mut ev = xlib::XEvent { type_: ClientMessage };
             ev.client_message.window = w;
             ev.client_message.message_type = mt;

@@ -214,7 +214,7 @@ pub(crate) fn killclient(state: &mut State, _arg: *const Arg) {
             return;
         }
 
-        if sendevent(
+        if !sendevent(
             state,
             (*(*state.selmon).sel).win,
             state.wmatom[WM::Delete as usize],
@@ -224,8 +224,7 @@ pub(crate) fn killclient(state: &mut State, _arg: *const Arg) {
             0,
             0,
             0,
-        ) == 0
-        {
+        ) {
             XGrabServer(state.dpy);
             XSetErrorHandler(Some(xerrordummy));
             XSetCloseDownMode(state.dpy, DestroyAll);
