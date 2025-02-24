@@ -260,7 +260,7 @@ pub struct Client {
     pub bw: c_int,
     pub oldbw: c_int,
     pub tags: c_uint,
-    pub isfixed: c_int,
+    pub isfixed: bool,
     pub isfloating: bool,
     pub isurgent: bool,
     pub neverfocus: c_int,

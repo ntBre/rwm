@@ -963,10 +963,10 @@ pub fn updatesizehints(state: &mut State, c: *mut Client) {
             (*c).maxa = 0.0;
         }
 
-        (*c).isfixed = ((*c).maxw != 0
+        (*c).isfixed = (*c).maxw != 0
             && (*c).maxh != 0
             && (*c).maxw == (*c).minw
-            && (*c).maxh == (*c).minh) as c_int;
+            && (*c).maxh == (*c).minh;
         (*c).hintsvalid = 1;
     }
 }
@@ -1489,10 +1489,9 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                     boxs as i32,
                     boxw,
                     boxw,
-                    (m == state.selmon
+                    m == state.selmon
                         && !(*state.selmon).sel.is_null()
-                        && ((*(*state.selmon).sel).tags & (1 << i)) != 0)
-                        as c_int,
+                        && ((*(*state.selmon).sel).tags & (1 << i)) != 0,
                     (urg & (1 << i)) != 0,
                 );
             }
@@ -1559,7 +1558,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                     0,
                     w as u32,
                     state.bh as u32,
-                    1,
+                    true,
                     true,
                 );
             }
@@ -2584,7 +2583,7 @@ pub fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         );
         grabbuttons(state, c, false);
         if !(*c).isfloating {
-            (*c).oldstate = trans != 0 || (*c).isfixed != 0;
+            (*c).oldstate = trans != 0 || (*c).isfixed;
             (*c).isfloating = (*c).oldstate;
         }
         if (*c).isfloating {
