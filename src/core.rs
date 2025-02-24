@@ -699,7 +699,7 @@ pub fn resize(
     interact: c_int,
 ) {
     log::trace!("resize");
-    if applysizehints(state, c, &mut x, &mut y, &mut w, &mut h, interact) != 0 {
+    if applysizehints(state, c, &mut x, &mut y, &mut w, &mut h, interact) {
         resizeclient(state, c, x, y, w, h);
     }
 }
@@ -798,7 +798,7 @@ pub fn applysizehints(
     w: &mut i32,
     h: &mut i32,
     interact: c_int,
-) -> c_int {
+) -> bool {
     log::trace!("applysizehints");
     unsafe {
         let m = (*c).mon;
@@ -885,7 +885,7 @@ pub fn applysizehints(
                 *h = std::cmp::min(*h, (*c).maxh);
             }
         }
-        (*x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h) as c_int
+        *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
     }
 }
 
