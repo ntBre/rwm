@@ -132,8 +132,6 @@ impl Button {
     }
 }
 
-unsafe impl Sync for Button {}
-
 pub struct Cursor {
     pub cursor: x11::xlib::Cursor,
 }
