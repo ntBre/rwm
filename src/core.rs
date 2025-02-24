@@ -467,7 +467,7 @@ pub fn drawbars(state: &mut State) {
 pub fn setfocus(state: &mut State, c: *mut Client) {
     log::trace!("setfocus");
     unsafe {
-        if (*c).neverfocus == 0 {
+        if !(*c).neverfocus {
             xlib::XSetInputFocus(
                 state.dpy,
                 (*c).win,
@@ -2637,9 +2637,9 @@ pub fn updatewmhints(state: &mut State, c: *mut Client) {
                 (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool;
             }
             if (*wmh).flags & InputHint != 0 {
-                (*c).neverfocus = ((*wmh).input == 0) as c_int;
+                (*c).neverfocus = (*wmh).input == 0;
             } else {
-                (*c).neverfocus = 0;
+                (*c).neverfocus = false;
             }
             xlib::XFree(wmh.cast());
         }
