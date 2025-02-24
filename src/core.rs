@@ -426,7 +426,7 @@ pub unsafe fn focus(state: &mut State, mut c: *mut Client) {
             if (*c).mon != state.selmon {
                 state.selmon = (*c).mon;
             }
-            if (*c).isurgent != 0 {
+            if (*c).isurgent {
                 seturgent(state, c, false);
             }
             detachstack(c);
@@ -467,7 +467,7 @@ pub fn drawbars(state: &mut State) {
 pub fn setfocus(state: &mut State, c: *mut Client) {
     log::trace!("setfocus");
     unsafe {
-        if (*c).neverfocus == 0 {
+        if !(*c).neverfocus {
             xlib::XSetInputFocus(
                 state.dpy,
                 (*c).win,
@@ -510,23 +510,23 @@ pub fn sendevent(
     d2: c_long,
     d3: c_long,
     d4: c_long,
-) -> c_int {
+) -> bool {
     log::trace!("sendevent");
     let mt;
-    let mut exists = 0;
+    let mut exists = false;
     unsafe {
         if proto == state.wmatom[WM::TakeFocus as usize]
             || proto == state.wmatom[WM::Delete as usize]
         {
             mt = state.wmatom[WM::Protocols as usize];
             if let Ok(protocols) = x::get_wm_protocols(state.dpy, w) {
-                exists = protocols.iter().rev().any(|p| *p == proto) as c_int;
+                exists = protocols.iter().rev().any(|p| *p == proto);
             }
         } else {
-            exists = 1;
+            exists = true;
             mt = proto;
         }
-        if exists != 0 {
+        if exists {
             let mut ev = xlib::XEvent { type_: ClientMessage };
             ev.client_message.window = w;
             ev.client_message.message_type = mt;
@@ -699,7 +699,7 @@ pub fn resize(
     interact: c_int,
 ) {
     log::trace!("resize");
-    if applysizehints(state, c, &mut x, &mut y, &mut w, &mut h, interact) != 0 {
+    if applysizehints(state, c, &mut x, &mut y, &mut w, &mut h, interact) {
         resizeclient(state, c, x, y, w, h);
     }
 }
@@ -798,7 +798,7 @@ pub fn applysizehints(
     w: &mut i32,
     h: &mut i32,
     interact: c_int,
-) -> c_int {
+) -> bool {
     log::trace!("applysizehints");
     unsafe {
         let m = (*c).mon;
@@ -845,7 +845,7 @@ pub fn applysizehints(
                 .arrange
                 .is_none()
         {
-            if (*c).hintsvalid == 0 {
+            if !(*c).hintsvalid {
                 updatesizehints(state, c);
             }
             /* see last two sentences in ICCCM 4.1.2.3 */
@@ -885,7 +885,7 @@ pub fn applysizehints(
                 *h = std::cmp::min(*h, (*c).maxh);
             }
         }
-        (*x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h) as c_int
+        *x != (*c).x || *y != (*c).y || *w != (*c).w || *h != (*c).h
     }
 }
 
@@ -963,11 +963,11 @@ pub fn updatesizehints(state: &mut State, c: *mut Client) {
             (*c).maxa = 0.0;
         }
 
-        (*c).isfixed = ((*c).maxw != 0
+        (*c).isfixed = (*c).maxw != 0
             && (*c).maxh != 0
             && (*c).maxw == (*c).minw
-            && (*c).maxh == (*c).minh) as c_int;
-        (*c).hintsvalid = 1;
+            && (*c).maxh == (*c).minh;
+        (*c).hintsvalid = true;
     }
 }
 
@@ -1067,7 +1067,7 @@ pub fn updatenumlockmask(state: &mut State) {
 pub fn seturgent(state: &mut State, c: *mut Client, urg: bool) {
     log::trace!("seturgent");
     unsafe {
-        (*c).isurgent = urg as c_int;
+        (*c).isurgent = urg;
         let wmh = xlib::XGetWMHints(state.dpy, (*c).win);
         if wmh.is_null() {
             return;
@@ -1449,7 +1449,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
         let mut c = (*m).clients;
         while !c.is_null() {
             occ |= (*c).tags;
-            if (*c).isurgent != 0 {
+            if (*c).isurgent {
                 urg |= (*c).tags;
             }
             c = (*c).next;
@@ -1489,10 +1489,9 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                     boxs as i32,
                     boxw,
                     boxw,
-                    (m == state.selmon
+                    m == state.selmon
                         && !(*state.selmon).sel.is_null()
-                        && ((*(*state.selmon).sel).tags & (1 << i)) != 0)
-                        as c_int,
+                        && ((*(*state.selmon).sel).tags & (1 << i)) != 0,
                     (urg & (1 << i)) != 0,
                 );
             }
@@ -1559,7 +1558,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
                     0,
                     w as u32,
                     state.bh as u32,
-                    1,
+                    true,
                     true,
                 );
             }
@@ -2584,7 +2583,7 @@ pub fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         );
         grabbuttons(state, c, false);
         if !(*c).isfloating {
-            (*c).oldstate = trans != 0 || (*c).isfixed != 0;
+            (*c).oldstate = trans != 0 || (*c).isfixed;
             (*c).isfloating = (*c).oldstate;
         }
         if (*c).isfloating {
@@ -2635,12 +2634,12 @@ pub fn updatewmhints(state: &mut State, c: *mut Client) {
                 (*wmh).flags &= !URGENT;
                 xlib::XSetWMHints(state.dpy, (*c).win, wmh);
             } else {
-                (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool as c_int;
+                (*c).isurgent = ((*wmh).flags & URGENT != 0) as bool;
             }
             if (*wmh).flags & InputHint != 0 {
-                (*c).neverfocus = ((*wmh).input == 0) as c_int;
+                (*c).neverfocus = (*wmh).input == 0;
             } else {
-                (*c).neverfocus = 0;
+                (*c).neverfocus = false;
             }
             xlib::XFree(wmh.cast());
         }

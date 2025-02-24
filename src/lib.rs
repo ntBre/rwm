@@ -132,8 +132,6 @@ impl Button {
     }
 }
 
-unsafe impl Sync for Button {}
-
 pub struct Cursor {
     pub cursor: x11::xlib::Cursor,
 }
@@ -256,14 +254,14 @@ pub struct Client {
     pub maxh: c_int,
     pub minw: c_int,
     pub minh: c_int,
-    pub hintsvalid: c_int,
+    pub hintsvalid: bool,
     pub bw: c_int,
     pub oldbw: c_int,
     pub tags: c_uint,
-    pub isfixed: c_int,
+    pub isfixed: bool,
     pub isfloating: bool,
-    pub isurgent: c_int,
-    pub neverfocus: c_int,
+    pub isurgent: bool,
+    pub neverfocus: bool,
     pub oldstate: bool,
     pub isfullscreen: bool,
     pub isterminal: bool,

@@ -95,7 +95,7 @@ pub fn rect(
     y: c_int,
     w: c_uint,
     h: c_uint,
-    filled: c_int,
+    filled: bool,
     invert: bool,
 ) {
     if drw.scheme.is_empty() {
@@ -109,7 +109,7 @@ pub fn rect(
                 [if invert { Col::Bg as usize } else { Col::Fg as usize }]
             .pixel,
         );
-        if filled != 0 {
+        if filled {
             xlib::XFillRectangle(drw.dpy, drw.drawable, drw.gc, x, y, w, h);
         } else {
             xlib::XDrawRectangle(
