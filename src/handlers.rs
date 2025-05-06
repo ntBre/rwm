@@ -636,7 +636,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
                 || ev.atom == state.netatom[Net::WMName as usize]
             {
                 updatetitle(state, c);
-                if c as *mut _ == (*c.mon).sel {
+                if std::ptr::eq(c, (*c.mon).sel) {
                     drawbar(state, c.mon);
                 }
             }

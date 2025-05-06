@@ -284,8 +284,7 @@ pub unsafe fn text(
     // variables at the top to match C as much as possible.
     unsafe {
         log::trace!(
-            "text: {drw:?}, {x}, {y}, {w}, {h}, {lpad}, {:?}, {invert}",
-            text
+            "text: {drw:?}, {x}, {y}, {w}, {h}, {lpad}, {text:?}, {invert}"
         );
         let mut ty: c_int;
         let mut ellipsis_x: c_int = 0;

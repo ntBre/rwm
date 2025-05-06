@@ -1,7 +1,7 @@
 use libc::{c_void, size_t};
 
 pub fn die(msg: &str) -> ! {
-    eprintln!("{}", msg);
+    eprintln!("{msg}");
     std::process::exit(1);
 }
 
