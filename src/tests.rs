@@ -55,7 +55,7 @@ fn main() {
         .into_button();
         handlers::buttonpress(&mut state, &mut button);
         unsafe {
-            assert!((*(*state.selmon).lt[(*state.selmon).sellt as usize])
+            assert!((*(*state.selmon).lt[(*state.selmon).sellt])
                 .arrange
                 .is_none());
         }

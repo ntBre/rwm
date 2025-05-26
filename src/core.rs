@@ -613,8 +613,8 @@ pub fn arrange(state: &mut State, mut m: *mut Monitor) {
 pub fn arrangemon(state: &mut State, m: *mut Monitor) {
     log::trace!("arrangemon");
     unsafe {
-        (*m).ltsymbol = (*(*m).lt[(*m).sellt as usize]).symbol.clone();
-        let arrange = &(*(*m).lt[(*m).sellt as usize]).arrange;
+        (*m).ltsymbol = (*(*m).lt[(*m).sellt]).symbol.clone();
+        let arrange = &(*(*m).lt[(*m).sellt]).arrange;
         if let Some(arrange) = arrange {
             (arrange.0)(state, m);
         }
@@ -628,12 +628,10 @@ pub fn restack(state: &mut State, m: *mut Monitor) {
         if (*m).sel.is_null() {
             return;
         }
-        if (*(*m).sel).isfloating
-            || (*(*m).lt[(*m).sellt as usize]).arrange.is_none()
-        {
+        if (*(*m).sel).isfloating || (*(*m).lt[(*m).sellt]).arrange.is_none() {
             xlib::XRaiseWindow(state.dpy, (*(*m).sel).win);
         }
-        if (*(*m).lt[(*m).sellt as usize]).arrange.is_some() {
+        if (*(*m).lt[(*m).sellt]).arrange.is_some() {
             let mut wc = xlib::XWindowChanges {
                 stack_mode: Below,
                 sibling: (*m).barwin,
@@ -672,9 +670,7 @@ pub fn showhide(state: &mut State, c: *mut Client) {
         if is_visible(c) {
             // show clients top down
             xlib::XMoveWindow(state.dpy, (*c).win, (*c).x, (*c).y);
-            if ((*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
-                .arrange
-                .is_none()
+            if ((*(*(*c).mon).lt[(*(*c).mon).sellt]).arrange.is_none()
                 || (*c).isfloating)
                 && !(*c).isfullscreen
             {
@@ -841,9 +837,7 @@ pub fn applysizehints(
         }
         if state.config.resize_hints
             || (*c).isfloating
-            || (*(*(*c).mon).lt[(*(*c).mon).sellt as usize])
-                .arrange
-                .is_none()
+            || (*(*(*c).mon).lt[(*(*c).mon).sellt]).arrange.is_none()
         {
             if !(*c).hintsvalid {
                 updatesizehints(state, c);
@@ -1461,9 +1455,7 @@ pub fn drawbar(state: &mut State, m: *mut Monitor) {
             let w = textw(&mut state.drw, &text, state.lrpad);
             drw::setscheme(
                 &mut state.drw,
-                state.scheme[if ((*m).tagset[(*m).seltags as usize] & (1 << i))
-                    != 0
-                {
+                state.scheme[if ((*m).tagset[(*m).seltags] & (1 << i)) != 0 {
                     Scheme::Sel
                 } else {
                     Scheme::Norm
@@ -2030,9 +2022,7 @@ pub fn detachstack(c: *mut Client) {
 /// as close as I can get
 #[inline]
 pub fn is_visible(c: *const Client) -> bool {
-    unsafe {
-        ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags as usize]) != 0
-    }
+    unsafe { ((*c).tags & (*(*c).mon).tagset[(*(*c).mon).seltags]) != 0 }
 }
 
 pub fn updatebarpos(state: &mut State, m: *mut Monitor) {
@@ -2080,7 +2070,7 @@ pub fn cleanup(mut state: State) {
     unsafe {
         let a = Arg::Ui(!0);
         view(&mut state, &a);
-        (*state.selmon).lt[(*state.selmon).sellt as usize] =
+        (*state.selmon).lt[(*state.selmon).sellt] =
             &Layout { symbol: String::new(), arrange: None };
 
         let mut m = state.mons;
@@ -2535,11 +2525,10 @@ pub fn manage(state: &mut State, w: Window, wa: *mut xlib::XWindowAttributes) {
         // TODO I'm also pretty sure this is _not_ the right way to be handling
         // this. checking the name of the window and applying these rules seems
         // like something meant to be handled by RULES
-        (*state.selmon).tagset[(*state.selmon).seltags as usize] &=
-            !state.scratchtag();
+        (*state.selmon).tagset[(*state.selmon).seltags] &= !state.scratchtag();
         if (*c).name == state.config.scratchpadname {
             (*c).tags = state.scratchtag();
-            (*(*c).mon).tagset[(*(*c).mon).seltags as usize] |= (*c).tags;
+            (*(*c).mon).tagset[(*(*c).mon).seltags] |= (*c).tags;
             (*c).isfloating = true;
             (*c).x = (*(*c).mon).wx + (*(*c).mon).ww / 2 - width(c) / 2;
             (*c).y = (*(*c).mon).wy + (*(*c).mon).wh / 2 - height(c) / 2;
@@ -2828,7 +2817,7 @@ pub fn applyrules(state: &mut State, c: *mut Client) {
         (*c).tags = if (*c).tags & state.tagmask() != 0 {
             (*c).tags & state.tagmask()
         } else {
-            (*(*c).mon).tagset[(*(*c).mon).seltags as usize]
+            (*(*c).mon).tagset[(*(*c).mon).seltags]
         };
     }
 }

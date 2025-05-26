@@ -187,15 +187,15 @@ pub struct Layout {
 #[derive(Clone, Debug)]
 pub struct Pertag {
     /// Current tag
-    pub curtag: c_uint,
+    pub curtag: usize,
     /// Previous tag
-    pub prevtag: c_uint,
+    pub prevtag: usize,
     /// Number of windows in master area
     pub nmasters: Vec<c_int>,
     /// Proportion of monitor for master area
     pub mfacts: Vec<f32>,
     /// Selected layouts
-    pub sellts: Vec<c_uint>,
+    pub sellts: Vec<usize>,
     /// Matrix of tag and layout indices
     pub ltidxs: Vec<[*const Layout; 2]>,
     /// Whether to display the bar
@@ -218,8 +218,8 @@ pub struct Monitor {
     pub wy: c_int,
     pub ww: c_int,
     pub wh: c_int,
-    pub seltags: c_uint,
-    pub sellt: c_uint,
+    pub seltags: usize,
+    pub sellt: usize,
     pub tagset: [c_uint; 2usize],
     pub showbar: bool,
     pub topbar: bool,

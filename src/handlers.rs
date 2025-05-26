@@ -289,7 +289,7 @@ pub(crate) fn configurerequest(state: &mut State, e: *mut XEvent) {
             if (ev.value_mask & CWBorderWidth as u64) != 0 {
                 (*c).bw = ev.border_width;
             } else if (*c).isfloating
-                || (*(*state.selmon).lt[(*state.selmon).sellt as usize])
+                || (*(*state.selmon).lt[(*state.selmon).sellt])
                     .arrange
                     .is_none()
             {
