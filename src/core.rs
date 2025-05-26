@@ -2896,9 +2896,10 @@ pub fn updatetitle(state: &mut State, c: *mut Client) {
         {
             gettextprop(state.dpy, (*c).win, XA_WM_NAME, &mut (*c).name);
         }
-        if (*c).name.is_empty() {
+        let c = &mut *c;
+        if c.name.is_empty() {
             /* hack to mark broken clients */
-            (*c).name = BROKEN.to_string_lossy().to_string();
+            c.name = BROKEN.to_string_lossy().to_string();
         }
     }
 }

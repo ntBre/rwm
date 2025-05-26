@@ -24,11 +24,11 @@ use crate::{Arg, Client, Monitor};
 
 pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
     unsafe {
-        (*state.selmon).pertag.showbars
-            [(*state.selmon).pertag.curtag as usize] =
-            !((*state.selmon).showbar);
-        (*state.selmon).showbar = (*state.selmon).pertag.showbars
-            [(*state.selmon).pertag.curtag as usize];
+        let monitor = &mut *state.selmon;
+        monitor.pertag.showbars[monitor.pertag.curtag as usize] =
+            !monitor.showbar;
+        monitor.showbar =
+            monitor.pertag.showbars[monitor.pertag.curtag as usize];
         updatebarpos(state, state.selmon);
         resizebarwin(state, state.selmon);
         if state.config.showsystray {
@@ -41,12 +41,12 @@ pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
                 sibling: 0,
                 stack_mode: 0,
             };
-            if !(*state.selmon).showbar {
+            if !(monitor).showbar {
                 wc.y = -state.bh;
-            } else if (*state.selmon).showbar {
+            } else if (monitor).showbar {
                 wc.y = 0;
-                if !(*state.selmon).topbar {
-                    wc.y = (*state.selmon).mh - state.bh;
+                if !(monitor).topbar {
+                    wc.y = (monitor).mh - state.bh;
                 }
             }
             XConfigureWindow(
@@ -100,11 +100,11 @@ pub(crate) fn focusstack(state: &mut State, arg: *const Arg) {
 /// Increase the number of windows in the master area.
 pub(crate) fn incnmaster(state: &mut State, arg: *const Arg) {
     unsafe {
-        (*state.selmon).pertag.nmasters
-            [(*state.selmon).pertag.curtag as usize] =
-            std::cmp::max((*state.selmon).nmaster + (*arg).i(), 0);
-        (*state.selmon).nmaster = (*state.selmon).pertag.nmasters
-            [(*state.selmon).pertag.curtag as usize];
+        let monitor = &mut *state.selmon;
+        monitor.pertag.nmasters[monitor.pertag.curtag as usize] =
+            std::cmp::max(monitor.nmaster + (*arg).i(), 0);
+        monitor.nmaster =
+            monitor.pertag.nmasters[monitor.pertag.curtag as usize];
         arrange(state, state.selmon);
     }
 }
@@ -130,10 +130,9 @@ pub(crate) fn setmfact(state: &mut State, arg: *const Arg) {
         if !(0.05..=0.95).contains(&f) {
             return;
         }
-        (*state.selmon).pertag.mfacts[(*state.selmon).pertag.curtag as usize] =
-            f;
-        (*state.selmon).mfact = (*state.selmon).pertag.mfacts
-            [(*state.selmon).pertag.curtag as usize];
+        let monitor = &mut *state.selmon;
+        monitor.pertag.mfacts[monitor.pertag.curtag as usize] = f;
+        monitor.mfact = monitor.pertag.mfacts[monitor.pertag.curtag as usize];
         arrange(state, state.selmon);
     }
 }
@@ -239,33 +238,27 @@ pub(crate) fn killclient(state: &mut State, _arg: *const Arg) {
 pub(crate) fn setlayout(state: &mut State, arg: *const Arg) {
     log::trace!("setlayout: {arg:?}");
     unsafe {
+        let monitor = &mut *state.selmon;
         if arg.is_null()
             || (*arg).l().is_none()
             || !std::ptr::eq(
                 &state.config.layouts[(*arg).l().unwrap()],
-                (*state.selmon).lt[(*state.selmon).sellt as usize],
+                monitor.lt[monitor.sellt as usize],
             )
         {
-            (*state.selmon).pertag.sellts
-                [(*state.selmon).pertag.curtag as usize] ^= 1;
-            (*state.selmon).sellt = (*state.selmon).pertag.sellts
-                [(*state.selmon).pertag.curtag as usize];
+            monitor.pertag.sellts[monitor.pertag.curtag as usize] ^= 1;
+            monitor.sellt =
+                monitor.pertag.sellts[monitor.pertag.curtag as usize];
         }
         if !arg.is_null() && (*arg).l().is_some() {
-            (*state.selmon).pertag.ltidxs
-                [(*state.selmon).pertag.curtag as usize]
-                [(*state.selmon).sellt as usize] =
+            monitor.pertag.ltidxs[monitor.pertag.curtag as usize]
+                [monitor.sellt as usize] =
                 &state.config.layouts[(*arg).l().unwrap()];
-            (*state.selmon).lt[(*state.selmon).sellt as usize] =
-                (*state.selmon).pertag.ltidxs
-                    [(*state.selmon).pertag.curtag as usize]
-                    [(*state.selmon).sellt as usize];
+            monitor.lt[monitor.sellt as usize] = monitor.pertag.ltidxs
+                [monitor.pertag.curtag as usize][monitor.sellt as usize];
         }
-        (*state.selmon).ltsymbol = (*(*state.selmon).lt
-            [(*state.selmon).sellt as usize])
-            .symbol
-            .clone();
-        if !(*state.selmon).sel.is_null() {
+        monitor.ltsymbol = (*monitor.lt[monitor.sellt as usize]).symbol.clone();
+        if !monitor.sel.is_null() {
             arrange(state, state.selmon);
         } else {
             drawbar(state, state.selmon);
@@ -427,46 +420,40 @@ pub(crate) fn tagmon(state: &mut State, arg: *const Arg) {
 
 pub(crate) fn toggleview(state: &mut State, arg: *const Arg) {
     unsafe {
-        let newtagset = (*state.selmon).tagset
-            [(*state.selmon).seltags as usize]
+        let monitor = &mut *state.selmon;
+        let newtagset = monitor.tagset[monitor.seltags as usize]
             ^ ((*arg).ui() & state.tagmask());
 
         if newtagset != 0 {
-            (*state.selmon).tagset[(*state.selmon).seltags as usize] =
-                newtagset;
+            monitor.tagset[monitor.seltags as usize] = newtagset;
 
             if newtagset == !0 {
-                (*state.selmon).pertag.prevtag = (*state.selmon).pertag.curtag;
-                (*state.selmon).pertag.curtag = 0;
+                monitor.pertag.prevtag = monitor.pertag.curtag;
+                monitor.pertag.curtag = 0;
             }
 
             // test if the user did not select the same tag
-            if (newtagset & (1 << ((*state.selmon).pertag.curtag - 1))) == 0 {
-                (*state.selmon).pertag.prevtag = (*state.selmon).pertag.curtag;
+            if (newtagset & (1 << (monitor.pertag.curtag - 1))) == 0 {
+                monitor.pertag.prevtag = monitor.pertag.curtag;
                 let mut i;
                 cfor!((i = 0; (newtagset & (1 << i)) == 0; i += 1) {});
-                (*state.selmon).pertag.curtag = i + 1;
+                monitor.pertag.curtag = i + 1;
             }
 
             // apply settings for this view
-            (*state.selmon).nmaster = (*state.selmon).pertag.nmasters
-                [(*state.selmon).pertag.curtag as usize];
-            (*state.selmon).mfact = (*state.selmon).pertag.mfacts
-                [(*state.selmon).pertag.curtag as usize];
-            (*state.selmon).sellt = (*state.selmon).pertag.sellts
-                [(*state.selmon).pertag.curtag as usize];
-            (*state.selmon).lt[(*state.selmon).sellt as usize] =
-                (*state.selmon).pertag.ltidxs
-                    [(*state.selmon).pertag.curtag as usize]
-                    [(*state.selmon).sellt as usize];
-            (*state.selmon).lt[((*state.selmon).sellt ^ 1) as usize] =
-                (*state.selmon).pertag.ltidxs
-                    [(*state.selmon).pertag.curtag as usize]
-                    [((*state.selmon).sellt ^ 1) as usize];
+            monitor.nmaster =
+                monitor.pertag.nmasters[monitor.pertag.curtag as usize];
+            monitor.mfact =
+                monitor.pertag.mfacts[monitor.pertag.curtag as usize];
+            monitor.sellt =
+                monitor.pertag.sellts[monitor.pertag.curtag as usize];
+            monitor.lt[monitor.sellt as usize] = monitor.pertag.ltidxs
+                [monitor.pertag.curtag as usize][monitor.sellt as usize];
+            monitor.lt[(monitor.sellt ^ 1) as usize] = monitor.pertag.ltidxs
+                [monitor.pertag.curtag as usize][(monitor.sellt ^ 1) as usize];
 
-            if (*state.selmon).showbar
-                != (*state.selmon).pertag.showbars
-                    [(*state.selmon).pertag.curtag as usize]
+            if monitor.showbar
+                != monitor.pertag.showbars[monitor.pertag.curtag as usize]
             {
                 togglebar(state, null_mut());
             }
