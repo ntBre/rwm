@@ -602,8 +602,7 @@ pub(crate) fn propertynotify(state: &mut State, e: *mut XEvent) {
 
         if ev.window == state.root && ev.atom == XA_WM_NAME {
             updatestatus(state);
-        } else if ev.state == PropertyDelete {
-            return; // ignore
+        } else if ev.state == PropertyDelete { // ignore
         } else {
             let c = wintoclient(state, ev.window);
             if c.is_null() {
