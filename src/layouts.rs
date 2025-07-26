@@ -2,8 +2,8 @@ use std::{cmp::min, ffi::c_uint};
 
 use libc::c_int;
 
-use crate::{cfor, height, is_visible, nexttiled, resize};
 use crate::{Monitor, State};
+use crate::{cfor, height, is_visible, nexttiled, resize};
 
 pub(crate) fn monocle(state: &mut State, m: *mut Monitor) {
     unsafe {

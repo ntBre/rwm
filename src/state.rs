@@ -9,10 +9,10 @@ use x11::xlib::{self, Atom, Display};
 use xcb::Connection;
 
 use crate::{
+    Clr, Cursors, Monitor, Systray, Window,
     config::Config,
     drw::{self, Drw},
-    enums::{Col, Net, Scheme, XEmbed, WM},
-    Clr, Cursors, Monitor, Systray, Window,
+    enums::{Col, Net, Scheme, WM, XEmbed},
 };
 
 /// A color scheme.

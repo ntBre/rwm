@@ -1,4 +1,4 @@
-use x11::xlib::{XButtonEvent, XEvent, _XDisplay};
+use x11::xlib::{_XDisplay, XButtonEvent, XEvent};
 
 pub enum Event {
     Button(XButtonEvent),

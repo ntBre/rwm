@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     error::Error,
-    ffi::{c_float, c_int, c_uint, CString},
+    ffi::{CString, c_float, c_int, c_uint},
     fs::read_to_string,
     path::{Path, PathBuf},
 };
@@ -9,7 +9,7 @@ use std::{
 use env::{CLICKS, HANDLERS, KEYS, XKEYS};
 use mlua::{Lua, LuaSerdeExt as _, Table};
 
-use crate::{config::key::Key, enums::Scheme, Button, Layout, Rule};
+use crate::{Button, Layout, Rule, config::key::Key, enums::Scheme};
 
 mod env;
 pub mod key;

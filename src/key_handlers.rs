@@ -4,23 +4,23 @@ use std::process::Command;
 use std::ptr::null_mut;
 
 use x11::xlib::{
-    ButtonRelease, ConfigureRequest, CurrentTime, DestroyAll, EnterWindowMask,
-    Expose, ExposureMask, False, GrabModeAsync, GrabSuccess, MapRequest,
-    MotionNotify, NoEventMask, SubstructureRedirectMask, XCheckMaskEvent,
-    XConfigureWindow, XEvent, XGrabPointer, XGrabServer, XKillClient,
-    XMaskEvent, XSetCloseDownMode, XSetErrorHandler, XSync, XUngrabPointer,
-    XUngrabServer, XWarpPointer, XWindowChanges, CWY,
+    ButtonRelease, CWY, ConfigureRequest, CurrentTime, DestroyAll,
+    EnterWindowMask, Expose, ExposureMask, False, GrabModeAsync, GrabSuccess,
+    MapRequest, MotionNotify, NoEventMask, SubstructureRedirectMask,
+    XCheckMaskEvent, XConfigureWindow, XEvent, XGrabPointer, XGrabServer,
+    XKillClient, XMaskEvent, XSetCloseDownMode, XSetErrorHandler, XSync,
+    XUngrabPointer, XUngrabServer, XWarpPointer, XWindowChanges,
 };
 
 use crate::core::{
-    arrange, attach, attachstack, detach, detachstack, drawbar, focus,
-    getrootptr, height, is_visible, nexttiled, pop, recttomon, resize,
-    resizebarwin, restack, sendevent, setfullscreen, unfocus, updatebarpos,
-    width, xerror, xerrordummy, HANDLER, MOUSEMASK, XNONE,
+    HANDLER, MOUSEMASK, XNONE, arrange, attach, attachstack, detach,
+    detachstack, drawbar, focus, getrootptr, height, is_visible, nexttiled,
+    pop, recttomon, resize, resizebarwin, restack, sendevent, setfullscreen,
+    unfocus, updatebarpos, width, xerror, xerrordummy,
 };
 use crate::enums::WM;
-use crate::{cfor, State};
 use crate::{Arg, Client, Monitor};
+use crate::{State, cfor};
 
 pub(crate) fn togglebar(state: &mut State, _arg: *const Arg) {
     unsafe {
@@ -287,11 +287,7 @@ pub(crate) fn togglefloating(state: &mut State, _arg: *const Arg) {
 /// their stackpos function, in the branch where this is true
 pub(crate) fn pushstack(state: &mut State, arg: *const Arg) {
     fn modulo(n: c_int, m: c_int) -> c_int {
-        if n % m < 0 {
-            (n % m) + m
-        } else {
-            n % m
-        }
+        if n % m < 0 { (n % m) + m } else { n % m }
     }
     unsafe {
         // begin stackpos

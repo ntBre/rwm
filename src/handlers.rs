@@ -5,24 +5,24 @@ use std::{
 };
 
 use x11::xlib::{
-    self, CWBackPixel, CWBorderWidth, CWHeight, CWWidth, CurrentTime, False,
-    KeyCode, MappingKeyboard, NotifyInferior, NotifyNormal, PropertyChangeMask,
-    PropertyDelete, ReplayPointer, ResizeRedirectMask, StructureNotifyMask,
-    XAddToSaveSet, XChangeWindowAttributes, XEvent, XGetWindowAttributes,
-    XMapRaised, XReparentWindow, XSelectInput, XSetWindowAttributes, XSync,
-    XWindowAttributes, CWX, CWY, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
-    XA_WM_TRANSIENT_FOR,
+    self, CWBackPixel, CWBorderWidth, CWHeight, CWWidth, CWX, CWY, CurrentTime,
+    False, KeyCode, MappingKeyboard, NotifyInferior, NotifyNormal,
+    PropertyChangeMask, PropertyDelete, ReplayPointer, ResizeRedirectMask,
+    StructureNotifyMask, XA_WM_HINTS, XA_WM_NAME, XA_WM_NORMAL_HINTS,
+    XA_WM_TRANSIENT_FOR, XAddToSaveSet, XChangeWindowAttributes, XEvent,
+    XGetWindowAttributes, XMapRaised, XReparentWindow, XSelectInput,
+    XSetWindowAttributes, XSync, XWindowAttributes,
 };
 
 use crate::{
-    drw,
+    Arg, Client, Monitor, State, Window, drw,
     enums::{Col, Scheme, XEmbed},
     util::ecalloc,
-    Arg, Client, Monitor, State, Window,
 };
 
 use crate::{
-    arrange, cleanmask, configure, drawbar, drawbars,
+    NORMAL_STATE, WITHDRAWN_STATE, arrange, cleanmask, configure, drawbar,
+    drawbars,
     enums::{Clk, Net},
     focus, getsystraywidth, grabkeys, height, is_visible, manage, recttomon,
     removesystrayicon, resizebarwin, resizeclient, restack, sendevent,
@@ -36,7 +36,6 @@ use crate::{
         XEMBED_EMBEDDED_VERSION, XEMBED_FOCUS_IN, XEMBED_MODALITY_ON,
         XEMBED_WINDOW_ACTIVATE,
     },
-    NORMAL_STATE, WITHDRAWN_STATE,
 };
 
 pub fn buttonpress(state: &mut State, e: *mut XEvent) {
