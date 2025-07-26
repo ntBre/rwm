@@ -18,6 +18,8 @@ jobs:
         uses: dtolnay/rust-toolchain@1.88
         with:
           components: rustfmt
+      - name: install rustfmt
+        run: rustup component add rustfmt
       - name: cargo fmt --check --all
         run: cargo fmt --check --all
   clippy:
