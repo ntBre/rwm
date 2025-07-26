@@ -1,13 +1,13 @@
 use std::cmp::max;
-use std::ffi::{c_int, c_uint, c_ulong, CStr};
+use std::ffi::{CStr, c_int, c_uint, c_ulong};
 use std::io::Read;
-use std::mem::{size_of, MaybeUninit};
+use std::mem::{MaybeUninit, size_of};
 use std::ptr::null_mut;
 use std::sync::LazyLock;
 
 use crate::config::Config;
-use crate::drw::{fontset_create, Drw};
-use crate::enums::{Clk, Col, Net, Scheme, XEmbed, WM};
+use crate::drw::{Drw, fontset_create};
+use crate::enums::{Clk, Col, Net, Scheme, WM, XEmbed};
 use crate::key_handlers::view;
 use crate::util::{self, ecalloc};
 use crate::xembed::{
@@ -15,8 +15,8 @@ use crate::xembed::{
     XEMBED_WINDOW_DEACTIVATE,
 };
 use crate::{
-    drw, handlers, x, Arg, Client, Layout, Monitor, Pertag, State, Systray,
-    Window, ICONIC_STATE, NORMAL_STATE, WITHDRAWN_STATE,
+    Arg, Client, ICONIC_STATE, Layout, Monitor, NORMAL_STATE, Pertag, State,
+    Systray, WITHDRAWN_STATE, Window, drw, handlers, x,
 };
 use libc::{c_long, c_uchar, pid_t, sigaction};
 use x11::keysym::XK_Num_Lock;
@@ -24,22 +24,22 @@ use x11::xlib::{
     self, Above, AnyButton, AnyKey, AnyModifier, BadAccess, BadDrawable,
     BadMatch, BadWindow, Below, ButtonPressMask, ButtonReleaseMask,
     CWBackPixel, CWBackPixmap, CWBorderWidth, CWCursor, CWEventMask, CWHeight,
-    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, ClientMessage,
-    ControlMask, CopyFromParent, CurrentTime, Display, EnterWindowMask,
-    ExposureMask, False, FocusChangeMask, GrabModeAsync, GrabModeSync,
-    InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask, Mod2Mask,
-    Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize, PMaxSize,
-    PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
+    CWOverrideRedirect, CWSibling, CWStackMode, CWWidth, CWX, CWY,
+    ClientMessage, ControlMask, CopyFromParent, CurrentTime, Display,
+    EnterWindowMask, ExposureMask, False, FocusChangeMask, GrabModeAsync,
+    GrabModeSync, InputHint, IsViewable, LeaveWindowMask, LockMask, Mod1Mask,
+    Mod2Mask, Mod3Mask, Mod4Mask, Mod5Mask, NoEventMask, PAspect, PBaseSize,
+    PMaxSize, PMinSize, PResizeInc, PSize, ParentRelative, PointerMotionMask,
     PointerRoot, PropModeAppend, PropModeReplace, PropertyChangeMask,
     RevertToPointerRoot, ShiftMask, StructureNotifyMask,
-    SubstructureNotifyMask, SubstructureRedirectMask, Success, True,
-    XChangeProperty, XChangeWindowAttributes, XConfigureWindow,
-    XCreateSimpleWindow, XDestroyWindow, XErrorEvent, XFillRectangle, XFree,
-    XGetSelectionOwner, XInternAtom, XMapRaised, XMapSubwindows, XMapWindow,
-    XMoveResizeWindow, XPropertyEvent, XSelectInput, XSetErrorHandler,
-    XSetForeground, XSetSelectionOwner, XSetWindowAttributes, XSync,
-    XUnmapWindow, XWindowChanges, CWX, CWY, XA_ATOM, XA_CARDINAL, XA_STRING,
-    XA_WINDOW, XA_WM_NAME,
+    SubstructureNotifyMask, SubstructureRedirectMask, Success, True, XA_ATOM,
+    XA_CARDINAL, XA_STRING, XA_WINDOW, XA_WM_NAME, XChangeProperty,
+    XChangeWindowAttributes, XConfigureWindow, XCreateSimpleWindow,
+    XDestroyWindow, XErrorEvent, XFillRectangle, XFree, XGetSelectionOwner,
+    XInternAtom, XMapRaised, XMapSubwindows, XMapWindow, XMoveResizeWindow,
+    XPropertyEvent, XSelectInput, XSetErrorHandler, XSetForeground,
+    XSetSelectionOwner, XSetWindowAttributes, XSync, XUnmapWindow,
+    XWindowChanges,
 };
 
 #[macro_export]
@@ -2758,11 +2758,7 @@ pub fn getsystraywidth(state: &State) -> c_uint {
             (w, i) = (w + (*i).w + state.config.systrayspacing as i32, (*i).next))
             {});
         }
-        if w != 0 {
-            w as c_uint + state.config.systrayspacing
-        } else {
-            1
-        }
+        if w != 0 { w as c_uint + state.config.systrayspacing } else { 1 }
     }
 }
 

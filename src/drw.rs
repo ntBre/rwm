@@ -1,6 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
-use std::ffi::{c_char, c_int, c_long, c_uchar, c_uint, CStr, CString};
+use std::ffi::{CStr, CString, c_char, c_int, c_long, c_uchar, c_uint};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
@@ -12,14 +12,14 @@ use fontconfig_sys::{
 };
 use x11::xft::{self, XftFont};
 use x11::xlib::{
-    self, CapButt, Display, Drawable, False, JoinMiter, LineSolid, GC,
+    self, CapButt, Display, Drawable, False, GC, JoinMiter, LineSolid,
 };
 
-use crate::enums::Col;
-use crate::util::die;
 use crate::Clr;
 use crate::Cursor as Cur;
 use crate::Window;
+use crate::enums::Col;
+use crate::util::die;
 
 // defined in /usr/include/fontconfig/fontconfig.h
 const FC_TRUE: i32 = 1;
@@ -265,7 +265,7 @@ pub unsafe fn fontset_getwidth(drw: &mut Drw, text: &str) -> c_uint {
     if drw.fonts.is_empty() || text.is_empty() {
         return 0;
     }
-    self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint
+    unsafe { self::text(drw, 0, 0, 0, 0, 0, text, 0) as c_uint }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -489,7 +489,9 @@ pub unsafe fn text(
 
                 if drw.fonts[0].pattern.is_null() {
                     // refer to the comment in xfont_create for more information
-                    die("the first font in the cache must be loaded from a font string");
+                    die(
+                        "the first font in the cache must be loaded from a font string",
+                    );
                 }
 
                 log::trace!("text: FcPatternDuplicate");
