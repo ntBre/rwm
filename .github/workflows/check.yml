@@ -9,13 +9,13 @@ name: check
 jobs:
   fmt:
     runs-on: ubuntu-latest
-    name: nightly / fmt
+    name: fmt
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
       - name: Install stable
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@1.88
         with:
           components: rustfmt
       - name: cargo fmt --check --all
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [nightly]
+        toolchain: ["1.88"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,7 +50,7 @@ jobs:
           args: --workspace --all-targets -- -D warnings
   doc:
     runs-on: ubuntu-latest
-    name: nightly / doc
+    name: doc
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,8 +59,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev lua5.4 liblua5.4-dev
-      - name: Install nightly
-        uses: dtolnay/rust-toolchain@nightly
+      - name: Install 1.88
+        uses: dtolnay/rust-toolchain@1.88
       - name: cargo doc
         run: cargo doc --no-deps --all-features
         env:
