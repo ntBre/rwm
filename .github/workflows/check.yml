@@ -15,7 +15,7 @@ jobs:
         with:
           submodules: true
       - name: Install stable
-        uses: dtolnay/rust-toolchain@1.88
+        uses: dtolnay/rust-toolchain@1.100
         with:
           components: rustfmt
       - name: install rustfmt
@@ -62,7 +62,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev lua5.4 liblua5.4-dev
       - name: Install 1.88
-        uses: dtolnay/rust-toolchain@1.88
+        uses: dtolnay/rust-toolchain@1.100
       - name: cargo doc
         run: cargo doc --no-deps --all-features
         env:
