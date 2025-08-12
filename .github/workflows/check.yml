@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     name: fmt
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
       - name: Install stable
@@ -33,7 +33,7 @@ jobs:
       matrix:
         toolchain: ["1.88"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
       - name: Install X libraries
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     name: doc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
       - name: Install X libraries
