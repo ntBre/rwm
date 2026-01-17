@@ -10,7 +10,7 @@ ifdef FIX
 endif
 
 clippy:
-	cargo +nightly clippy --workspace --all-targets --all-features --tests $(clippy_args)
+	cargo clippy --workspace --all-targets --all-features --tests $(clippy_args)
 
 doc:
 	cargo doc --open
