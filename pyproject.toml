@@ -1,0 +1,10 @@
+[project]
+name = "rwm"
+version = "2.0.1"
+
+[tool.rooster]
+changelog_ignore_labels = ["internal", "ci", "dependencies"]
+version_files = [
+    "pyproject.toml",
+    "Cargo.toml",
+]
