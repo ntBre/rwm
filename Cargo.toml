@@ -1,8 +1,9 @@
 [package]
 name = "rwm"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2024"
 rust-version = "1.88"
+repository = "https://github.com/ntBre/rwm"
 
 [workspace]
 members = ["blocks"]
@@ -21,3 +22,11 @@ xcb = { version = "1.7.0", features = [ "res" ] }
 
 [dev-dependencies]
 insta = "1.41.1"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+[package.metadata.dist]
+dist = true
