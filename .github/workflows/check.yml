@@ -1,9 +1,0 @@
-# from https://github.com/jonhoo/rust-ci-conf
-permissions:
-  contents: read
-on:
-  push:
-    branches: [master]
-  pull_request:
-name: check
-jobs:
