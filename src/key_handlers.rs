@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::ffi::c_int;
+use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::ptr::null_mut;
 
@@ -697,6 +698,15 @@ pub(crate) fn spawn(state: &mut State, arg: *const Arg) {
 
         let mut cmd = Command::new(argv[0].clone());
         let cmd = if argv.len() > 1 { cmd.args(&argv[1..]) } else { &mut cmd };
+
+        cmd.pre_exec(|| {
+            let mut sa: libc::sigaction = std::mem::zeroed();
+            libc::sigemptyset(&mut sa.sa_mask);
+            sa.sa_flags = 0;
+            sa.sa_sigaction = libc::SIG_DFL;
+            libc::sigaction(libc::SIGCHLD, &sa, std::ptr::null_mut());
+            Ok(())
+        });
 
         let Ok(_) = cmd.spawn() else {
             panic!("rwm: spawn '{:?}' failed", argv[0]);

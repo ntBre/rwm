@@ -69,7 +69,9 @@ fn main() {
 
     // kill xephyr when finished
     cmd.kill().unwrap();
-    cmd.try_wait().unwrap();
+    // ignore errors here, macos-latest seems to be stricter about auto-reaping
+    // child processes (or something) and fails to unwrap here.
+    let _ = cmd.try_wait();
 
     assert!(ok);
 }
