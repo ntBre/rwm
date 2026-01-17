@@ -17,7 +17,7 @@ mlua = { version = "0.11.3", features = ["lua54", "serialize"] }
 serde = { version = "1.0.219", features = ["derive"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-xcb = { version = "1.5.0", features = [ "res" ] }
+xcb = { version = "1.7.0", features = [ "res" ] }
 
 [dev-dependencies]
 insta = "1.41.1"
