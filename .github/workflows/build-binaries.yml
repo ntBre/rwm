@@ -1,0 +1,157 @@
+# Build rwm on all platforms.
+#
+# Assumed to run as a subworkflow of .github/workflows/release.yml; specifically, as a local
+# artifacts job within `cargo-dist`.
+name: "Build binaries"
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+  pull_request:
+    paths:
+      # When we change pyproject.toml, we want to ensure that the builds still work.
+      - pyproject.toml
+      # And when we change this workflow itself...
+      - .github/workflows/build-binaries.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  PACKAGE_NAME: rwm
+  MODULE_NAME: rwm
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  CARGO_TERM_COLOR: always
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  macos-x86_64:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install X libraries (mac)
+        run: |
+          brew install libxft libxinerama lua
+          brew install --cask xquartz
+          echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
+
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: "Archive binary"
+        run: |
+          TARGET=x86_64-apple-darwin
+          ARCHIVE_NAME=$PACKAGE_NAME-$TARGET
+          ARCHIVE_FILE=$ARCHIVE_NAME.tar.gz
+
+          mkdir -p $ARCHIVE_NAME
+          cp target/$TARGET/release/$PACKAGE_NAME $ARCHIVE_NAME/$PACKAGE_NAME
+          tar czvf $ARCHIVE_FILE $ARCHIVE_NAME
+          shasum -a 256 $ARCHIVE_FILE > $ARCHIVE_FILE.sha256
+
+      - name: "Upload binary"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: artifacts-macos-x86_64
+          path: |
+            *.tar.gz
+            *.sha256
+
+  macos-aarch64:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install X libraries (mac)
+        run: |
+          brew install libxft libxinerama lua
+          brew install --cask xquartz
+          echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
+
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
+
+      - name: "Archive binary"
+        run: |
+          TARGET=aarch64-apple-darwin
+          ARCHIVE_NAME=${PACKAGE_NAME}-$TARGET
+          ARCHIVE_FILE=$ARCHIVE_NAME.tar.gz
+
+          mkdir -p $ARCHIVE_NAME
+          cp target/$TARGET/release/${PACKAGE_NAME} $ARCHIVE_NAME/${PACKAGE_NAME}
+          tar czvf $ARCHIVE_FILE $ARCHIVE_NAME
+          shasum -a 256 $ARCHIVE_FILE > $ARCHIVE_FILE.sha256
+
+      - name: "Upload binary"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: artifacts-aarch64-apple-darwin
+          path: |
+            *.tar.gz
+            *.sha256
+
+  linux:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-build') }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install X libraries (ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
+
+      - name: Install toolchain
+        run: |
+          rustup target add ${{ matrix.target }}
+
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: "Archive binary"
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TARGET=${{ matrix.target }}
+          ARCHIVE_NAME=${PACKAGE_NAME}-$TARGET
+          ARCHIVE_FILE=$ARCHIVE_NAME.tar.gz
+
+          mkdir -p $ARCHIVE_NAME
+          cp target/$TARGET/release/${PACKAGE_NAME} $ARCHIVE_NAME/${PACKAGE_NAME}
+          tar czvf $ARCHIVE_FILE $ARCHIVE_NAME
+          shasum -a 256 $ARCHIVE_FILE > $ARCHIVE_FILE.sha256
+
+      - name: "Upload binary"
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: artifacts-${{ matrix.target }}
+          path: |
+            *.tar.gz
+            *.sha256
