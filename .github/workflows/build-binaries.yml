@@ -175,7 +175,7 @@ jobs:
 
       - name: "Build binary"
         run: |
-          cargo build --release --locked --target ${{ matrix.target }}
+          cargo build --release --locked --target ${{ matrix.platform.target }}
 
       - name: "Archive binary"
         shell: bash
