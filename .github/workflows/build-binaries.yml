@@ -179,7 +179,7 @@ jobs:
 
       - name: Install toolchain
         run: |
-          rustup target add ${{ matrix.target }}
+          rustup target add ${{ matrix.platform.target }}
 
       - name: "Build binary"
         run: |
