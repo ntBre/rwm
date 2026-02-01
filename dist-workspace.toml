@@ -15,6 +15,10 @@ installers = []
 dispatch-releases = true
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl"]
+# Whether CI should include auto-generated code to build local artifacts
+build-local-artifacts = false
+# Local artifacts jobs to run in CI
+local-artifacts-jobs = ["./build-binaries"]
 
 [dist.github-custom-runners]
 global = "ubuntu-latest"
