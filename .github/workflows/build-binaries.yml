@@ -177,6 +177,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
 
+      - name: Install toolchain
+        run: |
+          rustup target add ${{ matrix.target }}
+
       - name: "Build binary"
         run: |
           cargo build --release --locked --target ${{ matrix.platform.target }}
