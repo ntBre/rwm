@@ -42,7 +42,6 @@ jobs:
           persist-credentials: false
 
       - name: Install X libraries (mac)
-        if: ${{ matrix.is_mac }}
         run: |
           brew install libxft libxinerama lua
           brew install --cask xquartz
@@ -87,7 +86,6 @@ jobs:
           persist-credentials: false
 
       - name: Install X libraries (mac)
-        if: ${{ matrix.is_mac }}
         run: |
           brew install libxft libxinerama lua
           brew install --cask xquartz
@@ -132,6 +130,11 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      - name: Install X libraries (ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
 
       - name: "Build wheels"
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
@@ -181,6 +184,11 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+
+      - name: Install X libraries (ubuntu)
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
 
       - name: "Build wheels"
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
