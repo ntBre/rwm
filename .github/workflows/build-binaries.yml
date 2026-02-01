@@ -49,7 +49,7 @@ jobs:
 
       - name: "Build binary"
         run: |
-          cargo build --release --locked x86_64-apple-darwin
+          cargo build --release --locked --target x86_64-apple-darwin
 
       - name: "Archive binary"
         run: |
