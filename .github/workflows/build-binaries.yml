@@ -12,7 +12,7 @@ on:
         type: string
   pull_request:
     paths:
-      # When we change pyproject.toml, we want to ensure that the maturin builds still work.
+      # When we change pyproject.toml, we want to ensure that the builds still work.
       - pyproject.toml
       # And when we change this workflow itself...
       - .github/workflows/build-binaries.yml
@@ -47,15 +47,9 @@ jobs:
           brew install --cask xquartz
           echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
 
-      # TODO(brent) we really don't need to build _wheels_, but it seemed
-      # easiest to reuse maturin like this instead of invoking cargo correctly
-      # on its own
-      - name: "Build wheels - x86_64"
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
-        with:
-          maturin-version: v1.11.5
-          target: x86_64
-          args: --release --locked
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked x86_64-apple-darwin
 
       - name: "Archive binary"
         run: |
@@ -91,12 +85,9 @@ jobs:
           brew install --cask xquartz
           echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
 
-      - name: "Build wheels - aarch64"
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
-        with:
-          maturin-version: v1.11.5
-          target: aarch64
-          args: --release --locked
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target aarch64-apple-darwin
 
       - name: "Archive binary"
         run: |
@@ -136,13 +127,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
 
-      - name: "Build wheels"
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
-        with:
-          maturin-version: v1.11.5
-          target: ${{ matrix.target }}
-          manylinux: 2_17
-          args: --release --locked
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }}
 
       - name: "Archive binary"
         shell: bash
@@ -174,10 +161,6 @@ jobs:
         platform:
           - target: aarch64-unknown-linux-gnu
             arch: aarch64
-            manylinux: 2_17
-            # see https://github.com/astral-sh/ruff/issues/3791
-            # and https://github.com/gnzlbg/jemallocator/issues/170#issuecomment-1503228963
-            maturin_docker_options: -e JEMALLOC_SYS_WITH_LG_PAGE=16
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -190,14 +173,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install libxft-dev libxinerama-dev xserver-xephyr libxcb1-dev lua5.4 liblua5.4-dev
 
-      - name: "Build wheels"
-        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380 # v1.49.4
-        with:
-          maturin-version: v1.11.5
-          target: ${{ matrix.platform.target }}
-          manylinux: ${{ matrix.platform.manylinux }}
-          docker-options: ${{ matrix.platform.maturin_docker_options }}
-          args: --release --locked --out dist --compatibility pypi
+      - name: "Build binary"
+        run: |
+          cargo build --release --locked --target ${{ matrix.target }}
 
       - name: "Archive binary"
         shell: bash
