@@ -2,10 +2,6 @@
 name = "rwm"
 version = "2.0.1"
 
-[build-system]
-requires = ["maturin>=1.9,<2.0"]
-build-backend = "maturin"
-
 [tool.rooster]
 changelog_ignore_labels = ["internal", "ci", "dependencies"]
 version_files = [
