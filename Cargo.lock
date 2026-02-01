@@ -411,7 +411,7 @@ checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
 
 [[package]]
 name = "rwm"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "env_logger",
  "insta",
