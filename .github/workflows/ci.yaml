@@ -38,7 +38,7 @@ jobs:
       - name: Install X libraries (mac)
         if: ${{ matrix.is_mac }}
         run: |
-          brew install libxft libxinerama lua
+          brew install libxft libxinerama lua@5.4
           brew install --cask xquartz
           echo "PATH=$PATH:/opt/X11/bin" >> $GITHUB_ENV
 
