@@ -1655,6 +1655,7 @@ pub fn updatebars(state: &mut State) {
         let mut m = state.mons;
         while !m.is_null() {
             if (*m).barwin != 0 {
+                m = (*m).next;
                 continue;
             }
             let mut w = (*m).ww;
